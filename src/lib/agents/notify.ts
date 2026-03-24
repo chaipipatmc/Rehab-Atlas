@@ -34,9 +34,11 @@ export async function sendAgentEmail(params: {
 }): Promise<void> {
   const appUrl = getAppUrl();
 
+  // Build action buttons — link to a clean confirmation page (not directly to the API)
   const actionButtons = params.actions
     .map((a) => {
-      const url = `${appUrl}/api/agents/action?token=${encodeURIComponent(a.token)}&decision=${a.decision}${a.center_id ? `&center_id=${a.center_id}` : ""}`;
+      // Short, clean URL that loads a confirmation page with a form POST
+      const url = `${appUrl}/api/agents/action?t=${encodeURIComponent(a.token)}&d=${a.decision}${a.center_id ? `&c=${a.center_id}` : ""}`;
       const color = a.color || (a.decision === "approved" ? "#45636b" : a.decision === "rejected" ? "#dc2626" : "#f59e0b");
       return `<a href="${escapeHtml(url)}" style="display:inline-block;padding:10px 24px;background:${color};color:white;text-decoration:none;border-radius:24px;font-size:14px;font-weight:600;margin-right:8px;">${escapeHtml(a.label)}</a>`;
     })

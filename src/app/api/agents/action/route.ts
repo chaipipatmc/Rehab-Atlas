@@ -1,7 +1,7 @@
 /**
  * Owner Action Endpoint
- * Handles approve/reject clicks from agent notification emails.
- * GET /api/agents/action?token={hmac}&decision=approved&center_id={optional}
+ * GET  → Shows a branded confirmation page with "Confirm" button
+ * POST → Executes the action (approve/reject/needs_info)
  */
 
 import { NextResponse } from "next/server";
@@ -9,12 +9,12 @@ import { validateActionToken, updateTaskStatus, logAgentAction, getAppUrl } from
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendLeadForwardEmail } from "@/lib/email/send";
 
+// GET: Show confirmation page (user clicks email link → sees branded page → clicks Confirm)
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const token = url.searchParams.get("token");
-  const decision = url.searchParams.get("decision");
-  const centerId = url.searchParams.get("center_id");
-  const note = url.searchParams.get("note") || "";
+  const token = url.searchParams.get("t") || url.searchParams.get("token");
+  const decision = url.searchParams.get("d") || url.searchParams.get("decision");
+  const centerId = url.searchParams.get("c") || url.searchParams.get("center_id");
 
   // Dashboard redirect (from daily digest)
   if (decision === "dashboard") {
@@ -22,37 +22,98 @@ export async function GET(request: Request) {
   }
 
   if (!token || !decision || !["approved", "rejected", "needs_info"].includes(decision)) {
-    return htmlResponse("Invalid Request", "Missing or invalid parameters.", 400);
+    return brandedPage("Invalid Request", "Missing or invalid parameters.", 400);
   }
 
-  // Validate token
+  // Validate token before showing the page
   const parsed = validateActionToken(token);
   if (!parsed) {
-    return htmlResponse("Link Expired", "This action link has expired. Please use the admin dashboard instead.", 410);
+    return brandedPage("Link Expired", "This action link has expired (24h). Please use the admin dashboard instead.", 410);
   }
 
+  // Check task exists and hasn't been actioned
   const admin = createAdminClient();
+  const { data: task } = await admin.from("agent_tasks").select("id, agent_type, entity_type, owner_decision").eq("id", parsed.taskId).single();
 
-  // Get the task
-  const { data: task, error } = await admin
-    .from("agent_tasks")
-    .select("*")
-    .eq("id", parsed.taskId)
-    .single();
-
-  if (error || !task) {
-    return htmlResponse("Task Not Found", "This task no longer exists.", 404);
+  if (!task) {
+    return brandedPage("Task Not Found", "This task no longer exists.", 404);
   }
 
   if (task.owner_decision) {
-    return htmlResponse("Already Decided", `This task was already ${task.owner_decision} on ${new Date(task.decided_at).toLocaleDateString()}.`, 409);
+    return brandedPage("Already Decided", `This task was already <strong>${task.owner_decision}</strong>. No further action needed.`, 200);
   }
 
-  // Execute post-action based on agent type + decision
+  // Show confirmation page with a POST form
+  const decisionLabel = decision === "approved" ? "Approve" : decision === "rejected" ? "Reject" : "Request More Info";
+  const decisionColor = decision === "approved" ? "#45636b" : decision === "rejected" ? "#dc2626" : "#f59e0b";
+  const agentLabel = task.agent_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confirm Action — Rehab-Atlas</title>
+<style>
+  body{font-family:'Inter',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6f7;color:#2d3436;}
+  .card{background:white;border-radius:16px;padding:48px;max-width:420px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
+  .brand{font-family:'Noto Serif',Georgia,serif;font-size:22px;color:#45636b;margin:0 0 4px;}
+  .agent{font-size:11px;color:#9aa5a9;text-transform:uppercase;letter-spacing:2px;margin:0 0 24px;}
+  h1{font-size:20px;color:#2d3436;margin:0 0 8px;}
+  p{font-size:14px;color:#5a6a70;line-height:1.6;margin:0 0 24px;}
+  .btn{display:inline-block;padding:12px 32px;color:white;text-decoration:none;border-radius:24px;font-size:14px;font-weight:600;border:none;cursor:pointer;margin:4px;}
+  .btn-secondary{background:#e5e7eb;color:#5a6a70;}
+</style></head>
+<body>
+<div class="card">
+  <p class="brand">Rehab-Atlas</p>
+  <p class="agent">${agentLabel} Agent</p>
+  <h1>Confirm: ${decisionLabel}</h1>
+  <p>Are you sure you want to <strong>${decisionLabel.toLowerCase()}</strong> this ${task.entity_type.replace(/_/g, " ")}?</p>
+  <form method="POST" action="/api/agents/action">
+    <input type="hidden" name="token" value="${token}" />
+    <input type="hidden" name="decision" value="${decision}" />
+    ${centerId ? `<input type="hidden" name="center_id" value="${centerId}" />` : ""}
+    <button type="submit" class="btn" style="background:${decisionColor};">Confirm ${decisionLabel}</button>
+    <a href="/admin" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+</body></html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
+// POST: Execute the action
+export async function POST(request: Request) {
+  const formData = await request.formData();
+  const token = formData.get("token") as string;
+  const decision = formData.get("decision") as string;
+  const centerId = (formData.get("center_id") as string) || null;
+  const note = (formData.get("note") as string) || "";
+
+  if (!token || !decision || !["approved", "rejected", "needs_info"].includes(decision)) {
+    return brandedPage("Invalid Request", "Missing or invalid parameters.", 400);
+  }
+
+  const parsed = validateActionToken(token);
+  if (!parsed) {
+    return brandedPage("Link Expired", "This action link has expired (24h). Please use the admin dashboard instead.", 410);
+  }
+
+  const admin = createAdminClient();
+  const { data: task, error } = await admin.from("agent_tasks").select("*").eq("id", parsed.taskId).single();
+
+  if (error || !task) {
+    return brandedPage("Task Not Found", "This task no longer exists.", 404);
+  }
+
+  if (task.owner_decision) {
+    return brandedPage("Already Decided", `This task was already <strong>${task.owner_decision}</strong>. No further action needed.`, 200);
+  }
+
   try {
     await executePostAction(task, decision, centerId, admin);
 
-    // Update task
     await updateTaskStatus(task.id, decision === "approved" ? "approved" : decision === "rejected" ? "rejected" : "pending", {
       owner_decision: decision,
       owner_note: note,
@@ -66,11 +127,12 @@ export async function GET(request: Request) {
       details: { center_id: centerId, note },
     });
 
-    const label = decision === "approved" ? "Approved" : decision === "rejected" ? "Rejected" : "Marked for Follow-up";
-    return htmlResponse("Action Completed", `Task has been ${label.toLowerCase()} successfully.`, 200);
+    const label = decision === "approved" ? "Approved ✓" : decision === "rejected" ? "Rejected" : "Marked for Follow-up";
+    const icon = decision === "approved" ? "✅" : decision === "rejected" ? "❌" : "📝";
+    return brandedPage(`${icon} ${label}`, `The ${task.entity_type.replace(/_/g, " ")} has been ${label.toLowerCase()} successfully.`, 200);
   } catch (err) {
     console.error("Agent action failed:", err);
-    return htmlResponse("Action Failed", "Something went wrong. Please try again from the dashboard.", 500);
+    return brandedPage("Action Failed", "Something went wrong. Please try again from the admin dashboard.", 500);
   }
 }
 
@@ -88,7 +150,6 @@ async function executePostAction(
     switch (agentType) {
       case "center_admin": {
         if (entityType === "center_edit_request") {
-          // Apply edit request changes
           const { data: editReq } = await admin
             .from("center_edit_requests")
             .select("center_id, changes")
@@ -103,14 +164,12 @@ async function executePostAction(
             }).eq("id", entityId);
           }
         } else {
-          // Publish center
           await admin.from("centers").update({ status: "published" }).eq("id", entityId);
         }
         break;
       }
 
       case "content_admin": {
-        // Publish page/blog
         await admin.from("pages").update({
           status: "published",
           published_at: new Date().toISOString(),
@@ -121,7 +180,6 @@ async function executePostAction(
       case "lead_verify": {
         if (!centerId) break;
 
-        // Forward lead to selected center
         const { data: lead } = await admin.from("leads").select("*").eq("id", entityId).single();
         const { data: center } = await admin
           .from("centers")
@@ -130,18 +188,15 @@ async function executePostAction(
           .single();
 
         if (lead && center?.inquiry_email) {
-          // Create audit record
           await admin.from("lead_forwards").insert({
             lead_id: entityId,
             center_id: centerId,
-            forwarded_by: null, // agent-forwarded
+            forwarded_by: null,
             method: "email",
           });
 
-          // Update lead status
           await admin.from("leads").update({ status: "forwarded" }).eq("id", entityId);
 
-          // Send email to center
           await sendLeadForwardEmail({
             centerName: center.name,
             centerEmail: center.inquiry_email,
@@ -178,17 +233,26 @@ async function executePostAction(
   }
 }
 
-function htmlResponse(title: string, message: string, status: number) {
+function brandedPage(title: string, message: string, status: number) {
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title} — Rehab-Atlas Agent</title>
-<style>body{font-family:'Inter',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6f7;color:#2d3436;}
-.card{background:white;border-radius:16px;padding:48px;max-width:420px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
-h1{font-family:'Noto Serif',Georgia,serif;font-size:24px;color:#45636b;margin:0 0 12px;}
-p{font-size:15px;color:#5a6a70;line-height:1.6;margin:0 0 24px;}
-a{display:inline-block;padding:10px 28px;background:#45636b;color:white;text-decoration:none;border-radius:24px;font-size:14px;font-weight:600;}
+<title>${title} — Rehab-Atlas</title>
+<style>
+  body{font-family:'Inter',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6f7;color:#2d3436;}
+  .card{background:white;border-radius:16px;padding:48px;max-width:420px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
+  .brand{font-family:'Noto Serif',Georgia,serif;font-size:22px;color:#45636b;margin:0 0 24px;}
+  h1{font-size:20px;color:#2d3436;margin:0 0 12px;}
+  p{font-size:14px;color:#5a6a70;line-height:1.6;margin:0 0 24px;}
+  a.btn{display:inline-block;padding:10px 28px;background:#45636b;color:white;text-decoration:none;border-radius:24px;font-size:14px;font-weight:600;}
 </style></head>
-<body><div class="card"><h1>${title}</h1><p>${message}</p><a href="/admin/agents">Go to Dashboard</a></div></body></html>`;
+<body>
+<div class="card">
+  <p class="brand">Rehab-Atlas</p>
+  <h1>${title}</h1>
+  <p>${message}</p>
+  <a href="/admin" class="btn">Go to Dashboard</a>
+</div>
+</body></html>`;
 
   return new Response(html, {
     status,
