@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Metadata } from "next";
 import type { Components } from "react-markdown";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/shared/json-ld";
@@ -229,7 +230,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       {/* Article Content */}
       <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12 max-w-3xl">
         <article>
-          <ReactMarkdown components={blogMdComponents}>{cleanContent}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={blogMdComponents}>{cleanContent}</ReactMarkdown>
         </article>
 
         {/* Author Box */}

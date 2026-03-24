@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ArrowLeft, Scale, FileText, ShieldCheck, AlertCircle, BookOpen, Calendar } from "lucide-react";
 import type { Metadata } from "next";
 import type { Components } from "react-markdown";
@@ -203,7 +204,7 @@ export default async function CMSPage({ params }: PageProps) {
 
           <div className="px-6 sm:px-8 md:px-12 py-8 md:py-14">
             <article>
-              <ReactMarkdown components={mdComponents}>{content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{content}</ReactMarkdown>
             </article>
           </div>
 

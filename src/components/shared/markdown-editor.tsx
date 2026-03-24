@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, Quote, Link2, Image as ImageIcon,
@@ -369,6 +370,7 @@ export function MarkdownEditor({ value, onChange, placeholder, minHeight = "400p
             {value ? (
               <div className="prose prose-sm max-w-none prose-headings:font-serif prose-headings:text-foreground prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground">
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     h1: ({ children }) => <h1 className="text-2xl font-semibold font-serif text-foreground mt-6 mb-3">{children}</h1>,
                     h2: ({ children }) => <h2 className="text-xl font-semibold font-serif text-foreground mt-5 mb-2">{children}</h2>,
