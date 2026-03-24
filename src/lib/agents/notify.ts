@@ -34,19 +34,9 @@ export async function sendAgentEmail(params: {
 }): Promise<void> {
   const appUrl = getAppUrl();
 
-  // Build action section — use plain-text URLs to avoid Resend's click-tracking proxy
-  // (Resend rewrites <a href> tags through a proxy with SSL cert issues)
-  const actionButtons = params.actions
-    .map((a) => {
-      const url = `${appUrl}/api/agents/action?t=${a.token}&d=${a.decision}${a.center_id ? `&c=${a.center_id}` : ""}`;
-      const color = a.color || (a.decision === "approved" ? "#45636b" : a.decision === "rejected" ? "#dc2626" : "#f59e0b");
-      return `<div style="margin-bottom:12px;">
-        <span style="display:inline-block;padding:8px 20px;background:${color};color:white;border-radius:24px;font-size:14px;font-weight:600;">${escapeHtml(a.label)}</span>
-        <div style="margin-top:6px;font-size:12px;color:#6b7d82;">Copy and paste this link in your browser:</div>
-        <div style="margin-top:4px;padding:10px 14px;background:#f4f6f7;border-radius:8px;font-size:13px;font-family:monospace;word-break:break-all;color:#2d3436;">${escapeHtml(url)}</div>
-      </div>`;
-    })
-    .join("\n");
+  // Simple link to admin dashboard — avoids Resend's click-tracking proxy issues
+  const actionButtons = `<div style="font-size:13px;color:#6b7d82;margin-bottom:8px;">Log in to review and take action:</div>
+    <div style="padding:10px 14px;background:#f4f6f7;border-radius:8px;font-size:13px;font-family:monospace;color:#2d3436;">${appUrl}/admin/agents</div>`;
 
   const html = `
     <div style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#2d3436;">

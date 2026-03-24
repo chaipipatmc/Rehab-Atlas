@@ -27,6 +27,8 @@ interface AgentTaskRow {
   ai_summary: string | null;
   created_at: string;
   owner_decision: string | null;
+  action_token: string | null;
+  checklist: Record<string, unknown> | null;
 }
 
 const AGENT_INFO = {
@@ -70,6 +72,8 @@ export default function AdminAgentsPage() {
   const [tasks, setTasks] = useState<AgentTaskRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [actioning, setActioning] = useState<string | null>(null);
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -81,7 +85,7 @@ export default function AdminAgentsPage() {
       const supabase = createClient();
       const { data } = await supabase
         .from("agent_tasks")
-        .select("id, agent_type, entity_type, status, ai_recommendation, ai_summary, created_at, owner_decision")
+        .select("id, agent_type, entity_type, status, ai_recommendation, ai_summary, created_at, owner_decision, action_token, checklist")
         .order("created_at", { ascending: false })
         .limit(20);
       setTasks((data || []) as AgentTaskRow[]);
@@ -106,6 +110,32 @@ export default function AdminAgentsPage() {
       toast.error("Failed to update agent");
     }
     setToggling(null);
+  }
+
+  async function handleAction(taskId: string, token: string, decision: string) {
+    setActioning(taskId);
+    try {
+      const form = new FormData();
+      form.append("token", token);
+      form.append("decision", decision);
+      const res = await fetch("/api/agents/action", { method: "POST", body: form });
+      if (res.ok) {
+        toast.success(`Task ${decision}`);
+        // Refresh tasks
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("agent_tasks")
+          .select("id, agent_type, entity_type, status, ai_recommendation, ai_summary, created_at, owner_decision, action_token, checklist")
+          .order("created_at", { ascending: false })
+          .limit(20);
+        setTasks((data || []) as AgentTaskRow[]);
+      } else {
+        toast.error("Action failed");
+      }
+    } catch {
+      toast.error("Action failed");
+    }
+    setActioning(null);
   }
 
   if (loading) return <div className="animate-pulse h-96 bg-surface-container rounded-2xl" />;
@@ -181,6 +211,7 @@ export default function AdminAgentsPage() {
               <th className="text-left px-6 py-3 font-medium">Recommendation</th>
               <th className="text-left px-6 py-3 font-medium">Status</th>
               <th className="text-left px-6 py-3 font-medium">Date</th>
+              <th className="text-left px-6 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -188,11 +219,18 @@ export default function AdminAgentsPage() {
               const agentInfo = AGENT_INFO[task.agent_type as keyof typeof AGENT_INFO];
               const statusInfo = STATUS_CONFIG[task.status] || STATUS_CONFIG.pending;
               const StatusIcon = statusInfo.icon;
+              const isExpanded = expandedTask === task.id;
+              const isAwaiting = task.status === "awaiting_owner";
 
               return (
-                <tr key={task.id} className="border-t border-surface-container-low hover:bg-surface-container-low/50 transition-colors duration-200">
-                  <td className="px-6 py-4 text-sm font-medium text-foreground">
-                    {agentInfo?.label || task.agent_type}
+                <tr key={task.id} className="border-t border-surface-container-low hover:bg-surface-container-low/50 transition-colors duration-200 align-top">
+                  <td className="px-6 py-4">
+                    <button onClick={() => setExpandedTask(isExpanded ? null : task.id)} className="text-left">
+                      <p className="text-sm font-medium text-foreground">{agentInfo?.label || task.agent_type}</p>
+                      {isExpanded && task.ai_summary && (
+                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-xs">{task.ai_summary}</p>
+                      )}
+                    </button>
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">
                     {task.entity_type}
@@ -217,12 +255,35 @@ export default function AdminAgentsPage() {
                   <td className="px-6 py-4 text-xs text-muted-foreground">
                     {new Date(task.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </td>
+                  <td className="px-6 py-4">
+                    {isAwaiting && task.action_token && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleAction(task.id, task.action_token!, "approved")}
+                          disabled={actioning === task.id}
+                          className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-3 py-1 transition-colors disabled:opacity-50"
+                        >
+                          {actioning === task.id ? "..." : "Approve"}
+                        </button>
+                        <button
+                          onClick={() => handleAction(task.id, task.action_token!, "rejected")}
+                          disabled={actioning === task.id}
+                          className="text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-full px-3 py-1 transition-colors disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                    {task.owner_decision && (
+                      <span className="text-xs text-muted-foreground capitalize">{task.owner_decision}</span>
+                    )}
+                  </td>
                 </tr>
               );
             })}
             {tasks.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground">
                   No agent activity yet. Enable an agent above to get started.
                 </td>
               </tr>
