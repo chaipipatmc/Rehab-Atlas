@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inquiry Received - RehabAtlas</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Noto+Serif:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-background": "#2b3437",
+              "on-secondary-fixed": "#304246",
+              "on-tertiary-container": "#3a5162",
+              "surface-bright": "#f8f9fa",
+              "primary-fixed": "#c8e8f2",
+              "primary-fixed-dim": "#badae3",
+              "primary": "#45636b",
+              "on-secondary": "#edfcff",
+              "secondary": "#4f6266",
+              "on-surface": "#2b3437",
+              "surface-dim": "#d1dce0",
+              "secondary-fixed": "#d2e6eb",
+              "inverse-surface": "#0c0f10",
+              "on-secondary-container": "#425559",
+              "primary-container": "#c8e8f2",
+              "inverse-on-surface": "#9b9d9e",
+              "tertiary-fixed": "#c7e0f5",
+              "outline-variant": "#abb3b7",
+              "primary-dim": "#39575f",
+              "on-primary-fixed": "#25444c",
+              "on-primary-fixed-variant": "#426068",
+              "on-tertiary-fixed": "#273e4f",
+              "surface-container-low": "#f1f4f6",
+              "tertiary-dim": "#3e5667",
+              "secondary-fixed-dim": "#c4d8dc",
+              "on-error": "#fff7f6",
+              "surface-container": "#eaeff1",
+              "error-container": "#fe8983",
+              "surface-container-highest": "#dbe4e7",
+              "on-primary": "#ecfaff",
+              "surface-container-high": "#e3e9ec",
+              "surface-tint": "#45636b",
+              "on-secondary-fixed-variant": "#4c5f63",
+              "tertiary-fixed-dim": "#b9d2e7",
+              "surface-variant": "#dbe4e7",
+              "on-tertiary-fixed-variant": "#435b6c",
+              "inverse-primary": "#cdeef7",
+              "on-tertiary": "#f5f9ff",
+              "on-surface-variant": "#586064",
+              "error-dim": "#4e0309",
+              "error": "#9f403d",
+              "tertiary": "#4a6274",
+              "outline": "#737c7f",
+              "on-error-container": "#752121",
+              "surface": "#f8f9fa",
+              "tertiary-container": "#c7e0f5",
+              "on-primary-container": "#38565e",
+              "background": "#f8f9fa",
+              "secondary-dim": "#44565a",
+              "surface-container-lowest": "#ffffff",
+              "secondary-container": "#d2e6eb"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .serif-anchor { font-family: 'Noto Serif', serif; }
+        .sans-anchor { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 no-border bg-surface-container-low">
+<nav class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+<div class="text-xl font-serif font-bold text-[#45636b] dark:text-[#f8f9fa] tracking-tight">
+                RehabAtlas
+            </div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-slate-500 dark:text-slate-400 font-sans hover:text-[#39575f] dark:hover:text-white transition-colors duration-300" href="#">Directory</a>
+<a class="text-slate-500 dark:text-slate-400 font-sans hover:text-[#39575f] dark:hover:text-white transition-colors duration-300" href="#">Resources</a>
+<a class="text-slate-500 dark:text-slate-400 font-sans hover:text-[#39575f] dark:hover:text-white transition-colors duration-300" href="#">Support</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-500 dark:text-slate-400 p-2">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</nav>
+</header>
+<main class="flex-grow flex items-center justify-center px-6 py-20 relative overflow-hidden">
+<!-- Abstract Background Elements -->
+<div class="absolute top-0 left-0 w-full h-full pointer-events-none opacity-30">
+<div class="absolute top-[-10%] left-[-5%] w-96 h-96 bg-primary-container rounded-full blur-3xl"></div>
+<div class="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-tertiary-container rounded-full blur-3xl"></div>
+</div>
+<!-- Success Content Container -->
+<div class="max-w-2xl w-full text-center z-10">
+<!-- Success Icon -->
+<div class="mb-12 inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary-container text-primary shadow-sm">
+<span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'wght' 300;">check_circle</span>
+</div>
+<!-- Headline -->
+<h1 class="font-headline text-4xl md:text-5xl text-on-surface mb-6 leading-tight">
+                Thank you. We've received your request.
+            </h1>
+<!-- Supportive Message -->
+<div class="space-y-6 mb-12">
+<p class="text-lg md:text-xl text-on-surface-variant leading-relaxed">
+                    A RehabAtlas specialist is now reviewing your information to ensure the best possible match for your needs. We prioritize discretion and clinical alignment in every step of our process.
+                </p>
+<div class="inline-block px-6 py-3 bg-surface-container-low rounded-xl border border-outline-variant/15">
+<p class="text-primary font-medium flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">schedule</span>
+                        You can expect a confidential call or message from our team within 2-4 hours.
+                    </p>
+</div>
+</div>
+<!-- CTAs -->
+<div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+<a class="w-full sm:w-auto px-8 py-4 bg-primary text-on-primary rounded-full font-medium hover:bg-primary-dim transition-all duration-300 flex items-center justify-center gap-3 shadow-md" href="#">
+<span class="material-symbols-outlined text-xl">chat</span>
+                    Contact via WhatsApp
+                </a>
+<a class="w-full sm:w-auto px-8 py-4 bg-surface-container-highest text-on-surface rounded-full font-medium hover:bg-surface-dim transition-all duration-300 flex items-center justify-center gap-3" href="#">
+                    Browse More Centers
+                </a>
+</div>
+<!-- Trust Elements -->
+<div class="flex flex-col items-center gap-4 pt-12 border-t border-outline-variant/10">
+<div class="flex items-center gap-6 opacity-70 grayscale">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">verified_user</span>
+<span class="text-xs font-semibold tracking-wider uppercase text-on-surface-variant">HIPAA Compliant</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">lock</span>
+<span class="text-xs font-semibold tracking-wider uppercase text-on-surface-variant">Secure Data</span>
+</div>
+</div>
+<p class="text-sm text-slate-500 max-w-md mx-auto italic">
+                    Your journey to recovery is protected by the highest standards of data privacy and medical confidentiality.
+                </p>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full mt-auto bg-[#f1f4f6] dark:bg-slate-800/50 tonal shift using surface-container-low">
+<div class="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-6 max-w-7xl mx-auto">
+<div class="font-serif text-lg text-[#45636b] dark:text-[#f8f9fa]">
+                RehabAtlas
+            </div>
+<div class="flex flex-wrap justify-center gap-6">
+<a class="font-sans text-sm text-slate-600 dark:text-slate-400 hover:text-[#45636b] dark:hover:text-white transition-all" href="#">Privacy Policy</a>
+<a class="font-sans text-sm text-slate-600 dark:text-slate-400 hover:text-[#45636b] dark:hover:text-white transition-all" href="#">Terms of Service</a>
+<a class="font-sans text-sm text-slate-600 dark:text-slate-400 hover:text-[#45636b] dark:hover:text-white transition-all" href="#">Contact Support</a>
+<a class="font-sans text-sm text-slate-600 dark:text-slate-400 hover:text-[#45636b] dark:hover:text-white transition-all" href="#">Discreet Consultation</a>
+</div>
+<p class="font-sans text-sm text-slate-600 dark:text-slate-400 opacity-70">
+                © 2024 RehabAtlas. Your privacy is our priority.
+            </p>
+</div>
+</footer>
+</body></html>

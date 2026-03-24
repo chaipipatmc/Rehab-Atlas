@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Search Results | RehabAtlas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-bright": "#f8f9fa",
+              "on-tertiary-fixed-variant": "#435b6c",
+              "secondary": "#4f6266",
+              "secondary-dim": "#44565a",
+              "on-primary-fixed": "#25444c",
+              "primary-dim": "#39575f",
+              "on-primary-fixed-variant": "#426068",
+              "background": "#f8f9fa",
+              "on-surface": "#2b3437",
+              "tertiary": "#4a6274",
+              "tertiary-fixed-dim": "#b9d2e7",
+              "primary-container": "#c8e8f2",
+              "surface-tint": "#45636b",
+              "on-surface-variant": "#586064",
+              "on-secondary-container": "#425559",
+              "surface-container-low": "#f1f4f6",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ecfaff",
+              "surface-container": "#eaeff1",
+              "on-background": "#2b3437",
+              "on-tertiary-fixed": "#273e4f",
+              "surface-container-high": "#e3e9ec",
+              "inverse-surface": "#0c0f10",
+              "on-secondary": "#edfcff",
+              "primary-fixed": "#c8e8f2",
+              "inverse-primary": "#cdeef7",
+              "on-secondary-fixed": "#304246",
+              "on-error": "#fff7f6",
+              "secondary-container": "#d2e6eb",
+              "primary": "#45636b",
+              "secondary-fixed-dim": "#c4d8dc",
+              "on-secondary-fixed-variant": "#4c5f63",
+              "outline-variant": "#abb3b7",
+              "primary-fixed-dim": "#badae3",
+              "surface-variant": "#dbe4e7",
+              "error-dim": "#4e0309",
+              "tertiary-dim": "#3e5667",
+              "surface-dim": "#d1dce0",
+              "on-tertiary": "#f5f9ff",
+              "error-container": "#fe8983",
+              "on-tertiary-container": "#3a5162",
+              "error": "#9f403d",
+              "surface": "#f8f9fa",
+              "on-error-container": "#752121",
+              "secondary-fixed": "#d2e6eb",
+              "tertiary-container": "#c7e0f5",
+              "inverse-on-surface": "#9b9d9e",
+              "tertiary-fixed": "#c7e0f5",
+              "on-primary-container": "#38565e",
+              "surface-container-highest": "#dbe4e7",
+              "outline": "#737c7f"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .serif { font-family: 'Noto Serif', serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+<div class="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
+<div class="text-2xl font-serif font-bold text-[#45636b] dark:text-[#5c828d] tracking-tight">RehabAtlas</div>
+<nav class="hidden md:flex items-center space-gap-8 gap-8">
+<a class="text-[#45636b] dark:text-[#5c828d] font-semibold border-b-2 border-[#45636b] pb-1 text-sm tracking-wide" href="#">Browse</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm tracking-wide" href="#">Resources</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm tracking-wide" href="#">About</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm tracking-wide" href="#">Inquiries</a>
+</nav>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex items-center bg-surface-container-low rounded-full px-4 py-1.5 border border-transparent focus-within:border-primary/30 transition-all">
+<span class="material-symbols-outlined text-outline text-sm mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-48 text-on-surface" placeholder="Search facilities..." type="text"/>
+</div>
+<button class="material-symbols-outlined text-[#45636b] text-2xl hover:bg-slate-50 p-2 rounded-full transition-all">account_circle</button>
+</div>
+</div>
+<div class="bg-slate-100/50 dark:bg-slate-800/50 h-[1px] w-full absolute bottom-0"></div>
+</header>
+<main class="pt-28 pb-20 px-4 md:px-8 max-w-7xl mx-auto">
+<!-- Breadcrumbs -->
+<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-outline mb-8 px-2">
+<a class="hover:text-primary transition-colors" href="#">Home</a>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Search</a>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-on-surface-variant font-medium">Recovery Centers</span>
+</nav>
+<div class="flex flex-col lg:flex-row gap-12">
+<!-- Sidebar Filters -->
+<aside class="w-full lg:w-72 flex-shrink-0 space-y-10">
+<div>
+<h3 class="serif text-xl font-bold text-on-surface mb-6">Refine Search</h3>
+<div class="space-y-8">
+<!-- Care Type -->
+<div class="group">
+<label class="block text-xs font-bold uppercase tracking-widest text-outline mb-4">Care Type</label>
+<div class="space-y-3">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="rounded-sm border-outline-variant text-primary focus:ring-primary/20 bg-surface-container-low transition-all" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface">Inpatient Detox</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded-sm border-outline-variant text-primary focus:ring-primary/20 bg-surface-container-low transition-all" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface">Residential Care</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded-sm border-outline-variant text-primary focus:ring-primary/20 bg-surface-container-low transition-all" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface">Outpatient Services</span>
+</label>
+</div>
+</div>
+<!-- Duration -->
+<div>
+<label class="block text-xs font-bold uppercase tracking-widest text-outline mb-4">Duration</label>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-xs font-medium">30 Days</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium hover:bg-surface-container-highest transition-all">60 Days</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium hover:bg-surface-container-highest transition-all">90+ Days</button>
+</div>
+</div>
+<!-- Insurance -->
+<div>
+<label class="block text-xs font-bold uppercase tracking-widest text-outline mb-4">Insurance Provider</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg text-sm text-on-surface-variant py-2.5 px-4 focus:ring-1 focus:ring-primary/20">
+<option>Private Insurance</option>
+<option>Medicare/Medicaid</option>
+<option>Out-of-Pocket</option>
+</select>
+</div>
+<!-- Amenities -->
+<div>
+<label class="block text-xs font-bold uppercase tracking-widest text-outline mb-4">Amenities</label>
+<div class="space-y-3">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded-sm border-outline-variant text-primary focus:ring-primary/20 bg-surface-container-low transition-all" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface">Private Rooms</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded-sm border-outline-variant text-primary focus:ring-primary/20 bg-surface-container-low transition-all" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface">Wellness &amp; Spa</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded-sm border-outline-variant text-primary focus:ring-primary/20 bg-surface-container-low transition-all" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface">Nature Trails</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Subtle Map View Card -->
+<div class="relative h-64 w-full rounded-xl overflow-hidden bg-surface-container group">
+<img class="w-full h-full object-cover grayscale opacity-60 group-hover:scale-105 transition-transform duration-700" data-alt="Clean minimal grayscale map of a coastal city" data-location="Coastal Region" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6U5ejytuAuBwo3I02zPGIt6jLfVKzaSr_zZIdJwQWgw2nlYpXcWV9fHc9eOZ50e10_6XFhFsQl-CYMc51uUiP6uNRh--9pml0K0Vl9avgGOXujiP-nKX47Ur7u5jiTeDF3x7by43yfAuOvSRkKGsy5X1mOUDpUVZiPTkkmjgSm7x0E3ZBrwfv92pE8zVbPdcag78fFGM5bjzofM8Nf5LNVikJItpIBsbsVj53brTN55B3gZe9lb4SCvMza4_hd5V2pp2VYaBCcXGn"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container/80 to-transparent"></div>
+<button class="absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-2 bg-white/90 backdrop-blur text-primary text-xs font-bold rounded-full shadow-sm hover:bg-white transition-all">
+                        EXPAND MAP
+                    </button>
+</div>
+</aside>
+<!-- Results Section -->
+<section class="flex-1">
+<div class="flex items-baseline justify-between mb-8">
+<h2 class="serif text-3xl font-bold text-on-surface">Found 24 Destinations</h2>
+<span class="text-sm text-outline">Sort by: <span class="text-on-surface font-semibold cursor-pointer">Recommended</span></span>
+</div>
+<div class="space-y-8">
+<!-- Result Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-6 flex flex-col md:flex-row gap-8 transition-all duration-500 hover:translate-y-[-4px] hover:shadow-[0_20px_40px_-15px_rgba(69,99,107,0.08)] group">
+<div class="w-full md:w-64 h-48 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" data-alt="Luxury wellness resort with natural lighting and soft textures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFK3wMbkNuDCoa0gqLAmqCcQ8K_NzTuwLaLv23zkm16W0MZD2-dTGN1C2l3d2Hedbxeq1-3HdXGj01zqgkKcW4ncvXfx6FJfq0U5pwHZc2yY2n7anmry1sqrJpTDR1JeipAPnjncPSQx7wB-mIO7EROuqxpxFkzxO6EAES0bbRrMnGDKt9W-XQwgrne-KxF2ED8BgxdLm_WWjl8anbBqBCpsq0VI6otJmB6lTQ8nLyQUqB1201M32y1WGT7FQ2J7GkdK9B5igzNI0r"/>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="serif text-2xl font-bold text-[#45636b]">The Azure Sanctuary</h3>
+<div class="flex items-center gap-1 text-[#45636b]">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">4.9</span>
+</div>
+</div>
+<p class="text-sm text-outline mb-4 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                    Carmel-by-the-Sea, California
+                                </p>
+<p class="text-on-surface-variant text-sm leading-relaxed max-w-lg">
+                                    A holistic environment focused on emotional restoration and neuro-recovery. Featuring private garden villas and evidence-based clinical programs.
+                                </p>
+</div>
+<div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+<div class="flex gap-4">
+<span class="text-[11px] uppercase tracking-widest font-bold text-primary bg-primary/5 px-3 py-1 rounded-sm">Dual Diagnosis</span>
+<span class="text-[11px] uppercase tracking-widest font-bold text-on-tertiary-fixed-variant bg-tertiary/5 px-3 py-1 rounded-sm">Executive Program</span>
+</div>
+<button class="text-sm font-semibold text-[#45636b] hover:text-primary-dim transition-colors flex items-center gap-2 group/btn">
+                                    Send Inquiry via RehabAtlas
+                                    <span class="material-symbols-outlined text-sm transition-transform group-hover/btn:translate-x-1">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Result Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-6 flex flex-col md:flex-row gap-8 transition-all duration-500 hover:translate-y-[-4px] hover:shadow-[0_20px_40px_-15px_rgba(69,99,107,0.08)] group">
+<div class="w-full md:w-64 h-48 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" data-alt="Peaceful interior of a modern mountain retreat with large windows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2qjwuv20Nni31TVO2OsF0fS54yvY4nc8GxWeZFoxDTIlDfqW0Y3NJyuPM1eIHZVxasNcsJXHwbfy4fI5WzzMRyanPbKX9B5tAJ3RMJDsZ6RqxLmRLvSmrA48o0R2rUP93Ijx6jqfuJVMVif-E3J11b7qNNqlk_j9r1ehyYc86rLQDL4orDMnAmQZIEf6qcZ306raDYyaxEXhzD5WaETZGiYgABHvikqN1MEVqpYALekVLXn7ntg840gYcgPFEmVWCIdgFhgBv8Yyi"/>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="serif text-2xl font-bold text-[#45636b]">Cedar Ridge Highlands</h3>
+<div class="flex items-center gap-1 text-[#45636b]">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">4.7</span>
+</div>
+</div>
+<p class="text-sm text-outline mb-4 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                    Aspen, Colorado
+                                </p>
+<p class="text-on-surface-variant text-sm leading-relaxed max-w-lg">
+                                    Nature-integrated therapy designed for sensory grounding. Specialized in long-term behavioral transformation through quiet immersion.
+                                </p>
+</div>
+<div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+<div class="flex gap-4">
+<span class="text-[11px] uppercase tracking-widest font-bold text-primary bg-primary/5 px-3 py-1 rounded-sm">Trauma Informed</span>
+<span class="text-[11px] uppercase tracking-widest font-bold text-on-tertiary-fixed-variant bg-tertiary/5 px-3 py-1 rounded-sm">Pet Friendly</span>
+</div>
+<button class="text-sm font-semibold text-[#45636b] hover:text-primary-dim transition-colors flex items-center gap-2 group/btn">
+                                    Send Inquiry via RehabAtlas
+                                    <span class="material-symbols-outlined text-sm transition-transform group-hover/btn:translate-x-1">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Result Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl p-6 flex flex-col md:flex-row gap-8 transition-all duration-500 hover:translate-y-[-4px] hover:shadow-[0_20px_40px_-15px_rgba(69,99,107,0.08)] group">
+<div class="w-full md:w-64 h-48 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" data-alt="Quiet reading lounge in a clinical but warm environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmVFaJ8lZS7lsUNZCR80MieUeK2l5ucIap_1qFBoklREhLYV5JKvm4U0P0jn0hbPI0fpm-1Ek436KudQHJ7qiHycFDvPbU0VhxF3ZKpaWhsXDhnMpXlHk1D3tX0TaPlYPrIA2wnIyEdZIJDKnH76warnkIIrfDtnGugUPelBxFp65JK6kiluUymbS1PowU9NsUcriwXZoAuaXq05XlRFkYxpfUSa8cbSkefUwGIX0Q8CMiHZK6gMZDOiI9aDdIHdA8hw87WMR_r4ZW"/>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="serif text-2xl font-bold text-[#45636b]">Veritas Clinical Suites</h3>
+<div class="flex items-center gap-1 text-[#45636b]">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">5.0</span>
+</div>
+</div>
+<p class="text-sm text-outline mb-4 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                    Austin, Texas
+                                </p>
+<p class="text-on-surface-variant text-sm leading-relaxed max-w-lg">
+                                    Discreet medical detox and stabilization in an upscale urban setting. Professional staff-to-patient ratio of 1:1 for intensive care.
+                                </p>
+</div>
+<div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+<div class="flex gap-4">
+<span class="text-[11px] uppercase tracking-widest font-bold text-primary bg-primary/5 px-3 py-1 rounded-sm">Medical Detox</span>
+<span class="text-[11px] uppercase tracking-widest font-bold text-on-tertiary-fixed-variant bg-tertiary/5 px-3 py-1 rounded-sm">24/7 Nursing</span>
+</div>
+<button class="text-sm font-semibold text-[#45636b] hover:text-primary-dim transition-colors flex items-center gap-2 group/btn">
+                                    Send Inquiry via RehabAtlas
+                                    <span class="material-symbols-outlined text-sm transition-transform group-hover/btn:translate-x-1">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination -->
+<div class="mt-16 flex justify-center gap-2">
+<button class="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-on-primary text-sm font-bold">1</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-all text-on-surface-variant text-sm font-medium">2</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-all text-on-surface-variant text-sm font-medium">3</button>
+<span class="px-2 self-center text-outline">...</span>
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-all text-on-surface-variant text-sm font-medium">8</button>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] md:hidden">
+<a class="flex flex-col items-center justify-center bg-[#45636b]/10 dark:bg-[#45636b]/20 text-[#45636b] dark:text-[#5c828d] rounded-2xl px-5 py-2" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-serif text-[11px] font-medium mt-1">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-[#45636b] transition-all" href="#">
+<span class="material-symbols-outlined">star</span>
+<span class="font-serif text-[11px] font-medium mt-1">Featured</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-[#45636b] transition-all" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-serif text-[11px] font-medium mt-1">Resources</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-[#45636b] transition-all" href="#">
+<span class="material-symbols-outlined">mail</span>
+<span class="font-serif text-[11px] font-medium mt-1">Inquiries</span>
+</a>
+</nav>
+<!-- Footer -->
+<footer class="w-full py-16 px-8 mt-20 bg-[#f1f4f6] dark:bg-slate-950">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+<div class="space-y-4">
+<div class="font-serif text-lg text-[#45636b]">RehabAtlas</div>
+<p class="font-serif body text-sm leading-relaxed text-slate-500 dark:text-slate-400 max-w-xs">
+                    © 2024 RehabAtlas. A discreet sanctuary for recovery. Professional guidance for high-standard care.
+                </p>
+</div>
+<div class="flex flex-wrap gap-x-8 gap-y-4 md:justify-end items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Privacy Policy</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Terms of Service</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Medical Disclaimer</a>
+<a class="text-[#45636b] underline text-sm" href="#">Contact Specialist</a>
+</div>
+</div>
+</footer>
+</body></html>

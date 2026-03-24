@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Azure Crest Institute | Serene Recovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-dim": "#d1dce0",
+                        "secondary": "#4f6266",
+                        "on-tertiary": "#f5f9ff",
+                        "on-secondary-container": "#425559",
+                        "tertiary-container": "#c7e0f5",
+                        "error": "#9f403d",
+                        "tertiary-fixed-dim": "#b9d2e7",
+                        "on-surface-variant": "#586064",
+                        "primary-container": "#c8e8f2",
+                        "surface-container-high": "#e3e9ec",
+                        "secondary-container": "#d2e6eb",
+                        "on-tertiary-fixed-variant": "#435b6c",
+                        "on-tertiary-container": "#3a5162",
+                        "outline": "#737c7f",
+                        "primary-fixed": "#c8e8f2",
+                        "secondary-fixed": "#d2e6eb",
+                        "primary-fixed-dim": "#badae3",
+                        "primary": "#45636b",
+                        "on-error-container": "#752121",
+                        "surface-container-highest": "#dbe4e7",
+                        "secondary-dim": "#44565a",
+                        "surface-tint": "#45636b",
+                        "error-container": "#fe8983",
+                        "surface-variant": "#dbe4e7",
+                        "surface-container-low": "#f1f4f6",
+                        "on-primary": "#ecfaff",
+                        "on-secondary-fixed-variant": "#4c5f63",
+                        "on-surface": "#2b3437",
+                        "inverse-on-surface": "#9b9d9e",
+                        "inverse-primary": "#cdeef7",
+                        "surface-container": "#eaeff1",
+                        "on-error": "#fff7f6",
+                        "tertiary-dim": "#3e5667",
+                        "on-background": "#2b3437",
+                        "on-primary-container": "#38565e",
+                        "secondary-fixed-dim": "#c4d8dc",
+                        "surface": "#f8f9fa",
+                        "inverse-surface": "#0c0f10",
+                        "background": "#f8f9fa",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#426068",
+                        "error-dim": "#4e0309",
+                        "outline-variant": "#abb3b7",
+                        "primary-dim": "#39575f",
+                        "tertiary": "#4a6274",
+                        "surface-bright": "#f8f9fa",
+                        "on-secondary": "#edfcff",
+                        "on-primary-fixed": "#25444c",
+                        "tertiary-fixed": "#c7e0f5",
+                        "on-tertiary-fixed": "#273e4f",
+                        "on-secondary-fixed": "#304246"
+                    },
+                    fontFamily: {
+                        "headline": ["Noto Serif"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+        }
+        .text-shadow-sm {
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+<div class="flex justify-between items-center px-8 py-6 max-w-7xl mx-auto">
+<span class="font-serif text-2xl tracking-tight text-[#2C4A52] dark:text-white uppercase">SERENE RECOVERY</span>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Our Philosophy</a>
+<a class="text-[#45636b] dark:text-white font-semibold border-b border-[#45636b]" href="#">Treatment</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Locations</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Resources</a>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-medium hover:bg-primary-dim transition-all duration-300">
+                Contact Us
+            </button>
+</div>
+</nav>
+<!-- Sidebar Navigation (Desktop Inquiry) -->
+<aside class="fixed right-8 top-32 w-80 hidden lg:block z-40">
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-2xl shadow-slate-200/50">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container">medical_services</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-[#2C4A52]">Admissions</h3>
+<p class="text-xs text-slate-500">Available 24/7</p>
+</div>
+</div>
+<nav class="space-y-2 mb-8">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" href="#overview">
+<span class="material-symbols-outlined text-sm">info</span> Overview
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" href="#amenities">
+<span class="material-symbols-outlined text-sm">spa</span> Amenities
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" href="#team">
+<span class="material-symbols-outlined text-sm">medical_services</span> Clinical Team
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-[#45636b] text-white rounded-full transition-all" href="#inquiry">
+<span class="material-symbols-outlined text-sm">mail</span> Inquiry
+                </a>
+</nav>
+<button class="w-full py-4 bg-primary text-on-primary rounded-full font-bold uppercase tracking-widest text-xs hover:bg-primary-dim transition-colors">
+                Call Specialist
+            </button>
+</div>
+</aside>
+<main class="pt-28 pb-20 px-4 md:px-8 max-w-7xl mx-auto">
+<!-- Hero Section -->
+<section class="mb-20">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-end mb-12">
+<div class="lg:col-span-7">
+<div class="flex flex-wrap gap-3 mb-6">
+<span class="inline-flex items-center px-3 py-1 bg-primary-container text-on-primary-container text-[10px] font-bold uppercase tracking-widest rounded-full">
+<span class="material-symbols-outlined text-xs mr-1" style="font-variation-settings: 'FILL' 1;">verified</span> Verified
+                        </span>
+<span class="inline-flex items-center px-3 py-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-widest rounded-full">
+                            Trusted Partner
+                        </span>
+</div>
+<h1 class="font-headline text-5xl md:text-6xl text-on-surface mb-4 leading-tight">The Azure Crest Institute</h1>
+<div class="flex items-center gap-4 text-outline mb-8">
+<span class="flex items-center">
+<span class="material-symbols-outlined text-sm mr-1">location_on</span> Carmel-by-the-Sea, California
+                        </span>
+<span class="flex items-center">
+<span class="material-symbols-outlined text-sm mr-1 text-primary" style="font-variation-settings: 'FILL' 1;">star</span> 4.9 (120+ reviews)
+                        </span>
+</div>
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+<button class="px-8 py-4 bg-primary text-on-primary rounded-full font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
+                            Submit Inquiry via RehabAtlas
+                        </button>
+<a class="flex items-center gap-2 text-primary font-medium hover:underline decoration-2 underline-offset-4 transition-all" href="#">
+                            Request a Confidential Call <span class="material-symbols-outlined text-sm">call</span>
+</a>
+</div>
+</div>
+<div class="lg:col-span-5 text-right">
+<p class="text-label text-xs uppercase tracking-widest text-outline mb-1">Monthly Investment</p>
+<p class="font-headline text-3xl text-on-surface">$35,000 - $55,000</p>
+</div>
+</div>
+<!-- Image Gallery: Bento Style -->
+<div class="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-4 h-[600px]">
+<div class="md:col-span-2 md:row-span-2 relative overflow-hidden rounded-2xl group">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="Serene saltwater pool overlooking the ocean at luxury rehab center" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7xXx9_Bcb8F0XtanMJ-ff20YHD4M_9kjtVygXsYVW_vRtyp-oL7bo1Iaoa_0_AFjqZOM2z32FzbP4PLcAFfl1z2H3uhj2BmNTHF679xiouYgjZvXzBrP90PmZLpuZ7yyZaDrnqfgbRkmyWy9mceUOxxlhGNV0-IRzcZtV69SBzq28igEZIPcD79O-4NImA3Burva7jLWr-qihpOWIh9PsOUCo5Bydz7p9Wes2uANjRy4pc4aLIuwgWFSpFFtQ_FR9h6Ix1Yxm5WyB"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
+<span class="text-white font-medium">Oceanfront Saltwater Pool</span>
+</div>
+</div>
+<div class="md:col-span-2 relative overflow-hidden rounded-2xl group">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="Luxurious private suite with neutral tones and soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmIWRhTYrSUCBzBTaKalNaXcGb_coSwvONWa11TU3-fcycdy5Z9O7Pmm7lhITMVdn-InJFycv943vn8QdsMF6HweM5Yj9iXukUMeGSoJhBVHZ3nujoLhUu_3OgOyMcPlWspxHSmkROZ9k6j8ZQjwOJWt1Tg4yBMJCrLcxK55T8q8kdK-NNxw9vpwGPadvRzUfdrKwfMn6swNMdag7aJnVaW_eXYNckpvSwf5HyGZJfxaaqplCeCwOJJbasX3vfZU2C9eA8HJeH-Gd6"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
+<span class="text-white font-medium">Executive Private Suites</span>
+</div>
+</div>
+<div class="relative overflow-hidden rounded-2xl group">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="Zen garden with carefully manicured paths and lush greenery" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvVPHPrkAxOD93oLUj_daDz9JpEcX0Vwgfy5n8C7R6u5Ob2cFVRdmyUlRHaI8bDQnElZB9bnRZ_B6R3ZRIO3fQxdqfwY1Z2x4KXnEWct1vQFrd49vF5-g3ei5hAxcFgZuH9EkWYf6BeKE_fvWX-c06xf0cDlLeu4lVaj2f7rc2Zi34OE3HQC9L-2Q0BrbMfgwr3Yf9ENpV8yrehYrMBcS5b2wjK3V67sevuEsA_Y8aQDnwuqudbgpqwvy13BpzdjG3raONwmTpdv3Z"/>
+</div>
+<div class="relative overflow-hidden rounded-2xl group">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="Detox spa room with ambient blue lighting and medical equipment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHipqefsJpUbhssu5zjtf698pHj3osz0T_pkC38eQFzAPqxJqGX-6T6N_MnIwmhc2bYs4ao1dJEpbyvHtVnrx5pGyCawwHopY3kRbWsxvzuHcAej-B-71Xdjd_CcqdPbQBq19KgrTUOtefhNHwDcAnAK1FKGu8Wfmq9fLHLxCPRdexj-Y2a2MjOvE4fKHm3nDRyv7-_L2AgZZWRKYpWElkOXDVFASYPuNh2t-u4Y9pqSpcmZTWsj26AJKENn8oDtT1cMyv_Hc9Cflh"/>
+</div>
+</div>
+</section>
+<!-- Personalization Banner -->
+<section class="mb-20 bg-primary-container/30 border-l-4 border-primary p-8 rounded-r-2xl">
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary text-3xl">psychology_alt</span>
+<div>
+<h3 class="font-headline text-xl mb-2">Why this center fits your profile</h3>
+<p class="text-on-primary-container/80 leading-relaxed">
+                        Based on your assessment, this center matches your preference for <span class="font-semibold text-primary-dim">private suites</span> and <span class="font-semibold text-primary-dim">dual-diagnosis expertise</span>. Our matching algorithm ranks this as a 98% compatibility for your specific recovery goals.
+                    </p>
+</div>
+</div>
+</section>
+<!-- Main Content Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
+<!-- Left Column: Detailed Info -->
+<div class="lg:col-span-2 space-y-24">
+<!-- Overview -->
+<section id="overview">
+<h2 class="font-headline text-3xl mb-8 flex items-center gap-3">
+<span class="w-8 h-[1px] bg-primary"></span> Sanctuary &amp; Focus
+                    </h2>
+<p class="font-headline text-2xl text-secondary mb-10 italic leading-relaxed">
+                        "A premier coastal sanctuary specializing in holistic recovery and neurological restoration."
+                    </p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div>
+<h4 class="text-xs uppercase tracking-widest font-bold text-outline mb-4">Treatment Focus</h4>
+<div class="flex flex-wrap gap-2">
+<span class="px-4 py-2 bg-surface-container-high rounded-lg text-sm font-medium">Substance Abuse</span>
+<span class="px-4 py-2 bg-surface-container-high rounded-lg text-sm font-medium">Mental Health</span>
+<span class="px-4 py-2 bg-surface-container-high rounded-lg text-sm font-medium">Dual Diagnosis</span>
+</div>
+</div>
+<div>
+<h4 class="text-xs uppercase tracking-widest font-bold text-outline mb-4">Conditions Treated</h4>
+<ul class="space-y-2 text-on-surface/80">
+<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span> Alcoholism</li>
+<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span> Anxiety &amp; Panic Disorders</li>
+<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span> PTSD &amp; Complex Trauma</li>
+<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span> Treatment-Resistant Depression</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- Program & Therapies -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-8 p-10 bg-surface-container-low rounded-3xl">
+<div class="text-center">
+<span class="material-symbols-outlined text-primary-dim text-4xl mb-4">calendar_today</span>
+<h4 class="font-headline text-lg mb-2">Duration</h4>
+<p class="text-sm text-outline">30, 60, or 90 day intensive programs</p>
+</div>
+<div class="text-center border-x border-outline-variant/20">
+<span class="material-symbols-outlined text-primary-dim text-4xl mb-4">groups</span>
+<h4 class="font-headline text-lg mb-2">Patient Ratio</h4>
+<p class="text-sm text-outline">1:1 Clinical staff-to-patient attention</p>
+</div>
+<div class="text-center">
+<span class="material-symbols-outlined text-primary-dim text-4xl mb-4">self_improvement</span>
+<h4 class="font-headline text-lg mb-2">Approach</h4>
+<p class="text-sm text-outline">CBT, Eco-Therapy, &amp; Equine-Assisted</p>
+</div>
+</section>
+<!-- Amenities -->
+<section id="amenities">
+<h2 class="font-headline text-3xl mb-8 flex items-center gap-3">
+<span class="w-8 h-[1px] bg-primary"></span> Living Experience
+                    </h2>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+<div class="space-y-4">
+<div class="aspect-square bg-surface-container-highest rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">bed</span>
+</div>
+<p class="text-center text-sm font-medium">Private Suites</p>
+</div>
+<div class="space-y-4">
+<div class="aspect-square bg-surface-container-highest rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">pool</span>
+</div>
+<p class="text-center text-sm font-medium">Saltwater Pool</p>
+</div>
+<div class="space-y-4">
+<div class="aspect-square bg-surface-container-highest rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">spa</span>
+</div>
+<p class="text-center text-sm font-medium">Detox Spa</p>
+</div>
+<div class="space-y-4">
+<div class="aspect-square bg-surface-container-highest rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">menu_book</span>
+</div>
+<p class="text-center text-sm font-medium">Curated Library</p>
+</div>
+</div>
+</section>
+<!-- Editorial Review -->
+<section class="bg-surface-container-lowest p-12 rounded-[2rem] shadow-sm relative overflow-hidden">
+<div class="absolute top-0 right-0 p-8 opacity-10">
+<span class="material-symbols-outlined text-9xl">format_quote</span>
+</div>
+<h4 class="text-xs uppercase tracking-widest font-bold text-primary mb-6">RehabAtlas Editorial Review</h4>
+<p class="font-headline text-2xl leading-relaxed text-on-surface mb-8">
+                        "The Azure Crest Institute manages to balance medical rigor with a profound sense of tranquility. It is, in every sense, a digital sanctuary for healing where every detail—from the pH-balanced saltwater pool to the bespoke nutrition plans—is designed for restoration."
+                    </p>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-dim overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Headshot of a professional medical reviewer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXADimTJsymxh-bGsgdBGJR6mmINDkZ5cZiAs5AYwVnKMHIY-iea6pAdyrss9K5qcQl35UjAng6yx4oJShCaS9tarqDcGexUZGH3BYkhqBzhCLGNBa6H9FhsNFDfG2blZH0syEiBJ8BrC1RJv00Wb9yAF12UNNdJlyqlUUWJgT6luf7LUm3cXbX8yIO5TkPMYRE-xFMCWFRiSPD0K1xuSrsmA2gpdtnkh9bQMbJAZmOMPO0nv8zQ2HCgPfuscvKlpI9lj4JujbHbN-"/>
+</div>
+<div>
+<p class="text-sm font-bold">Dr. Elena Sterling</p>
+<p class="text-xs text-outline">Chief Medical Editor, RehabAtlas</p>
+</div>
+</div>
+</section>
+<!-- FAQs -->
+<section>
+<h2 class="font-headline text-3xl mb-12">Common Inquiries</h2>
+<div class="space-y-6">
+<details class="group bg-surface-container p-6 rounded-2xl cursor-pointer">
+<summary class="flex justify-between items-center font-semibold list-none">
+                                What is the intake process?
+                                <span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<p class="mt-4 text-on-surface/70 text-sm leading-relaxed">
+                                Our intake process begins with a comprehensive RehabAtlas assessment. Once cleared, patients undergo a 48-hour medical stabilization period in our on-site detox wing before transitioning to their private suite.
+                            </p>
+</details>
+<details class="group bg-surface-container p-6 rounded-2xl cursor-pointer">
+<summary class="flex justify-between items-center font-semibold list-none">
+                                Are families involved in the program?
+                                <span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<p class="mt-4 text-on-surface/70 text-sm leading-relaxed">
+                                Yes, we offer a dedicated Family Healing Weekend once a month, conducted virtually or in-person at our Carmel annex, focused on systemic recovery and setting boundaries.
+                            </p>
+</details>
+</div>
+</section>
+<!-- Map Section -->
+<section>
+<div class="rounded-3xl overflow-hidden h-[400px] relative shadow-inner">
+<img class="w-full h-full object-cover grayscale opacity-80" data-alt="Stylized map showing the coastal location of Carmel-by-the-Sea" data-location="Carmel-by-the-Sea, California" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdIEezjvll46W8UfLMnggJFzOTIIYoksLa-5gMDAl8bSu277yqi9lYouBB3TORMnIZ4zOPeVutxsXUZKBaqqW5zyo8uoWRdyk13-tFbScVmfa-AbbJskc8iSDhiDewJvbP79DqnveIbytA1mq_j53s0JgqPR6FXRZ3lda7WJtXOJPGv2mDoERvYsJWUc9-nwe7EdQeUi4Op31dVMi-2ftekE3KmBtX2zeRMhki8DM4q19YJNuhSWQ8XTHX75f6TCMNCg3ZM_FeLiY5"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="bg-white p-4 rounded-full shadow-2xl flex items-center gap-3">
+<span class="w-4 h-4 rounded-full bg-primary animate-pulse"></span>
+<span class="font-bold text-sm">Azure Crest Institute</span>
+</div>
+</div>
+</div>
+<div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+<div>
+<h4 class="text-xs uppercase tracking-widest font-bold text-outline mb-4">Insurance Accepted</h4>
+<div class="flex flex-wrap gap-4 text-sm font-semibold text-secondary">
+<span>Blue Cross</span>
+<span class="text-outline-variant">•</span>
+<span>Aetna</span>
+<span class="text-outline-variant">•</span>
+<span>Cigna (Out-of-network)</span>
+</div>
+</div>
+<div class="flex gap-4 md:justify-end">
+<div class="text-right">
+<p class="text-[10px] uppercase font-bold text-outline">Accreditation</p>
+<p class="text-xs font-medium">Joint Commission • HIPAA</p>
+</div>
+<span class="material-symbols-outlined text-3xl text-primary">verified_user</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Sticky Inquiry Box -->
+<div class="lg:col-span-1">
+<div class="sticky top-32 space-y-6">
+<div class="bg-surface-container-highest p-8 rounded-3xl shadow-xl shadow-slate-200/50" id="inquiry">
+<h3 class="font-headline text-2xl mb-2">Start Your Journey Today</h3>
+<p class="text-sm text-outline mb-8">Personalized guidance from a specialist.</p>
+<form class="space-y-4">
+<div>
+<label class="block text-[10px] uppercase tracking-wider font-bold text-outline mb-2">Full Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="John Doe" type="text"/>
+</div>
+<div>
+<label class="block text-[10px] uppercase tracking-wider font-bold text-outline mb-2">Email Address</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="john@example.com" type="email"/>
+</div>
+<div>
+<label class="block text-[10px] uppercase tracking-wider font-bold text-outline mb-2">Phone (Optional)</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+<button class="w-full py-5 bg-primary text-on-primary rounded-full font-bold uppercase tracking-widest text-sm hover:bg-primary-dim transition-all mt-4" type="button">
+                                Complete Inquiry
+                            </button>
+</form>
+<div class="mt-8 flex gap-3 items-start opacity-70">
+<span class="material-symbols-outlined text-sm">lock</span>
+<p class="text-[10px] leading-relaxed">
+                                Your inquiry is confidential and managed directly by RehabAtlas specialists to ensure your privacy.
+                            </p>
+</div>
+</div>
+<!-- Bottom CTA for focus -->
+<div class="bg-secondary p-8 rounded-3xl text-on-secondary">
+<p class="text-xs font-bold uppercase tracking-widest mb-4 opacity-70">Not sure yet?</p>
+<h4 class="font-headline text-xl mb-6">Explore our curated collection of luxury sanctuaries.</h4>
+<a class="inline-flex items-center gap-2 font-bold text-sm border-b-2 border-primary-container pb-1 hover:gap-4 transition-all" href="#">
+                            Browse Alternatives <span class="material-symbols-outlined">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-slate-200/10 bg-[#f1f4f6] dark:bg-slate-950">
+<div class="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-4 max-w-7xl mx-auto">
+<div class="flex flex-col gap-2 items-center md:items-start">
+<span class="font-serif italic text-slate-400">Serene Recovery</span>
+<p class="text-xs text-slate-400 uppercase tracking-widest">© 2024 Serene Recovery Center. A Digital Sanctuary for Healing.</p>
+</div>
+<div class="flex gap-8">
+<a class="text-slate-400 text-xs uppercase tracking-widest hover:text-slate-900 transition-colors duration-300" href="#">Privacy Policy</a>
+<a class="text-slate-400 text-xs uppercase tracking-widest hover:text-slate-900 transition-colors duration-300" href="#">Accreditation</a>
+<a class="text-slate-400 text-xs uppercase tracking-widest hover:text-slate-900 transition-colors duration-300" href="#">Terms of Service</a>
+<a class="text-slate-400 text-xs uppercase tracking-widest hover:text-slate-900 transition-colors duration-300" href="#">Careers</a>
+</div>
+</div>
+</footer>
+</body></html>

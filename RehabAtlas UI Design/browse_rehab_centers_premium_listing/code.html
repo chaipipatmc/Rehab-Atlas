@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-bright": "#f8f9fa",
+              "surface": "#f8f9fa",
+              "surface-container": "#eaeff1",
+              "on-background": "#2b3437",
+              "error": "#9f403d",
+              "secondary-fixed": "#d2e6eb",
+              "on-error-container": "#752121",
+              "on-tertiary-fixed": "#273e4f",
+              "tertiary-fixed-dim": "#b9d2e7",
+              "error-container": "#fe8983",
+              "surface-variant": "#dbe4e7",
+              "on-secondary-container": "#425559",
+              "background": "#f8f9fa",
+              "primary-fixed-dim": "#badae3",
+              "on-tertiary-fixed-variant": "#435b6c",
+              "inverse-on-surface": "#9b9d9e",
+              "surface-container-low": "#f1f4f6",
+              "on-secondary": "#edfcff",
+              "on-secondary-fixed": "#304246",
+              "primary": "#45636b",
+              "on-tertiary-container": "#3a5162",
+              "outline-variant": "#abb3b7",
+              "on-primary": "#ecfaff",
+              "inverse-surface": "#0c0f10",
+              "on-primary-fixed-variant": "#426068",
+              "surface-container-high": "#e3e9ec",
+              "on-secondary-fixed-variant": "#4c5f63",
+              "primary-dim": "#39575f",
+              "secondary-dim": "#44565a",
+              "secondary-container": "#d2e6eb",
+              "tertiary-container": "#c7e0f5",
+              "surface-tint": "#45636b",
+              "on-tertiary": "#f5f9ff",
+              "surface-container-highest": "#dbe4e7",
+              "primary-fixed": "#c8e8f2",
+              "primary-container": "#c8e8f2",
+              "on-primary-fixed": "#25444c",
+              "secondary-fixed-dim": "#c4d8dc",
+              "tertiary-dim": "#3e5667",
+              "inverse-primary": "#cdeef7",
+              "on-error": "#fff7f6",
+              "surface-dim": "#d1dce0",
+              "tertiary-fixed": "#c7e0f5",
+              "on-surface": "#2b3437",
+              "error-dim": "#4e0309",
+              "secondary": "#4f6266",
+              "tertiary": "#4a6274",
+              "outline": "#737c7f",
+              "on-primary-container": "#38565e",
+              "on-surface-variant": "#586064",
+              "surface-container-lowest": "#ffffff"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .serif-italic { font-family: 'Noto Serif', serif; font-style: italic; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary-container">
+<!-- TopNavBar Implementation -->
+<nav class="fixed top-0 w-full flex justify-between items-center px-8 h-20 bg-white/80 backdrop-blur-md z-50 tonal-shift bg-slate-50">
+<div class="flex items-center gap-12">
+<span class="text-2xl font-serif italic font-bold text-[#45636b]">RehabAtlas</span>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-[#45636b] font-semibold border-b-2 border-[#45636b] py-1" href="#">Centers</a>
+<a class="text-slate-500 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Resources</a>
+<a class="text-slate-500 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">How it Works</a>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden lg:flex relative items-center">
+<span class="material-symbols-outlined absolute left-4 text-outline" data-icon="search">search</span>
+<input class="pl-12 pr-4 py-2 bg-surface-container-low rounded-full border-none focus:ring-2 focus:ring-primary/20 w-64 text-sm outline-none" placeholder="Search centers..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-full font-medium text-sm hover:bg-primary-dim transition-all duration-300 active:scale-95 shadow-sm">
+                Start Assessment
+            </button>
+</div>
+</nav>
+<main class="pt-20 min-h-screen flex">
+<!-- SideNavBar / Filters Implementation -->
+<aside class="h-[calc(100vh-5rem)] w-80 sticky top-20 flex flex-col p-6 gap-y-6 overflow-y-auto no-scrollbar bg-[#f1f4f6]">
+<div>
+<h2 class="text-lg font-serif text-[#45636b] mb-1">Refine Results</h2>
+<p class="text-xs text-on-surface-variant tracking-tight">Find your sanctuary</p>
+</div>
+<div class="space-y-6">
+<!-- Location Filter -->
+<div class="space-y-3">
+<label class="font-sans uppercase tracking-widest text-[10px] font-bold text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="public">public</span> Location
+                    </label>
+<select class="w-full bg-surface-container-lowest border-none rounded-xl text-sm p-3 focus:ring-2 focus:ring-primary/20 outline-none">
+<option>United States</option>
+<option>Canada</option>
+<option>United Kingdom</option>
+</select>
+</div>
+<!-- Treatment Type -->
+<div class="space-y-3">
+<label class="font-sans uppercase tracking-widest text-[10px] font-bold text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="healing">healing</span> Treatment Focus
+                    </label>
+<div class="space-y-2">
+<label class="flex items-center gap-3 group cursor-pointer">
+<input checked="" class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-primary transition-colors">Substance Abuse</span>
+</label>
+<label class="flex items-center gap-3 group cursor-pointer">
+<input class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-primary transition-colors">Mental Health</span>
+</label>
+<label class="flex items-center gap-3 group cursor-pointer">
+<input class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-primary transition-colors">Eating Disorders</span>
+</label>
+</div>
+</div>
+<!-- Budget Range -->
+<div class="space-y-3">
+<label class="font-sans uppercase tracking-widest text-[10px] font-bold text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="payments">payments</span> Budget Range
+                    </label>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 bg-primary text-white text-xs rounded-full font-medium">Luxury</button>
+<button class="px-3 py-1.5 bg-white text-on-surface-variant text-xs rounded-full font-medium hover:bg-slate-200 transition-colors">Mid-Range</button>
+<button class="px-3 py-1.5 bg-white text-on-surface-variant text-xs rounded-full font-medium hover:bg-slate-200 transition-colors">Affordable</button>
+</div>
+</div>
+<!-- Amenities -->
+<div class="space-y-3">
+<label class="font-sans uppercase tracking-widest text-[10px] font-bold text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="spa">spa</span> Amenities
+                    </label>
+<div class="grid grid-cols-1 gap-2">
+<label class="flex items-center gap-3 group cursor-pointer">
+<input class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-primary transition-colors">Private Suites</span>
+</label>
+<label class="flex items-center gap-3 group cursor-pointer">
+<input class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-primary transition-colors">Holistic Therapies</span>
+</label>
+</div>
+</div>
+<!-- Insurance -->
+<div class="space-y-3">
+<label class="font-sans uppercase tracking-widest text-[10px] font-bold text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="verified_user">verified_user</span> Insurance
+                    </label>
+<select class="w-full bg-surface-container-lowest border-none rounded-xl text-sm p-3 focus:ring-2 focus:ring-primary/20 outline-none">
+<option>All Providers</option>
+<option>Aetna</option>
+<option>Blue Cross Blue Shield</option>
+<option>Cigna</option>
+</select>
+</div>
+</div>
+<button class="mt-auto bg-primary text-on-primary w-full py-3 rounded-xl font-semibold text-sm hover:translate-x-1 transition-transform duration-300 active:scale-95 shadow-sm">
+                Apply Filters
+            </button>
+</aside>
+<!-- Right Main Content -->
+<section class="flex-1 p-12 bg-surface">
+<!-- Header Section -->
+<div class="max-w-7xl mx-auto mb-12 flex flex-col md:flex-row justify-between items-end gap-6">
+<div class="space-y-2">
+<h1 class="text-5xl font-serif italic text-[#45636b] tracking-tight leading-tight">Browse Rehab Centers</h1>
+<p class="text-on-surface-variant max-w-lg leading-relaxed">
+                        Curated healing environments tailored to your recovery journey. Each facility is vetted for excellence and compassionate care.
+                    </p>
+</div>
+<div class="flex items-center gap-4 bg-surface-container-low p-2 rounded-full">
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant pl-4">Sort by:</span>
+<select class="bg-transparent border-none text-sm font-semibold text-primary focus:ring-0 cursor-pointer pr-8">
+<option>Featured</option>
+<option>Highest Rated</option>
+<option>Price: Low to High</option>
+<option>Most Reviewed</option>
+</select>
+</div>
+</div>
+<!-- Grid Content -->
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+<!-- Card 1 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-outline-variant/10">
+<div class="relative h-64 overflow-hidden">
+<img alt="Azure Sanctuary" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Modern minimalist wellness retreat with pool and ocean view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYeVhPl43uhY-N_507nL7ZnQ77tgZa9c2O0qnvPpoRTVaECf4CASzHZAj4lR8QzVdWdOr30u05OHF0BWOSxoe9xzbNhsARfSknUEZyXcqiKKIDWK-wR9AZ8nWkcLrAD59gqyo_7OMxkoC8VhnFocmqXabphjLglpnQP58VMSKTucpa4aGZjDpVuUr7WdKdYG0g1wzS0K7VBuhJgX8fop7aFVoBXThFkruDoBW9L3Szn6l8eAxSCFWZT4ZK2pT4MXynavy0uAWLDMwK"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-white/90 backdrop-blur-md text-[#45636b] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Verified</span>
+<span class="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Partner</span>
+</div>
+</div>
+<div class="p-8 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-2xl font-serif italic text-on-surface">The Azure Sanctuary</h3>
+<div class="flex items-center gap-1 text-on-surface-variant text-sm mt-1">
+<span class="material-symbols-outlined text-base" data-icon="location_on">location_on</span>
+                                    Carmel, CA
+                                </div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container text-primary px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-sm fill-current" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">4.9</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">
+                            A coastal haven focused on holistic recovery, offering personalized detoxification and high-intensity therapeutic support.
+                        </p>
+<div class="pt-4 border-t border-surface-container flex justify-between items-center">
+<div>
+<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Starting at</span>
+<span class="text-lg font-semibold text-primary">$30k - $50k <span class="text-xs font-normal text-on-surface-variant">/ month</span></span>
+</div>
+<button class="bg-surface-container-highest text-on-surface px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-primary hover:text-white transition-all duration-300">
+                                View Profile
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+<div class="relative h-64 overflow-hidden">
+<img alt="Willow Peaks" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Luxury mountain estate with large windows and forest view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGIJsExVJb4cwdA7qtWwHDDEdpU2n-usKeVWk_sF6k_Cpq_cH96if2lWAGmzdQHYLDozOEsptIm6gesQw9wbmGkaO8G4JQ4pAHpeALRgb9_wiWr1T3oMYlALDHsz_ryEGtLc2et2VcaLkGa_0Fw4EfDBKP6JenPLY1Wflq71nB-jj28ELQwPxK-AtL_0bQr_Ty2omWC8V2_Uba9-na3i0XKmF9BrZe3Hc1QniZO1aQ7Oz5mxYIw7UEuo96h65GRK2brJTT-J_bqxhZ"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-white/90 backdrop-blur-md text-[#45636b] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Verified</span>
+</div>
+</div>
+<div class="p-8 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-2xl font-serif italic text-on-surface">Willow Peaks Lodge</h3>
+<div class="flex items-center gap-1 text-on-surface-variant text-sm mt-1">
+<span class="material-symbols-outlined text-base" data-icon="location_on">location_on</span>
+                                    Aspen, CO
+                                </div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container text-primary px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-sm fill-current" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">4.8</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">
+                            Premier mountain retreat specializing in dual-diagnosis treatment and trauma-informed cognitive behavioral therapy.
+                        </p>
+<div class="pt-4 border-t border-surface-container flex justify-between items-center">
+<div>
+<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Starting at</span>
+<span class="text-lg font-semibold text-primary">$45k - $70k <span class="text-xs font-normal text-on-surface-variant">/ month</span></span>
+</div>
+<button class="bg-surface-container-highest text-on-surface px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-primary hover:text-white transition-all duration-300">
+                                View Profile
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+<div class="relative h-64 overflow-hidden">
+<img alt="Serene Valley" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Quiet spa-like interior with neutral tones and soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRSZxYg9vv5of2-9__HZYfIzi48U3I33eetNryInc9cXxgeYD66j1VdiPejQaUJxTWvTY0qtUo0mtk8cZuk-gWRrST3rc8husaYwBjXz4mKR5rD4UCGwXz4loJLqqhmF5C0Wrv0SxAwCD3MIYce6oloQQA0TZ6VHntBAEQ79oyaN-zkP3fqsizIn8udT9macMneRVyeU1us411DmpMRpzo7405Op6u04Zq0EN5DOjVZFoYxouQHCgZN11gosWTB-h79YaAb5gFBnKe"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Partner</span>
+</div>
+</div>
+<div class="p-8 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-2xl font-serif italic text-on-surface">The Serene Valley</h3>
+<div class="flex items-center gap-1 text-on-surface-variant text-sm mt-1">
+<span class="material-symbols-outlined text-base" data-icon="location_on">location_on</span>
+                                    Sedona, AZ
+                                </div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container text-primary px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-sm fill-current" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">4.7</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">
+                            Nature-integrated wellness center focused on spiritual restoration and intensive outpatient mindfulness programs.
+                        </p>
+<div class="pt-4 border-t border-surface-container flex justify-between items-center">
+<div>
+<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Starting at</span>
+<span class="text-lg font-semibold text-primary">$25k - $40k <span class="text-xs font-normal text-on-surface-variant">/ month</span></span>
+</div>
+<button class="bg-surface-container-highest text-on-surface px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-primary hover:text-white transition-all duration-300">
+                                View Profile
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 4 (Asymmetric Layout Example) -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+<div class="relative h-64 overflow-hidden">
+<img alt="Palm Grove" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Boutique luxury resort with palm trees and sunset" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAMH1t5e4x1Ev3MtD45VefwcCgLiNK1lCHod5TAluEMG_So7-HEiJmR6QWI_ONUV0ZPCo69FqftpMtT2H6fIkp-lQIDhl6Vxqa2tSkqmx5s6Zl5SWPHSDbpia4FIPkgzlFWEaBtfRVZ71CS-whQSphKK7VU5MGhXJiKW9V-LYt3-mjHVV05D1ZDflWFwU9xvX6AmUrJIN1LurqryD45ckTVqQjFoWJezg-gUGSAkzxXtT0nqM9nCtpFV_dda6BlNBlehSmjGZbsKe3"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-white/90 backdrop-blur-md text-[#45636b] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Verified</span>
+</div>
+</div>
+<div class="p-8 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-2xl font-serif italic text-on-surface">Palm Grove Heights</h3>
+<div class="flex items-center gap-1 text-on-surface-variant text-sm mt-1">
+<span class="material-symbols-outlined text-base" data-icon="location_on">location_on</span>
+                                    Palm Springs, CA
+                                </div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container text-primary px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-sm fill-current" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">4.9</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">
+                            Discreet, high-end residential treatment for executives and professionals seeking privacy and clinical excellence.
+                        </p>
+<div class="pt-4 border-t border-surface-container flex justify-between items-center">
+<div>
+<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Starting at</span>
+<span class="text-lg font-semibold text-primary">$55k - $80k <span class="text-xs font-normal text-on-surface-variant">/ month</span></span>
+</div>
+<button class="bg-surface-container-highest text-on-surface px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-primary hover:text-white transition-all duration-300">
+                                View Profile
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+<div class="relative h-64 overflow-hidden">
+<img alt="Elysian Fields" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Spacious modern living room with natural wood and plants" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlrTXDdb7S7f-ZYxodKtA1m3U4DLPzcOSo2jraFjWFg7-rD6jLwWdSmDkt-FOHnNTwC5YXO_MasYXQFtMuNREUJrnZxvdq3nHI196hcCKZnhrxBIPrVJj2huO6D8j9zU7FvSJaiBhYslYYICJAEPBt_KA65h4rN88xQVfZI2wYJ8gJ85OXprmaTNGWEQSIS5bylJB9KzFtlTG22deINxyVWLsb9dqqLnSPPIxF5egKMYLzbcn4aZW3YkhP-i55Pt_9dh0YASmf0Eub"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-white/90 backdrop-blur-md text-[#45636b] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Verified</span>
+</div>
+</div>
+<div class="p-8 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-2xl font-serif italic text-on-surface">Elysian Fields</h3>
+<div class="flex items-center gap-1 text-on-surface-variant text-sm mt-1">
+<span class="material-symbols-outlined text-base" data-icon="location_on">location_on</span>
+                                    Austin, TX
+                                </div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container text-primary px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-sm fill-current" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">4.6</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">
+                            A community-centric approach to long-term recovery, featuring expert psychiatric care and vocational transition support.
+                        </p>
+<div class="pt-4 border-t border-surface-container flex justify-between items-center">
+<div>
+<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Starting at</span>
+<span class="text-lg font-semibold text-primary">$20k - $35k <span class="text-xs font-normal text-on-surface-variant">/ month</span></span>
+</div>
+<button class="bg-surface-container-highest text-on-surface px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-primary hover:text-white transition-all duration-300">
+                                View Profile
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 6 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+<div class="relative h-64 overflow-hidden">
+<img alt="Harbor Light" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Light-filled yoga studio with large windows and garden view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBNAsPd1JntwbYV8wU5F4ReVG1-jMGFRD3gb_N_SC7ql_Uww1V4tYBe1XUkLsMbMrFcEU6V61UT94IvhRsk3PecCM_Ad5mS92IOrmt_5IXZcMnX6orEm7Kl6PAxYgroVaMKhR6icCX-KpCXcc488nQYq-NTY7_Fii3K82EIb6T-PJHCEA-1fkQmKDMcWLaUaJV0pXBgHzBMy_zS4byyIn8UhMWtDkCAQ25CC6dH2-4c61owJlkJ9YY9PJ1rNETQRGirv5UQZ1LyCwz"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Partner</span>
+</div>
+</div>
+<div class="p-8 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-2xl font-serif italic text-on-surface">Harbor Light Haven</h3>
+<div class="flex items-center gap-1 text-on-surface-variant text-sm mt-1">
+<span class="material-symbols-outlined text-base" data-icon="location_on">location_on</span>
+                                    Miami, FL
+                                </div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container text-primary px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-sm fill-current" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold">4.8</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">
+                            Sun-drenched facility combining luxury amenities with evidence-based relapse prevention and wellness coaching.
+                        </p>
+<div class="pt-4 border-t border-surface-container flex justify-between items-center">
+<div>
+<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Starting at</span>
+<span class="text-lg font-semibold text-primary">$35k - $55k <span class="text-xs font-normal text-on-surface-variant">/ month</span></span>
+</div>
+<button class="bg-surface-container-highest text-on-surface px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-primary hover:text-white transition-all duration-300">
+                                View Profile
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination - Editorial Style -->
+<div class="max-w-7xl mx-auto mt-20 flex justify-center items-center gap-12 border-t border-surface-container pt-12">
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined">arrow_back</span> Previous
+                </button>
+<div class="flex items-center gap-8 text-sm font-medium">
+<span class="text-primary border-b-2 border-primary pb-1">01</span>
+<span class="text-on-surface-variant hover:text-primary cursor-pointer transition-colors">02</span>
+<span class="text-on-surface-variant hover:text-primary cursor-pointer transition-colors">03</span>
+<span class="text-on-surface-variant">...</span>
+<span class="text-on-surface-variant hover:text-primary cursor-pointer transition-colors">12</span>
+</div>
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors">
+                    Next <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Floating Action Button - Mobile/Contextual Suppression logic as per prompt -->
+<!-- Suppressed here as we are on a browsing/details list page which is task-focused -->
+</body></html>

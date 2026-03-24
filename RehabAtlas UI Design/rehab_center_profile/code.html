@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-bright": "#f8f9fa",
+                        "on-tertiary-fixed-variant": "#435b6c",
+                        "secondary": "#4f6266",
+                        "secondary-dim": "#44565a",
+                        "on-primary-fixed": "#25444c",
+                        "primary-dim": "#39575f",
+                        "on-primary-fixed-variant": "#426068",
+                        "background": "#f8f9fa",
+                        "on-surface": "#2b3437",
+                        "tertiary": "#4a6274",
+                        "tertiary-fixed-dim": "#b9d2e7",
+                        "primary-container": "#c8e8f2",
+                        "surface-tint": "#45636b",
+                        "on-surface-variant": "#586064",
+                        "on-secondary-container": "#425559",
+                        "surface-container-low": "#f1f4f6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ecfaff",
+                        "surface-container": "#eaeff1",
+                        "on-background": "#2b3437",
+                        "on-tertiary-fixed": "#273e4f",
+                        "surface-container-high": "#e3e9ec",
+                        "inverse-surface": "#0c0f10",
+                        "on-secondary": "#edfcff",
+                        "primary-fixed": "#c8e8f2",
+                        "inverse-primary": "#cdeef7",
+                        "on-secondary-fixed": "#304246",
+                        "on-error": "#fff7f6",
+                        "secondary-container": "#d2e6eb",
+                        "primary": "#45636b",
+                        "secondary-fixed-dim": "#c4d8dc",
+                        "on-secondary-fixed-variant": "#4c5f63",
+                        "outline-variant": "#abb3b7",
+                        "primary-fixed-dim": "#badae3",
+                        "surface-variant": "#dbe4e7",
+                        "error-dim": "#4e0309",
+                        "tertiary-dim": "#3e5667",
+                        "surface-dim": "#d1dce0",
+                        "on-tertiary": "#f5f9ff",
+                        "error-container": "#fe8983",
+                        "on-tertiary-container": "#3a5162",
+                        "error": "#9f403d",
+                        "surface": "#f8f9fa",
+                        "on-error-container": "#752121",
+                        "secondary-fixed": "#d2e6eb",
+                        "tertiary-container": "#c7e0f5",
+                        "inverse-on-surface": "#9b9d9e",
+                        "tertiary-fixed": "#c7e0f5",
+                        "on-primary-container": "#38565e",
+                        "surface-container-highest": "#dbe4e7",
+                        "outline": "#737c7f"
+                    },
+                    fontFamily: {
+                        "headline": ["Noto Serif"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Noto Serif', serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+<div class="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto relative">
+<span class="text-2xl font-serif font-bold text-[#45636b] dark:text-[#5c828d] tracking-tight">RehabAtlas</span>
+<div class="hidden md:flex items-center space-gap-8 gap-x-8">
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm tracking-wide" href="#">Browse</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm tracking-wide" href="#">Resources</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm tracking-wide" href="#">About</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm tracking-wide" href="#">Inquiries</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-slate-500 hover:text-[#45636b] transition-all p-2 rounded-full hover:bg-slate-50">account_circle</button>
+</div>
+<div class="bg-slate-100/50 dark:bg-slate-800/50 h-[1px] w-full absolute bottom-0 left-0"></div>
+</div>
+</nav>
+<main class="pt-20">
+<!-- Serene Image Gallery Section -->
+<section class="px-4 md:px-8 py-8 max-w-7xl mx-auto">
+<div class="grid grid-cols-12 gap-4 h-[400px] md:h-[600px]">
+<div class="col-span-12 md:col-span-8 rounded-xl overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="Serene luxury rehabilitation center exterior with lush greenery" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEG-Aea_D1hw2zKsS3ym_u-du0EkAQUqN_nbHsatMHqVyJAb71I42PzH00Xs5Vd8zMzookqd5etAnr3D_x73UI1dChg06ixf27ftMIdCrlxvYMTxjx0jn4mH4tTuyGSRdhkcgkjCSwTAwBhawAfFDItvw1Sm46lmRJkRXdDYvZhPDx8qTwZGvEACrvJtLj_zIZJE-xrKrCMR4beFPZZ2qMAEIsx3LBOkhEaxNhxirot5Ip7-n9tnXzGfzZ05a7OVqJDFyVsXU4LZ10"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+</div>
+<div class="hidden md:grid md:col-span-4 grid-rows-2 gap-4">
+<div class="rounded-xl overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Peaceful interior meditation room with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBN5vSQluocJM_U9ZSvUkfkdC0SYu1Ju0nn6O_jhiE1QSVRwfDd1v08lo0orSB0xVmZJKJhoLUMqpkob8s1lL1xijYENc3LmrJfdeJx9w5AzJ_Y98sIPRrN-33mKrfGsm0vN0yrdmphTmoOg-1Vz0sA-t54gqnq3-HL8QEYOfIoqy7jx-XueQ24yGpPawTHhvX-s8JCb0fY_eVfwRtXcZ8FYpajneWisEL1QOCI-kUkrXTg9kqk5CAh56ETe-Pj5jHzKaR_IY9F_KZ7"/>
+</div>
+<div class="rounded-xl overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="Infinity pool overlooking a calm mountain landscape" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvf4hQMDIE_nboZCQiIWM_LMrPPxgKK0WDJpTbcSoB4RXGKeyW6kMz8_A32HgjHgOGMivi7Q5xaLwjBNgFirJUGZyQSujf58hB2-tYAm9LxfrYQFSLbe5XKg9EgNtPXeb4b9efLv6LUXQgRyk05MQziHTGGk_DSW80hv4BSIXYB8DJYhu-SHnF6RGPynYP0LDcs327r89Vl2_JhKGMPy51CDttl5A5OmYkP9NwgYE-HQvocghDzMToVYAzXEIzGtvak7wdLl7Gp1b3"/>
+<div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full text-xs font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">grid_view</span>
+                            View 24 Photos
+                        </div>
+</div>
+</div>
+</div>
+</section>
+<!-- Editorial Content Layout -->
+<section class="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-8">
+<!-- Left Column: Content -->
+<div class="lg:col-span-8 space-y-20">
+<!-- Overview -->
+<article>
+<div class="mb-8">
+<span class="text-primary font-medium tracking-widest text-xs uppercase">Est. 1994 • Private Sanctuary</span>
+<h1 class="text-5xl md:text-6xl text-on-surface mt-4 mb-6 leading-tight">The Cedars Recovery Institute</h1>
+<div class="flex flex-wrap gap-3">
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-xs font-medium text-secondary">Holistic Approach</span>
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-xs font-medium text-secondary">Trauma-Informed Care</span>
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-xs font-medium text-secondary">Dual Diagnosis</span>
+</div>
+</div>
+<div class="space-y-6 text-on-surface-variant leading-relaxed text-lg">
+<p>Nestled within thirty acres of secluded woodland, The Cedars provides a tranquil environment designed for profound healing. Our program is built on the premise that recovery is not just the absence of illness, but the presence of meaning and connection.</p>
+<p>We limit our occupancy to ensure that every individual receives the personalized attention required for a transformative journey. Here, clinical excellence meets architectural serenity.</p>
+</div>
+</article>
+<!-- Treatment Philosophy -->
+<section class="grid md:grid-cols-2 gap-12 bg-surface-container-low p-12 rounded-xl">
+<div class="space-y-6">
+<h2 class="text-3xl text-on-surface">Treatment Philosophy</h2>
+<p class="text-on-surface-variant leading-relaxed">Our methodology blends evidence-based clinical practices with alternative therapies. We believe in treating the whole person—mind, body, and spirit—rather than just the symptoms of addiction.</p>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary mt-1">psychology</span>
+<div>
+<h4 class="font-semibold text-on-surface">Cognitive Behavioral Therapy</h4>
+<p class="text-sm text-on-surface-variant">Intensive 1-on-1 sessions with senior clinicians.</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary mt-1">nature_people</span>
+<div>
+<h4 class="font-semibold text-on-surface">Eco-Therapy</h4>
+<p class="text-sm text-on-surface-variant">Guided integration with the surrounding natural environment.</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary mt-1">self_improvement</span>
+<div>
+<h4 class="font-semibold text-on-surface">Mindfulness Practice</h4>
+<p class="text-sm text-on-surface-variant">Daily meditation and yoga sessions for emotional regulation.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Accommodations -->
+<article class="space-y-8">
+<h2 class="text-3xl text-on-surface">Accommodations</h2>
+<div class="grid md:grid-cols-2 gap-8">
+<div class="space-y-4">
+<img class="rounded-xl w-full h-64 object-cover" data-alt="Luxurious private suite with floor-to-ceiling windows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_NktnbpjbajqqVqCa34MNEm51TKz_if2-7Tn0El69cRG45nh950MMPdsDq2y4Lv7qwRsXqi54pK3zAYhqw9hm1G8pfHdwQSONdUy-kNxhfei5h9NU3BrKaUW4QX6yLpX7vlSF23CAI68YuObk4WLFSHQBtXJp6rYyXvIwukj8uzCpVD0Y-U-lMGAF1roF4tv45DTsLBfou4_uIG32QCs5HDLkkZWLLDfy7_mUW5QsXY4FxAS-HO1PkEQbJV8LcxPQhiuNA5rHn4su"/>
+<h3 class="text-xl">Private Suites</h3>
+<p class="text-on-surface-variant text-sm">Quiet, spacious rooms with organic linens, en-suite spa bathrooms, and private terraces overlooking the cedar groves.</p>
+</div>
+<div class="space-y-4">
+<img class="rounded-xl w-full h-64 object-cover" data-alt="Professional grade kitchen and dining area for residents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRzDBHVrstT_rVVbZDA4JbyzHFn4mVqWG6E0zEqI4mjZEvzYjII1NXvjk_X2EljUh1twg_9L1ArmnOv9FxtKR9URviiFWmzDSj8_f2qQvhruwnJsVsWWAGLUzX5RptGeVPrgCSAyarjiCiCK0XL1o7veUO_B5u111v52sQxOQ18ync_qFSRWta1xdlLEJupv7_iK-7QePLZkHRNI6P7F5r_lBih0phGsFuNZMsndPw5K6x1HK9WqeuEv3QDVWd8BYrRpjr-H5benop"/>
+<h3 class="text-xl">Nutritional Excellence</h3>
+<p class="text-on-surface-variant text-sm">Chef-prepared organic meals tailored to individual dietary needs, focusing on brain health and physical restoration.</p>
+</div>
+</div>
+</article>
+<!-- Amenities Section -->
+<section class="py-12 border-t border-surface-container-high">
+<h2 class="text-3xl text-on-surface mb-10">Amenities</h2>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+<div class="flex flex-col items-center text-center space-y-3">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container">pool</span>
+</div>
+<span class="text-sm font-medium text-secondary">Saltwater Pool</span>
+</div>
+<div class="flex flex-col items-center text-center space-y-3">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container">spa</span>
+</div>
+<span class="text-sm font-medium text-secondary">Detox Spa</span>
+</div>
+<div class="flex flex-col items-center text-center space-y-3">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container">fitness_center</span>
+</div>
+<span class="text-sm font-medium text-secondary">Private Gym</span>
+</div>
+<div class="flex flex-col items-center text-center space-y-3">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container">library_books</span>
+</div>
+<span class="text-sm font-medium text-secondary">Curated Library</span>
+</div>
+</div>
+</section>
+<!-- Testimonials -->
+<section class="bg-[#f1f4f6] p-12 rounded-xl italic">
+<h2 class="not-italic text-sm uppercase tracking-widest text-primary mb-8 font-semibold">Voices of Recovery</h2>
+<div class="space-y-12">
+<blockquote class="relative">
+<span class="material-symbols-outlined absolute -left-8 -top-4 text-primary-dim opacity-20 text-5xl">format_quote</span>
+<p class="text-xl text-on-surface-variant leading-relaxed">"The Cedars didn't just help my son find sobriety; they helped him find himself again. The level of care and discretion was beyond anything we expected."</p>
+<cite class="not-italic block mt-4 font-semibold text-on-surface text-sm">— The Mitchell Family</cite>
+</blockquote>
+<blockquote class="relative">
+<span class="material-symbols-outlined absolute -left-8 -top-4 text-primary-dim opacity-20 text-5xl">format_quote</span>
+<p class="text-xl text-on-surface-variant leading-relaxed">"A sanctuary in every sense of the word. The clinical team is exceptional, but the atmosphere of peace is what truly allows the work to happen."</p>
+<cite class="not-italic block mt-4 font-semibold text-on-surface text-sm">— A. Henderson, Alumnus</cite>
+</blockquote>
+</div>
+</section>
+</div>
+<!-- Right Column: Floating Sidebar -->
+<aside class="lg:col-span-4 relative">
+<div class="sticky top-28 bg-surface-container-lowest p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,0.04)] border border-outline-variant/15">
+<h3 class="text-2xl mb-2">Start Your Journey Today</h3>
+<p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Connect with a specialist to discuss admissions, insurance verification, and customized treatment plans.</p>
+<div class="space-y-4">
+<button class="w-full bg-primary hover:bg-primary-dim text-on-primary py-4 px-6 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2">
+                            Inquire via RehabAtlas Specialist
+                        </button>
+<button class="w-full bg-surface-container-highest hover:bg-surface-container-high text-on-surface py-4 px-6 rounded-full font-medium transition-all duration-300 text-sm">
+                            Download Brochure (PDF)
+                        </button>
+</div>
+<div class="mt-8 pt-8 border-t border-surface-container flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-sm">shield</span>
+<p class="text-[12px] text-on-surface-variant leading-tight">Your inquiry is managed by RehabAtlas for your privacy. All communications are strictly confidential and HIPAA compliant.</p>
+</div>
+<div class="mt-8 space-y-4">
+<div class="flex items-center gap-3 text-sm text-secondary">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+<span>Joint Commission Accredited</span>
+</div>
+<div class="flex items-center gap-3 text-sm text-secondary">
+<span class="material-symbols-outlined text-[20px]">credit_card</span>
+<span>Major Insurance Accepted</span>
+</div>
+</div>
+</div>
+</aside>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-16 px-8 mt-20 bg-[#f1f4f6] dark:bg-slate-950">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+<div class="space-y-4">
+<span class="font-serif text-lg text-[#45636b]">RehabAtlas</span>
+<p class="text-slate-500 dark:text-slate-400 max-w-xs font-serif text-sm leading-relaxed">© 2024 RehabAtlas. A discreet sanctuary for recovery.</p>
+</div>
+<div class="flex flex-wrap gap-x-8 gap-y-4 md:justify-end items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Privacy Policy</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Terms of Service</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Medical Disclaimer</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Contact Specialist</a>
+</div>
+</div>
+</footer>
+<!-- Bottom Navigation Bar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] md:hidden">
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-serif text-[11px] font-medium mt-1">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="star">star</span>
+<span class="font-serif text-[11px] font-medium mt-1">Featured</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-serif text-[11px] font-medium mt-1">Resources</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#45636b]/10 dark:bg-[#45636b]/20 text-[#45636b] dark:text-[#5c828d] rounded-2xl px-5 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="font-serif text-[11px] font-medium mt-1">Inquiries</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RehabAtlas | Assessment Wizard</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-fixed-dim": "#b9d2e7",
+              "tertiary-fixed": "#c7e0f5",
+              "on-error": "#fff7f6",
+              "on-primary-fixed-variant": "#426068",
+              "on-secondary-fixed": "#304246",
+              "on-tertiary-fixed-variant": "#435b6c",
+              "secondary-fixed-dim": "#c4d8dc",
+              "primary-fixed": "#c8e8f2",
+              "background": "#f8f9fa",
+              "on-primary": "#ecfaff",
+              "on-primary-container": "#38565e",
+              "surface-bright": "#f8f9fa",
+              "on-tertiary-fixed": "#273e4f",
+              "on-secondary-container": "#425559",
+              "surface-container-low": "#f1f4f6",
+              "on-tertiary": "#f5f9ff",
+              "on-surface-variant": "#586064",
+              "on-secondary": "#edfcff",
+              "inverse-primary": "#cdeef7",
+              "primary": "#45636b",
+              "secondary-dim": "#44565a",
+              "error-dim": "#4e0309",
+              "error": "#9f403d",
+              "on-primary-fixed": "#25444c",
+              "inverse-on-surface": "#9b9d9e",
+              "on-secondary-fixed-variant": "#4c5f63",
+              "on-tertiary-container": "#3a5162",
+              "surface-dim": "#d1dce0",
+              "inverse-surface": "#0c0f10",
+              "surface-tint": "#45636b",
+              "secondary-fixed": "#d2e6eb",
+              "outline": "#737c7f",
+              "surface-container": "#eaeff1",
+              "surface-container-lowest": "#ffffff",
+              "error-container": "#fe8983",
+              "surface-container-high": "#e3e9ec",
+              "on-surface": "#2b3437",
+              "on-error-container": "#752121",
+              "primary-fixed-dim": "#badae3",
+              "on-background": "#2b3437",
+              "tertiary-dim": "#3e5667",
+              "secondary": "#4f6266",
+              "tertiary-container": "#c7e0f5",
+              "surface": "#f8f9fa",
+              "secondary-container": "#d2e6eb",
+              "primary-container": "#c8e8f2",
+              "tertiary": "#4a6274",
+              "primary-dim": "#39575f",
+              "surface-container-highest": "#dbe4e7",
+              "outline-variant": "#abb3b7",
+              "surface-variant": "#dbe4e7"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .serif-text {
+            font-family: 'Noto Serif', serif;
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+        }
+        .step-progress-gradient {
+            background: linear-gradient(90deg, #45636b 25%, #dbe4e7 25%);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex flex-col min-h-screen">
+<!-- TopNavBar (Shared Component Shell) -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+<div class="flex justify-between items-center px-8 py-5 max-w-7xl mx-auto w-full">
+<div class="font-serif text-2xl font-bold text-[#45636b] dark:text-[#8baab3] tracking-tight">RehabAtlas</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#39575f] transition-colors duration-300" href="#">Support</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#39575f] transition-colors duration-300" href="#">Help Center</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#45636b] transition-colors duration-300">Save &amp; Exit</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col items-center justify-center pt-24 pb-12 px-6">
+<!-- Assessment Wizard Container -->
+<div class="w-full max-w-3xl flex flex-col gap-8">
+<!-- Progress Indicator -->
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<span class="font-sans text-xs uppercase tracking-widest text-outline">Step 2 of 8</span>
+<span class="font-sans text-xs uppercase tracking-widest text-primary font-bold">Personal Context</span>
+</div>
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full w-1/4 bg-primary rounded-full transition-all duration-700 ease-out"></div>
+</div>
+</div>
+<!-- Central Question Card -->
+<div class="bg-surface-container-lowest rounded-xl p-12 md:p-20 shadow-[0_32px_64px_-12px_rgba(43,52,55,0.06)] relative overflow-hidden">
+<!-- Decorative Subtle Gradient Element -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+<div class="relative z-10 flex flex-col items-center text-center space-y-12">
+<!-- Question Header -->
+<div class="space-y-4 max-w-lg">
+<h1 class="serif-text text-4xl md:text-5xl text-on-surface tracking-tight leading-tight">
+                            Who needs help today?
+                        </h1>
+<p class="text-on-surface-variant font-body leading-relaxed">
+                            Every journey to recovery starts with a single, honest step. Tell us who we are supporting today so we can tailor the next questions.
+                        </p>
+</div>
+<!-- Selection Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+<!-- Option: Myself -->
+<button class="group flex flex-col items-center p-10 rounded-xl bg-surface-container-low border border-transparent hover:bg-primary-container hover:border-primary/20 transition-all duration-300 text-center">
+<div class="w-16 h-16 rounded-full bg-surface-container-highest group-hover:bg-white flex items-center justify-center mb-6 transition-colors duration-300">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="person">person</span>
+</div>
+<span class="font-sans text-lg font-semibold text-on-surface-variant group-hover:text-on-primary-container">Myself</span>
+<span class="mt-2 font-sans text-sm text-outline group-hover:text-on-primary-container/70">I am seeking support for my own journey.</span>
+</button>
+<!-- Option: A Loved One -->
+<button class="group flex flex-col items-center p-10 rounded-xl bg-surface-container-low border border-transparent hover:bg-primary-container hover:border-primary/20 transition-all duration-300 text-center">
+<div class="w-16 h-16 rounded-full bg-surface-container-highest group-hover:bg-white flex items-center justify-center mb-6 transition-colors duration-300">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="family_restroom">family_restroom</span>
+</div>
+<span class="font-sans text-lg font-semibold text-on-surface-variant group-hover:text-on-primary-container">A Loved One</span>
+<span class="mt-2 font-sans text-sm text-outline group-hover:text-on-primary-container/70">I am helping a friend or family member.</span>
+</button>
+</div>
+<!-- Card Footer Navigation -->
+<div class="w-full pt-12 flex items-center justify-between">
+<button class="flex items-center gap-2 text-outline hover:text-primary font-medium transition-colors py-3 px-6">
+<span class="material-symbols-outlined text-xl" data-icon="arrow_back">arrow_back</span>
+<span>Back</span>
+</button>
+<button class="bg-primary text-on-primary hover:bg-primary-dim px-10 py-4 rounded-full font-semibold flex items-center gap-3 shadow-lg shadow-primary/10 transition-all duration-300 transform hover:-translate-y-0.5">
+<span>Next Question</span>
+<span class="material-symbols-outlined text-xl" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- High-Risk Advisory Banner -->
+<div class="bg-surface-container-high/50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left border border-outline-variant/10">
+<div class="w-10 h-10 shrink-0 rounded-full bg-white flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-2xl" data-icon="emergency">emergency</span>
+</div>
+<div class="flex-grow">
+<p class="text-on-surface-variant text-sm leading-relaxed">
+                        If this is a medical emergency, please call your local emergency services or a crisis hotline immediately. 
+                        <a class="text-primary font-semibold underline underline-offset-4 ml-1 hover:text-primary-dim transition-colors" href="#">Find local resources</a>
+</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (Shared Component Shell) -->
+<footer class="w-full py-16 mt-auto bg-slate-50 dark:bg-slate-950">
+<div class="flex flex-col md:flex-row justify-between items-center px-12 gap-8 w-full max-w-7xl mx-auto">
+<div class="font-serif italic text-lg text-[#45636b]">RehabAtlas</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="font-sans text-xs uppercase tracking-widest text-slate-400 dark:text-slate-600 hover:text-[#45636b] transition-opacity" href="#">Privacy Policy</a>
+<a class="font-sans text-xs uppercase tracking-widest text-slate-400 dark:text-slate-600 hover:text-[#45636b] transition-opacity" href="#">Terms of Service</a>
+<a class="font-sans text-xs uppercase tracking-widest text-slate-400 dark:text-slate-600 hover:text-[#45636b] transition-opacity" href="#">HIPAA Compliance</a>
+<a class="font-sans text-xs uppercase tracking-widest text-slate-400 dark:text-slate-600 hover:text-[#45636b] transition-opacity" href="#">Crisis Support</a>
+</div>
+<div class="font-sans text-xs uppercase tracking-widest text-slate-400 dark:text-slate-600">
+                © 2024 RehabAtlas. A Digital Sanctuary for Recovery.
+            </div>
+</div>
+</footer>
+</body></html>

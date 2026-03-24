@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Assessment Results | RehabAtlas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary": "#f5f9ff",
+              "on-tertiary-fixed": "#273e4f",
+              "inverse-surface": "#0c0f10",
+              "on-surface": "#2b3437",
+              "on-error": "#fff7f6",
+              "secondary-container": "#d2e6eb",
+              "inverse-primary": "#cdeef7",
+              "tertiary-container": "#c7e0f5",
+              "secondary-fixed-dim": "#c4d8dc",
+              "outline-variant": "#abb3b7",
+              "inverse-on-surface": "#9b9d9e",
+              "on-background": "#2b3437",
+              "surface-bright": "#f8f9fa",
+              "secondary-fixed": "#d2e6eb",
+              "primary-container": "#c8e8f2",
+              "tertiary-dim": "#3e5667",
+              "on-primary-fixed-variant": "#426068",
+              "on-secondary-container": "#425559",
+              "tertiary": "#4a6274",
+              "primary": "#45636b",
+              "on-error-container": "#752121",
+              "surface-container-highest": "#dbe4e7",
+              "surface-container": "#eaeff1",
+              "secondary": "#4f6266",
+              "secondary-dim": "#44565a",
+              "on-primary-container": "#38565e",
+              "error-container": "#fe8983",
+              "on-tertiary-fixed-variant": "#435b6c",
+              "on-surface-variant": "#586064",
+              "error": "#9f403d",
+              "on-secondary-fixed-variant": "#4c5f63",
+              "primary-fixed": "#c8e8f2",
+              "background": "#f8f9fa",
+              "primary-dim": "#39575f",
+              "surface-container-lowest": "#ffffff",
+              "surface-dim": "#d1dce0",
+              "primary-fixed-dim": "#badae3",
+              "outline": "#737c7f",
+              "on-secondary": "#edfcff",
+              "surface-container-high": "#e3e9ec",
+              "on-secondary-fixed": "#304246",
+              "on-primary-fixed": "#25444c",
+              "on-primary": "#ecfaff",
+              "error-dim": "#4e0309",
+              "on-tertiary-container": "#3a5162",
+              "surface-tint": "#45636b",
+              "surface-variant": "#dbe4e7",
+              "tertiary-fixed-dim": "#b9d2e7",
+              "tertiary-fixed": "#c7e0f5",
+              "surface": "#f8f9fa",
+              "surface-container-low": "#f1f4f6"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .editorial-shadow {
+        box-shadow: 0 32px 64px -12px rgba(43, 52, 55, 0.06);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm dark:shadow-none border-none transition-colors duration-300">
+<nav class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+<div class="font-['Noto_Serif'] text-2xl font-black text-[#45636b] dark:text-white tracking-tight">RehabAtlas</div>
+<div class="hidden md:flex items-center space-gap-8 gap-8">
+<a class="text-[#45636b] dark:text-white border-b-2 border-[#45636b] pb-1 font-['Noto_Serif'] font-bold text-lg" href="#">Assessments</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-[#45636b] dark:hover:text-white transition-colors font-['Noto_Serif'] font-bold text-lg" href="#">Facilities</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-[#45636b] dark:hover:text-white transition-colors font-['Noto_Serif'] font-bold text-lg" href="#">Resources</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-[#45636b] dark:hover:text-white transition-colors font-['Noto_Serif'] font-bold text-lg" href="#">Support</a>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-medium hover:bg-primary-dim transition-all duration-300 active:scale-95">
+                Get Help Now
+            </button>
+</nav>
+</header>
+<main class="pt-32 pb-24 px-6 max-w-7xl mx-auto">
+<!-- Hero / Header Section -->
+<section class="mb-20 max-w-3xl">
+<h1 class="font-headline text-5xl md:text-6xl text-primary font-bold mb-6 tracking-tight leading-tight">
+                We've found the right path for you.
+            </h1>
+<p class="text-xl text-on-surface-variant font-light leading-relaxed">
+                Based on your assessment, these centers provide the specialized care and environment you're looking for. We prioritize clinical excellence and your personal wellness preferences.
+            </p>
+</section>
+<!-- Top Matches -->
+<section class="mb-24">
+<div class="flex items-center gap-4 mb-10">
+<div class="h-px flex-1 bg-outline-variant/20"></div>
+<h2 class="font-headline text-2xl italic text-tertiary">Our Primary Recommendations</h2>
+<div class="h-px flex-1 bg-outline-variant/20"></div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Card 1 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden editorial-shadow flex flex-col transition-transform duration-500 hover:-translate-y-2">
+<div class="relative h-64 overflow-hidden">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="Luxury coastal rehabilitation facility with ocean view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSbF2o-WjEM5FbNilP_cJJiFHJIQP4hmmrXla-X-L13AvMgCL_vRYYC7OZ_zS69EtrP743mCbA1lj78ULgkkUi8Wu5r2Mv6oHPBl2lLG0ZE1owv4XtSwdAntHwZ9DyFD0kSOrKSW1-MufPxqRtIVvgNz2ImrwVDt7Jwuoz3XDNHb-QcweOF_1K4Vht5LvHs7rg-fsGZ4gxAyTdmAlyfxdDmJNDlnBKXSLVllibWLuIjh1IV83OyheJytKWEh-cwPwTBhgTvUGf9ou_"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-white/90 backdrop-blur-sm text-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Verified</span>
+<span class="bg-primary/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Trusted Partner</span>
+</div>
+</div>
+<div class="p-8 flex-1 flex flex-col">
+<div class="mb-4">
+<h3 class="font-headline text-2xl text-on-surface mb-1">The Azure Crest Institute</h3>
+<div class="flex items-center text-on-surface-variant text-sm gap-1">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                Carmel-by-the-Sea, CA
+                            </div>
+</div>
+<div class="text-primary font-semibold mb-6">$30k - $50k / month</div>
+<div class="bg-surface-container-low p-4 rounded-lg mb-8 border-l-4 border-primary">
+<p class="text-sm text-on-secondary-container italic leading-relaxed">
+                                "Matches your preference for holistic detox and private suites with oceanfront access."
+                            </p>
+</div>
+<div class="mt-auto space-y-3">
+<button class="w-full bg-primary text-on-primary py-3 rounded-full font-medium hover:bg-primary-dim transition-colors">Submit Inquiry</button>
+<button class="w-full bg-surface-container-highest text-on-surface py-3 rounded-full font-medium hover:bg-surface-variant transition-colors">View Profile</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden editorial-shadow flex flex-col transition-transform duration-500 hover:-translate-y-2 lg:mt-12">
+<div class="relative h-64 overflow-hidden">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="Modern serene medical facility interior with wood accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjFBvz4xcgUL3qbDktX9kS0yb2xkHYC24kOd-JSDf93b-9P-Vmlkr0oVgyb8xFLXA-fqP95FacvNEmYxGhlNIx4Jvi_i3y5PqEuZ5wiSHMmTNoxfIyN5fuipQHhbyhk7xItLx0rsu3YAXC1J5xle7X19pnOYyBZOKvSK8M6YN7E_duz-FgpQ7JatrH_j5qO3MMEsbXjiel622Z3PPbrN-4qUGl5fgZvQ4xi9gSDubdju_KCauuaawybEThgSf1kx2A2JTx5hyoEDFn"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-white/90 backdrop-blur-sm text-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Verified</span>
+</div>
+</div>
+<div class="p-8 flex-1 flex flex-col">
+<div class="mb-4">
+<h3 class="font-headline text-2xl text-on-surface mb-1">Serenity Peak Wellness</h3>
+<div class="flex items-center text-on-surface-variant text-sm gap-1">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                Aspen, CO
+                            </div>
+</div>
+<div class="text-primary font-semibold mb-6">$25k - $40k / month</div>
+<div class="bg-surface-container-low p-4 rounded-lg mb-8 border-l-4 border-primary">
+<p class="text-sm text-on-secondary-container italic leading-relaxed">
+                                "Aligns with your request for mountain-based therapy and specialized dual-diagnosis care."
+                            </p>
+</div>
+<div class="mt-auto space-y-3">
+<button class="w-full bg-primary text-on-primary py-3 rounded-full font-medium hover:bg-primary-dim transition-colors">Submit Inquiry</button>
+<button class="w-full bg-surface-container-highest text-on-surface py-3 rounded-full font-medium hover:bg-surface-variant transition-colors">View Profile</button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden editorial-shadow flex flex-col transition-transform duration-500 hover:-translate-y-2">
+<div class="relative h-64 overflow-hidden">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="Peaceful garden setting of a recovery center" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPmDqMAzrzvKZKbDRntwxal0Z2AN5RcTomp82oyYUG1qF0AmbZ2wBpP3A1xv_yg9KHptrT_zJwt3JvxRTdM22fTrnAyOxFAH49J9zBojkYJ775KOC-EnCC_4RDbnhhhRb0mJNPyrlHfHgAWbsJZL18JMAPoYFwLTl4xSgnZXoGOGBI3-9rSUlKD-MHkmXd6gRfCQxSzM3hIM8N3lPj1EgcMaVNlaOCApnmWNsbPHx0wSsk6MsK_JrxmvzmJmFOKg_oysEKua3FgnDz"/>
+<div class="absolute top-4 left-4 flex gap-2">
+<span class="bg-white/90 backdrop-blur-sm text-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Verified</span>
+<span class="bg-primary/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Trusted Partner</span>
+</div>
+</div>
+<div class="p-8 flex-1 flex flex-col">
+<div class="mb-4">
+<h3 class="font-headline text-2xl text-on-surface mb-1">Oak Haven Recovery</h3>
+<div class="flex items-center text-on-surface-variant text-sm gap-1">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                Asheville, NC
+                            </div>
+</div>
+<div class="text-primary font-semibold mb-6">$18k - $32k / month</div>
+<div class="bg-surface-container-low p-4 rounded-lg mb-8 border-l-4 border-primary">
+<p class="text-sm text-on-secondary-container italic leading-relaxed">
+                                "Excellent match for your interest in nature-integrated recovery and small group sizes."
+                            </p>
+</div>
+<div class="mt-auto space-y-3">
+<button class="w-full bg-primary text-on-primary py-3 rounded-full font-medium hover:bg-primary-dim transition-colors">Submit Inquiry</button>
+<button class="w-full bg-surface-container-highest text-on-surface py-3 rounded-full font-medium hover:bg-surface-variant transition-colors">View Profile</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Alternatives -->
+<section class="mb-24 bg-surface-container-low rounded-3xl p-12">
+<h2 class="font-headline text-3xl text-on-surface mb-8">Other centers that meet your criteria</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Alt 1 -->
+<div class="flex bg-surface-container-lowest p-6 rounded-xl gap-6 items-center hover:bg-surface-bright transition-colors">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Interior hallway of a high-end clinic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8YjBLyGJCreqEFnQj5bQrdyrEDVxgQ7HMyzhN1tdjbcczEmWtSH1d7Y5hdRqjvlHRpgK2OcP8nTVmsE_7mfmfIqsyj8_y56Gt-Lz82QdOxfTjM5jvozVJsc_kXzXZuJGVvR5o8PMKIXNmsWaVmcnwcw1T0DDa4KBy28fQiLbrIeUbck3GLF4S6C2N7R8hhVEQVxAo0BbcyIi0kFk3tZoTJIbQhbqWAIM5anVUEmvplZyabZVooNaiw_1FzQYOcdBJuuMBjk9a7oVu"/>
+</div>
+<div>
+<h4 class="font-headline text-xl text-on-surface">The Meridian Retreat</h4>
+<p class="text-sm text-on-surface-variant mb-2">Austin, TX • Clinical Focus</p>
+<a class="text-primary text-sm font-semibold hover:underline" href="#">View Quick Info</a>
+</div>
+</div>
+<!-- Alt 2 -->
+<div class="flex bg-surface-container-lowest p-6 rounded-xl gap-6 items-center hover:bg-surface-bright transition-colors">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="View from a balcony at a rehab center" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHuj_h1xN5bFgEbiPpB0Zpht_mTK1IB4uPhty4u_wzKHyQqrJ57ktPj1dxu7PBt9NIABcvUlmW49l0_Qj-8LYNLLNgBuIgyua5jWxGWI7aeWMh3kQhHTRw9BkdB1LpuG9XA4JNiX7j9a6HfX6DVYytKKQqYmCQ2iCknzugzC8CH6RNk6ohfpvNdWCmDFzEPQPHJwYExvOxUhIHS4DfH1oL0UkBLNI5egCj9OOSuMWG5W4kQi69heM4lU1L0LrImR-yb5P38S4z5ygq"/>
+</div>
+<div>
+<h4 class="font-headline text-xl text-on-surface">Harbor Light Estates</h4>
+<p class="text-sm text-on-surface-variant mb-2">Newport, RI • Privacy First</p>
+<a class="text-primary text-sm font-semibold hover:underline" href="#">View Quick Info</a>
+</div>
+</div>
+</div>
+</section>
+<!-- Methodology -->
+<section class="mb-24 text-center max-w-5xl mx-auto">
+<h2 class="font-headline text-3xl text-on-surface mb-12">Our methodology: How we selected these matches</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+<div class="space-y-4">
+<div class="w-16 h-16 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center mx-auto">
+<span class="material-symbols-outlined text-3xl">medical_services</span>
+</div>
+<h3 class="font-headline text-xl font-bold">Clinical Alignment</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">We verify treatments against established medical protocols and your specific history.</p>
+</div>
+<div class="space-y-4">
+<div class="w-16 h-16 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center mx-auto">
+<span class="material-symbols-outlined text-3xl">meeting_room</span>
+</div>
+<h3 class="font-headline text-xl font-bold">Resource Availability</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Real-time tracking of private suites, specialized therapists, and immediate admission slots.</p>
+</div>
+<div class="space-y-4">
+<div class="w-16 h-16 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center mx-auto">
+<span class="material-symbols-outlined text-3xl">account_balance_wallet</span>
+</div>
+<h3 class="font-headline text-xl font-bold">Budget Fit</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Analyzing total costs and insurance compatibility to ensure sustainable care transitions.</p>
+</div>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="bg-primary p-16 rounded-3xl text-center text-on-primary shadow-2xl overflow-hidden relative">
+<!-- Subtle background texture pattern -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 40px 40px;"></div>
+<div class="relative z-10 max-w-2xl mx-auto">
+<h2 class="font-headline text-4xl mb-6">Need guidance on these choices?</h2>
+<p class="text-on-primary/80 mb-10 text-lg">Our recovery specialists can help you compare these options in detail and handle all the paperwork for you.</p>
+<div class="flex flex-col sm:flex-row justify-center items-center gap-6">
+<button class="bg-white text-primary px-10 py-4 rounded-full font-bold text-lg hover:bg-on-primary transition-colors shadow-lg active:scale-95 duration-200 ease-in-out">
+                        Speak with a Specialist
+                    </button>
+<a class="text-white font-medium hover:underline underline-offset-8" href="#">Browse All Centers</a>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-50 dark:bg-slate-950 w-full mt-auto border-t-0 bg-slate-100 dark:bg-slate-900/50">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-8 py-12 max-w-7xl mx-auto gap-6">
+<div class="flex flex-col gap-2">
+<div class="font-['Noto_Serif'] text-xl font-bold text-slate-800 dark:text-slate-200">RehabAtlas</div>
+<p class="font-['Inter'] text-sm text-slate-500 dark:text-slate-400">© 2024 RehabAtlas. A Digital Sanctuary for Recovery.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="font-['Inter'] text-sm text-slate-500 hover:text-[#45636b] hover:underline underline-offset-4 transition-all" href="#">Privacy Policy</a>
+<a class="font-['Inter'] text-sm text-slate-500 hover:text-[#45636b] hover:underline underline-offset-4 transition-all" href="#">Terms of Service</a>
+<a class="font-['Inter'] text-sm text-slate-500 hover:text-[#45636b] hover:underline underline-offset-4 transition-all" href="#">Clinical Standards</a>
+<a class="font-['Inter'] text-sm text-slate-500 hover:text-[#45636b] hover:underline underline-offset-4 transition-all" href="#">Contact Support</a>
+</div>
+</div>
+</footer>
+</body></html>

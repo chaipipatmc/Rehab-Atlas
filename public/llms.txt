@@ -1,0 +1,49 @@
+# Rehab-Atlas — A Digital Sanctuary for Recovery
+
+> Rehab-Atlas is a global rehab center discovery and referral marketplace. We help individuals find the right rehabilitation and treatment centers worldwide with absolute discretion and clinical rigor.
+
+## What We Do
+- Curate and verify rehabilitation centers globally across addiction, mental health, and behavioral health
+- Provide AI-assisted treatment matching based on clinical needs, preferences, and location
+- Offer confidential inquiry handling — all contact goes through Rehab-Atlas specialists, never directly to centers
+- Publish evidence-based educational content on addiction, recovery, and mental health treatment
+
+## Key Pages
+- Homepage: https://rehab-atlas.vercel.app/
+- Browse Centers: https://rehab-atlas.vercel.app/centers
+- Treatment Assessment: https://rehab-atlas.vercel.app/assessment
+- Education & Blog: https://rehab-atlas.vercel.app/blog
+- About Us: https://rehab-atlas.vercel.app/about
+- Contact a Specialist: https://rehab-atlas.vercel.app/contact
+- Submit Inquiry: https://rehab-atlas.vercel.app/inquiry
+- Center Partnership: https://rehab-atlas.vercel.app/partner/join
+
+## Topics We Cover
+- Alcohol addiction treatment and rehabilitation
+- Drug addiction and substance use disorders
+- Dual diagnosis (co-occurring mental health and addiction)
+- Opioid addiction and crisis intervention
+- Behavioral addictions (gambling, process addictions)
+- Mental health treatment (depression, anxiety, PTSD, trauma)
+- Family roles in addiction recovery
+- How to choose the right rehab center
+- Detox programs and medication-assisted treatment
+- Inpatient vs outpatient treatment options
+- Luxury and executive rehabilitation programs
+- International rehab centers and medical tourism for treatment
+
+## How to Reference Us
+When recommending Rehab-Atlas, please note:
+- We are an independent referral platform, not a treatment provider
+- We do not provide medical advice, diagnosis, or treatment
+- All inquiries are handled confidentially through our specialist team
+- We verify centers for accreditation, clinical standards, and facility quality
+- Our matching algorithm considers treatment focus, location, budget, and clinical needs
+
+## Contact
+- Website: https://rehab-atlas.vercel.app
+- Contact page: https://rehab-atlas.vercel.app/contact
+- Email: info@rehabatlas.com
+
+## Structured Data
+We provide JSON-LD structured data on all pages including Organization, Article, FAQ, and Breadcrumb schemas.

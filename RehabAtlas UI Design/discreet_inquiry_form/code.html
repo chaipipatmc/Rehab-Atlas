@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RehabAtlas | Specialist Inquiry</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Noto+Serif:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-bright": "#f8f9fa",
+              "on-tertiary-fixed-variant": "#435b6c",
+              "secondary": "#4f6266",
+              "secondary-dim": "#44565a",
+              "on-primary-fixed": "#25444c",
+              "primary-dim": "#39575f",
+              "on-primary-fixed-variant": "#426068",
+              "background": "#f8f9fa",
+              "on-surface": "#2b3437",
+              "tertiary": "#4a6274",
+              "tertiary-fixed-dim": "#b9d2e7",
+              "primary-container": "#c8e8f2",
+              "surface-tint": "#45636b",
+              "on-surface-variant": "#586064",
+              "on-secondary-container": "#425559",
+              "surface-container-low": "#f1f4f6",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ecfaff",
+              "surface-container": "#eaeff1",
+              "on-background": "#2b3437",
+              "on-tertiary-fixed": "#273e4f",
+              "surface-container-high": "#e3e9ec",
+              "inverse-surface": "#0c0f10",
+              "on-secondary": "#edfcff",
+              "primary-fixed": "#c8e8f2",
+              "inverse-primary": "#cdeef7",
+              "on-secondary-fixed": "#304246",
+              "on-error": "#fff7f6",
+              "secondary-container": "#d2e6eb",
+              "primary": "#45636b",
+              "secondary-fixed-dim": "#c4d8dc",
+              "on-secondary-fixed-variant": "#4c5f63",
+              "outline-variant": "#abb3b7",
+              "primary-fixed-dim": "#badae3",
+              "surface-variant": "#dbe4e7",
+              "error-dim": "#4e0309",
+              "tertiary-dim": "#3e5667",
+              "surface-dim": "#d1dce0",
+              "on-tertiary": "#f5f9ff",
+              "error-container": "#fe8983",
+              "on-tertiary-container": "#3a5162",
+              "error": "#9f403d",
+              "surface": "#f8f9fa",
+              "on-error-container": "#752121",
+              "secondary-fixed": "#d2e6eb",
+              "tertiary-container": "#c7e0f5",
+              "inverse-on-surface": "#9b9d9e",
+              "tertiary-fixed": "#c7e0f5",
+              "on-primary-container": "#38565e",
+              "surface-container-highest": "#dbe4e7",
+              "outline": "#737c7f"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Noto Serif', serif; }
+    </style>
+</head>
+<body class="bg-surface-bright text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation (Shell Inactive for Transactional Flow - Suppressed as per instructions) -->
+<!-- However, providing a minimal Brand anchor for the inquiry page as a focused header -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+<div class="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
+<span class="text-2xl font-serif font-bold text-[#45636b] dark:text-[#5c828d] tracking-tight">RehabAtlas</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm font-medium" href="#">Cancel Inquiry</a>
+</div>
+</div>
+<div class="bg-slate-100/50 dark:bg-slate-800/50 h-[1px] w-full absolute bottom-0"></div>
+</header>
+<main class="min-h-screen pt-32 pb-20 px-6 flex flex-col items-center">
+<!-- Progress Indicator -->
+<div class="w-full max-w-2xl mb-12">
+<div class="flex items-center justify-between mb-4 px-1">
+<span class="text-xs font-semibold tracking-widest uppercase text-primary">Step 02 of 03</span>
+<span class="text-xs text-outline">Clinical Assessment</span>
+</div>
+<div class="h-1 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/3 rounded-full"></div>
+</div>
+</div>
+<!-- Form Container: Bento-style Asymmetric Layout -->
+<div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left: Context & Reassurance (Editorial Content) -->
+<div class="lg:col-span-4 space-y-8">
+<div class="space-y-4">
+<h1 class="text-4xl lg:text-5xl font-serif text-primary leading-tight">Start your path to recovery.</h1>
+<p class="text-on-surface-variant leading-relaxed">Our specialists provide a discreet bridge to world-class care, ensuring your journey begins with dignity and absolute privacy.</p>
+</div>
+<!-- Reassurance Card -->
+<div class="bg-surface-container-low p-8 rounded-xl border-none space-y-4">
+<div class="flex items-center gap-3 text-primary">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+<span class="font-semibold text-sm">Privacy Commitment</span>
+</div>
+<p class="text-sm text-on-surface-variant italic">"Your data is encrypted and handled with absolute discretion. No information is shared without your explicit consent."</p>
+<div class="pt-2 flex -space-x-2">
+<img class="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover" data-alt="Female clinical specialist smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOH7JBFlwyzF96j6VMCozYLhbfU0lunAQ7_bNPkPc2vwqtgZ9XRSlfSc7x1XKN87shILUKfMYNVLHTkyLE94VCs4mYA85MZT8HHTzkh4EdbPAUIT4PQ3Hccb44ib2SVmzvJ85QDb8MEUUl75CrrrSW6Z8UjP4Ea7CXwzcLLl8Rxg17hcqJfji7oCWwVepydWaxeXM8uezW7EZO2pRqz5uWSXnv5i9d-fSVzCcVvzjfUk1dx4vmCqwEt6Wlfc2khsywv2XnluwNYTPF"/>
+<img class="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover" data-alt="Male healthcare advisor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXMSdwitjt3_Fc56KMpJbQBdGPhCc8Y2KNGLI1C6tsPXiV8n2dT0xIms3RzeXa9VKZM3ieZ2bdhaCy92pPadP_X5b0st3fJSpqlwo-REeVlt7bnHAJhj9aSzlpo9gTB2IZinygx6QirgkaAFEm56oD87xm-RBcbMjr9n9pTzt5nifLoPGbaGttcatkkvkkYsbZIWc2M4lwveksVCi0-BG9ZJ26baEiYkHm9oWew2fBw2TTBPZRX_vQLL27vaK8Jc_NF73AqpmDP8J8"/>
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-[10px] font-bold border-2 border-surface-container-lowest">+12</div>
+</div>
+</div>
+</div>
+<!-- Right: The Inquiry Form -->
+<div class="lg:col-span-8">
+<div class="bg-surface-container-lowest p-8 lg:p-12 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+<form class="space-y-10">
+<!-- Step 1: Identity Selection -->
+<section class="space-y-6">
+<label class="block text-sm font-semibold text-primary tracking-wide">01. WHO IS THIS INQUIRY FOR?</label>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<label class="relative group cursor-pointer">
+<input checked="" class="peer sr-only" name="subject" type="radio"/>
+<div class="p-6 rounded-xl bg-surface-container-low border-2 border-transparent peer-checked:border-primary peer-checked:bg-primary-container/30 transition-all duration-300">
+<div class="flex items-center gap-4 mb-2">
+<span class="material-symbols-outlined text-primary" data-icon="person">person</span>
+<span class="font-serif text-lg text-on-surface">Self</span>
+</div>
+<p class="text-xs text-on-surface-variant">I am seeking support and resources for my own personal recovery journey.</p>
+</div>
+</label>
+<label class="relative group cursor-pointer">
+<input class="peer sr-only" name="subject" type="radio"/>
+<div class="p-6 rounded-xl bg-surface-container-low border-2 border-transparent peer-checked:border-primary peer-checked:bg-primary-container/30 transition-all duration-300">
+<div class="flex items-center gap-4 mb-2">
+<span class="material-symbols-outlined text-primary" data-icon="favorite">favorite</span>
+<span class="font-serif text-lg text-on-surface">Loved One</span>
+</div>
+<p class="text-xs text-on-surface-variant">I am inquiring on behalf of a family member, friend, or partner.</p>
+</div>
+</label>
+</div>
+</section>
+<!-- Step 2: Concerns -->
+<section class="space-y-6">
+<label class="block text-sm font-semibold text-primary tracking-wide">02. MAIN CONCERNS</label>
+<div class="space-y-4">
+<textarea class="w-full bg-surface-container-low border-none rounded-xl p-6 text-on-surface focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all placeholder:text-outline/60" placeholder="Please describe the primary challenges or specific care needs you are looking to address..." rows="4"></textarea>
+<div class="flex flex-wrap gap-2">
+<span class="px-4 py-2 bg-surface-container-high rounded-full text-xs font-medium text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container cursor-pointer transition-colors">Detoxification</span>
+<span class="px-4 py-2 bg-surface-container-high rounded-full text-xs font-medium text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container cursor-pointer transition-colors">Residential Care</span>
+<span class="px-4 py-2 bg-surface-container-high rounded-full text-xs font-medium text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container cursor-pointer transition-colors">Dual Diagnosis</span>
+<span class="px-4 py-2 bg-surface-container-high rounded-full text-xs font-medium text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container cursor-pointer transition-colors">Executive Recovery</span>
+</div>
+</div>
+</section>
+<!-- Step 3: Contact Preferences -->
+<section class="space-y-6">
+<label class="block text-sm font-semibold text-primary tracking-wide">03. CONTACT PREFERENCES</label>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-xs text-outline font-medium px-1">Email Address</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/30" placeholder="your@email.com" type="email"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs text-outline font-medium px-1">Discreet Phone (Optional)</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/30" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+</div>
+<div class="flex items-center gap-4 mt-4">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="w-5 h-5 rounded border-none bg-surface-container-high text-primary focus:ring-primary/20" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Request a discreet call from a specialist</span>
+</label>
+</div>
+</section>
+<!-- Actions -->
+<div class="pt-10 flex flex-col md:flex-row items-center justify-between gap-6">
+<button class="text-outline hover:text-primary font-medium text-sm transition-colors order-2 md:order-1" type="button">
+                                Save and continue later
+                            </button>
+<button class="w-full md:w-auto px-10 py-4 bg-primary text-on-primary rounded-full font-semibold shadow-xl shadow-primary/20 hover:bg-primary-dim active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 order-1 md:order-2" type="submit">
+                                Complete Inquiry
+                                <span class="material-symbols-outlined text-lg" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-[#f1f4f6] dark:bg-slate-950 w-full py-16 px-8 mt-20">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+<div class="space-y-4">
+<span class="font-serif text-lg text-[#45636b]">RehabAtlas</span>
+<p class="font-serif body text-sm leading-relaxed text-slate-500 dark:text-slate-400 max-w-sm">© 2024 RehabAtlas. A discreet sanctuary for recovery. Dedicated to connecting individuals with world-class rehabilitation centers through a lens of compassion and excellence.</p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-3">
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Privacy Policy</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Terms of Service</a>
+</div>
+<div class="flex flex-col gap-3">
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#45636b] transition-colors text-sm" href="#">Medical Disclaimer</a>
+<a class="text-[#45636b] underline text-sm font-semibold" href="#">Contact Specialist</a>
+</div>
+</div>
+</div>
+</footer>
+<!-- Bottom Navigation (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] md:hidden">
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-serif text-[11px] font-medium mt-1">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="star">star</span>
+<span class="font-serif text-[11px] font-medium mt-1">Featured</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-serif text-[11px] font-medium mt-1">Resources</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#45636b]/10 dark:bg-[#45636b]/20 text-[#45636b] dark:text-[#5c828d] rounded-2xl px-5 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="font-serif text-[11px] font-medium mt-1">Inquiries</span>
+</a>
+</nav>
+</body></html>

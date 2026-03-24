@@ -1,9 +1,10 @@
 # PRD — RehabAtlas MVP
 ## Product Requirements Document
-**Version:** 1.1 (Revised – Controlled Lead Routing)
-**Product Name:** RehabAtlas  
-**Tagline:** The Global Rehab Center Database  
-**Positioning:** Trusted treatment matching platform  
+**Version:** 2.0 (Current Implementation)
+**Product Name:** RehabAtlas
+**Tagline:** A Digital Sanctuary for Recovery
+**Positioning:** Premium global rehab center discovery and referral marketplace
+**Last Updated:** March 2026
 
 ---
 
@@ -12,14 +13,16 @@
 RehabAtlas is a standalone global web platform for discovering, comparing, and inquiring about rehab centers.
 
 The platform combines:
-- global rehab directory
-- AI-assisted matching (assessment)
+- global rehab directory (50 centers live, 14,000+ in database)
+- AI-assisted matching (5-step assessment → Claude-powered explanations)
 - centralized lead intake and controlled referral system
+- education blog with addiction/recovery content (SEO)
+- partner portal for center self-management
 
 RehabAtlas operates as an **information and referral marketplace**, not a medical provider and not a booking/payment system.
 
 **Key difference from traditional platforms:**
-All user inquiries are captured and controlled by RehabAtlas.  
+All user inquiries are captured and controlled by RehabAtlas.
 No inquiry is sent directly to rehab centers without admin mediation.
 
 ---
@@ -28,21 +31,18 @@ No inquiry is sent directly to rehab centers without admin mediation.
 
 ## Primary Goals
 1. Build global rehab marketplace
-2. Generate referral-based revenue
+2. Generate referral-based revenue (commission per admission)
 3. Own demand funnel and lead flow
+4. Build SEO authority via education content
 
 ## Year-1 Success Metrics
 - organic traffic
 - completed assessments
 - qualified leads
+- center partner sign-ups
 
-## MVP Objective
-Deliver a premium, trustworthy platform where users can:
-- browse rehab centers
-- complete AI assessment
-- receive matches
-- submit inquiries to RehabAtlas
-- be routed to appropriate centers via admin-controlled process
+## MVP Status: BUILT
+All MVP features are implemented and functional.
 
 ---
 
@@ -50,534 +50,338 @@ Deliver a premium, trustworthy platform where users can:
 
 1. Independent marketplace (no visible tie to any center)
 2. Information/referral only (no medical advice)
-3. Calm + premium + trustworthy UX
+3. Calm + premium + trustworthy UX ("The Quiet Authority" design system)
 4. Browse-first + AI-enhanced
 5. Controlled lead ownership (CRITICAL)
+6. Role-based access (user / partner / admin)
+7. Education-driven SEO strategy
 
 ---
 
 # 4. Target Users
 
 ## Primary
-- parents / family
-- spouse / partner
+- parents / family seeking treatment for loved ones
+- individuals seeking help for themselves
 
 ## Secondary
-- self-seeking users
 - HR / employers
 - therapists / referrers
 - concierge / case managers
 
+## Center Partners
+- rehab center owners/managers seeking to manage their listing
+
 ## Scope
-- Global
+- Global (MVP: primarily US centers)
 - English only (MVP)
 
 ---
 
-# 5. In-Scope MVP Features
+# 5. Implemented Features (Current State)
 
-- rehab directory
-- search & filtering
-- AI assessment + matching
-- center profile pages
-- inquiry submission (to platform only)
-- admin dashboard
-- CMS
-- editorial ratings
-- partner portal (basic)
-- analytics
-- legal pages
+## Public Pages
+- [x] Homepage with atmospheric hero, featured centers, search bar, trust messaging
+- [x] Browse Centers directory with filters (country, treatment, setting, insurance, detox)
+- [x] Center Profile pages with photos, editorial ratings, FAQs, map, inquiry CTA
+- [x] AI Assessment wizard (5 steps, ~2 minutes)
+- [x] Match Results page with Claude-powered explanations
+- [x] Confidential Inquiry form with privacy messaging
+- [x] Inquiry Success confirmation with WhatsApp CTA
+- [x] Education Blog with 6 SEO articles (featured images, read time, related articles)
+- [x] About Us page (mission, vetting process, quality assurance, how it works)
+- [x] Privacy Policy, Terms of Service, Medical Disclaimer, HIPAA Compliance, Contact pages
+- [x] Mobile responsive across all pages
+
+## Authentication & Roles
+- [x] Sign Up with account type selection (Seeking Help vs. Center Representative)
+- [x] Sign In with session management
+- [x] Role-based navigation (different nav bars per role)
+- [x] Role-based dropdown menu with avatar
+- [x] Three roles: user (gray), partner (green), admin (teal)
+- [x] Partner application flow with email notification to admin
+
+## Normal User (role: user)
+- [x] Profile management (/account)
+- [x] My Inquiries page (/account/inquiries)
+- [x] Saved Centers page (/account/saved) — placeholder
+
+## Center Partner (role: partner)
+- [x] Dashboard with stats (/partner)
+- [x] Edit center profile with admin approval flow (/partner/edit)
+- [x] Photo management — view, add (via URL), request removal (/partner/photos)
+- [x] Write education blog articles for review (/partner/blog)
+- [x] Change log with status tracking (/partner/history)
+- [x] Sidebar navigation layout
+
+## Admin Dashboard
+- [x] System overview with metric cards (/admin)
+- [x] Lead management with table, status, urgency, forward (/admin/leads)
+- [x] Lead detail with contact info, inquiry details, assessment data, forward history (/admin/leads/[id])
+- [x] Lead forwarding with commission scheme display + warnings
+- [x] Center management — list, create, edit (/admin/centers)
+- [x] Center form: all fields + photos upload + commission + editorial ratings
+- [x] User management — change roles, link partners to centers (/admin/users)
+- [x] Content management — blog/page CRUD with markdown editor (/admin/content)
+- [x] Content editor with image upload + inline insert
+- [x] Author tracking (RehabAtlas vs. partner) in content list
+- [x] Edit request review (/admin/edit-requests)
+- [x] Settings page with notification toggles (/admin/settings)
+- [x] Sidebar navigation layout with search bar
+
+## Commission & Commercial System
+- [x] Commission type per center: none / percentage / fixed amount
+- [x] Commission rate (%) and fixed amount ($) fields
+- [x] Agreement status: none / pending / active / expired
+- [x] Contract start/end dates
+- [x] Account manager field
+- [x] Commission notes (internal)
+- [x] Commission details shown in lead forwarding UI
+- [x] Warnings for expired/missing agreements
+
+## Blog & Education System
+- [x] Two content sources: RehabAtlas editorial + partner-contributed
+- [x] Partner submissions go to draft (require admin publish)
+- [x] Author box at end of articles with center backlink
+- [x] Featured images (embedded in markdown content)
+- [x] Related articles
+- [x] Read time estimation
+- [x] SEO metadata (meta title, meta description, OG image)
+- [x] Medical disclaimer on every article
+
+## Image Management
+- [x] Supabase Storage upload (drag & drop, click to browse)
+- [x] Multi-image upload for centers (grid, reorder, primary badge)
+- [x] Single image upload for blog content
+- [x] Inline image insert in markdown editor
+- [x] External URL support as fallback
+- [x] Web-scraped photos from 42 center websites (162 photos)
+
+## Email Notifications (via Resend)
+- [x] New inquiry → admin email
+- [x] Partner verification request → admin email
+- [x] Blog submission by partner → admin email
+- [x] Lead forwarded → center's inquiry email
+- [x] Branded HTML email templates
+
+## Design System ("The Quiet Authority")
+- [x] Noto Serif (headings) + Inter (body) typography
+- [x] Deep teal palette (#45636b) with lithic neutral surfaces
+- [x] No hard borders — ghost-border shadows + surface color layering
+- [x] Pill-shaped buttons with gradient primary CTAs
+- [x] Glassmorphism header (backdrop-blur)
+- [x] Ambient shadows, 300ms transitions
+- [x] Responsive: all pages adapt to mobile
 
 ---
 
-# 6. Out of Scope
+# 6. Out of Scope (Not Built)
 
-- booking/payment
+- booking/payment system
 - telemedicine
-- patient portal
-- insurance workflow
-- multilingual
+- patient portal (medical records)
+- insurance verification workflow
+- multilingual support
 - mobile app
-- public user reviews
-- adolescent flow
-- revenue tracking (full)
+- public user reviews/comments
+- adolescent-specific flow
+- revenue tracking dashboard
+- AI chat assistant
+- real-time notifications (WebSocket)
 
 ---
 
-# 7. User Experience Overview
+# 7. Data
 
-## Homepage CTA
-Primary: Browse rehab centers  
-Secondary: Start assessment
+## Database
+- 10 tables with Row Level Security
+- 50 published centers (from 14,000+ in Excel database)
+- 162 scraped facility photos
+- 6 education articles
+- 5 legal/static pages
+- Commission tracking fields on centers
+- Author tracking fields on pages
 
-## Assessment UX
-- multi-step wizard
-- 1–3 minutes
-
----
-
-# 8. Core User Journeys
-
-## A — Browse & Inquiry
-1. browse centers
-2. open profile
-3. submit inquiry to RehabAtlas
-4. admin reviews
-5. admin forwards to eligible center
-
-## B — AI Matching
-1. complete assessment
-2. get 3 matches + alternatives
-3. view profile
-4. submit inquiry
-5. admin routing
-
-## C — Partner Edit
-1. login
-2. edit profile
-3. admin approval
-4. publish
+## Migrations
+1. `001_initial_schema.sql` — all tables, RLS, triggers, storage
+2. `002_commission_fields.sql` — commission_type, rate, amount, contract dates
+3. `003_blog_author_fields.sql` — author_type, author_name, author_center_id
 
 ---
 
-# 9. Functional Requirements
+# 8. Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16.2 (App Router, TypeScript, Turbopack) |
+| Database | Supabase (PostgreSQL + Auth + Storage + RLS) |
+| UI | Tailwind CSS v4 + shadcn/ui v4 (@base-ui/react) |
+| AI | Claude API (claude-sonnet-4-20250514) |
+| Email | Resend |
+| Hosting | Vercel |
+| CLI | GitHub CLI, Vercel CLI, Supabase CLI |
 
 ---
 
-## 9.1 Homepage
-
-- hero section
-- browse CTA
-- assessment CTA
-- featured centers
-- how-it-works
-- trust messaging
-- footer + legal
-
----
-
-## 9.2 Listing / Search
-
-### Filters
-- country
-- city
-- treatment focus
-- inpatient/outpatient
-- detox
-- budget
-- language
-- insurance
-
-### Sorting
-- relevance
-- featured
-- price
-- rating
-- most reviewed
-
-### Card Info
-- name
-- location
-- image
-- short description
-- pricing
-- badges
-- CTA
-
-### Transparency
-Sponsored/Preferred must be clearly labeled
-
----
-
-## 9.3 Center Profile Page
-
-### Sections
-- overview
-- photos
-- treatment focus
-- conditions
-- therapies
-- pricing
-- program length
-- accommodation
-- staff
-- accreditation
-- editorial rating
-- FAQs
-- map
-- inquiry form
-- request assessment CTA
-
-### Personalization
-If assessment completed:
-→ show "Why this center may fit you"
-
-### Conversion Rule
-User must submit inquiry to RehabAtlas (NOT direct to center)
-
----
-
-## 9.4 AI Assessment
-
-### Duration
-1–3 minutes
-
-### Questions
-- who needs help
-- age range
-- primary issue (addiction + mental health)
-- severity
-- co-occurring issues
-- prior treatment
-- detox need
-- budget
-- location
-- privacy
-- insurance
-- urgency
-
-### Urgency Levels
-- need help soon
-- urgent / immediate
-
-### High Risk Handling
-- show warning
-- advise immediate help
-- allow browsing
-
-### Output
-- 3 best matches
-- alternatives
-- explanation
-- next steps
-
-### Logic
-- rule-based matching
-- LLM explanation layer
-
----
-
-## 9.5 AI Chat
-
-Allowed:
-- explain options
-- narrow choices
-- guide to inquiry
-
-Not allowed:
-- diagnosis
-- medical advice
-
----
-
-## 9.6 Lead Flow (CRITICAL SYSTEM)
+# 9. Lead Flow (CRITICAL SYSTEM)
 
 ### Submission
-User submits inquiry → goes ONLY to RehabAtlas
+User submits inquiry → goes ONLY to RehabAtlas (via service role API)
 
 ### No Direct Forwarding
-System must NOT send leads automatically to centers
+System does NOT send leads automatically to centers
 
 ### Admin Workflow
 Admin must:
-- review inquiry
-- check partner eligibility
-- decide routing
-- forward manually
+1. Review inquiry in dashboard
+2. View commission scheme for target center
+3. Check agreement status (active/expired/none)
+4. Decide routing
+5. Forward manually with full audit trail
 
-### Lead Status
-- New
-- Under Review
-- Awaiting Info
-- Ready to Forward
-- Forwarded
-- Closed
+### Lead Status Workflow
+New → Under Review → Awaiting Info → Ready to Forward → Forwarded → Closed
 
 ---
 
-## 9.7 Lead Form
+# 10. User Journeys
 
-Fields:
-- name
-- email
-- phone / WhatsApp
-- country
-- who for
-- age
-- concern
-- urgency
-- preferred center
-- budget
-- message
-- consent
-- request call
+## A — Browse & Inquiry
+1. Browse centers (filter by country, treatment, setting, etc.)
+2. View center profile (photos, ratings, description, FAQs)
+3. Submit inquiry to RehabAtlas (never to center directly)
+4. Admin reviews → forwards to eligible center
 
-### Success Page
-- confirmation
-- WhatsApp CTA
-- message: "our team will review and connect you"
+## B — AI Matching
+1. Complete 5-step assessment (~2 minutes)
+2. Get 3 primary matches + alternatives with AI explanations
+3. View matched center profiles
+4. Submit inquiry → admin routing
 
----
+## C — Education
+1. Browse education articles on /blog
+2. Read article (SEO-optimized, with related articles)
+3. CTA at end → assessment or inquiry
 
-## 9.8 Reviews (MVP)
+## D — Partner Self-Service
+1. Sign up as "I Represent a Center" → application submitted
+2. Admin approves → changes role to partner, links to center
+3. Partner edits profile → submitted as edit request → admin approves
+4. Partner writes blog article → submitted as draft → admin publishes with center backlink
 
-- editorial ratings only
-- categories:
-  - overall
-  - staff
-  - facility
-  - program quality
-  - privacy
-  - value
-
----
-
-## 9.9 Badges
-
-- Verified Profile
-- Trusted Partner
-
-### Definitions
-- Verified = verified identity
-- Trusted Partner = signed agreement
-
----
-
-## 9.10 CMS
-
-Must manage:
-- rehab profiles
-- static pages
-- blog
-- FAQs
-- legal pages
-- badges
-- editorial ratings
-
----
-
-## 9.11 Admin Dashboard
-
-Capabilities:
-- manage centers
-- manage questionnaire
-- manage matching logic
-- view leads
-- assign leads
-- update status
-- manage content
-- manage badges
-
-### Metrics
-- traffic
-- assessments
-- top matches
-- lead volume
-- leads by partner
-
----
-
-## 9.12 Partner Portal
-
-Can edit:
-- basic info
-- photos
-- pricing
-- contact
-- inquiry email
-
-Cannot edit:
-- ratings
-- badges
-
-All changes require approval
-
----
-
-# 10. Data Model
-
-### Minimum fields
-- name
-- location
-- contact
-- description
-- treatment focus
-
-### Full model
-- pricing
-- program length
-- detox
-- therapies
-- staff
-- accreditation
-- languages
-- insurance
-- badges
-- inquiry email
-
-### Commercial Fields
-- verified_profile
-- trusted_partner
-- referral_eligible
-- agreement_status
+## E — Admin Operations
+1. Dashboard overview (traffic, assessments, leads)
+2. Manage leads (review, forward with commission check)
+3. Manage centers (CRUD, photos, commission, badges)
+4. Manage users (promote to partner/admin, link to centers)
+5. Manage content (blog, static, legal pages)
+6. Review partner edit requests
 
 ---
 
 # 11. Legal & Compliance
 
-### Platform Type
-Information/referral only
-
-### Required Pages
+### Implemented Pages
 - Privacy Policy
-- Terms of Use
-- Disclaimer
-- Contact
+- Terms of Service
+- Medical Disclaimer
+- HIPAA Compliance
+- Contact Specialist
 
 ### Disclaimers
-- not medical advice
-- informational only
+- Not medical advice (on all pages)
+- Informational only
+- Medical disclaimer on every blog article
 
 ### Privacy
-- PDPA compliant
-
-### Do NOT collect
-- medical history
-- diagnosis details
-- medication
-- ID/passport
-- insurance docs
-- payment data
+- HIPAA-aligned practices
+- Encryption at rest and in transit
+- Controlled data sharing (only with consent)
+- Medical emergency contacts shown (988, SAMHSA)
 
 ---
 
 # 12. Non-Functional Requirements
 
 ### Performance
-- fast load
-- SEO optimized
-- mobile responsive
+- [x] Turbopack for fast dev builds (~7-9s production build)
+- [x] Server-side rendering for SEO pages
+- [x] Image optimization via external URLs
 
 ### Security
-- auth + roles
-- secure data handling
+- [x] Supabase Auth + Role-based access
+- [x] Row Level Security on all tables
+- [x] Service role for sensitive operations
+- [x] Middleware route protection (/admin, /partner)
 
-### Scalability
-- support global expansion
-- support hybrid monetization
-
----
-
-# 13. Tech Stack
-
-- Next.js
-- Node.js
-- Supabase
-- Vercel
+### Responsive
+- [x] Mobile-first design with adaptive breakpoints
+- [x] All pages tested for mobile viewports
 
 ---
 
-# 14. Integrations
+# 13. Monetization
 
-- WhatsApp
-- Google Analytics
-- Meta Pixel
-- email automation
-- Stripe (future-ready)
-
----
-
-# 15. Monetization
-
-### MVP
-- commission per admission
+### Current
+- Commission per admission (percentage or fixed amount)
+- Commission tracking in admin dashboard
+- Agreement status + contract dates
 
 ### Future
-- hybrid model (subscription + CPC + CPL)
+- Subscription model for premium listings
+- CPC/CPL advertising
+- Featured placement fees
 
 ---
 
-# 16. SEO Strategy
+# 14. SEO Strategy
 
-### MVP
-- center profile pages
+### Implemented
+- [x] Center profile pages with metadata
+- [x] Education blog with 6 articles (addiction, treatment, dual diagnosis, family, opioids, choosing rehab)
+- [x] Meta titles + descriptions on all pages
+- [x] OG images for blog articles
+- [x] Semantic HTML with editorial typography
+- [x] Structured internal linking (blog → assessment → inquiry)
 
-### Phase 2
-- country pages
-- condition pages
-- guides
-
----
-
-# 17. UX Guidelines
-
-Tone:
-- calm
-- premium
-- trustworthy
-
-Avoid:
-- medical claims
-- guarantees
-
-Use:
-- "may fit"
-- "based on your responses"
+### Future
+- Country landing pages
+- Condition-specific landing pages
+- Comprehensive treatment guides
 
 ---
 
-# 18. Launch Plan
+# 15. Acceptance Criteria (All Met)
 
-Timeline: 6 weeks  
-Approach: MVP-first, scale-ready  
-
----
-
-# 19. Acceptance Criteria
-
-1. users can browse centers
-2. users can complete assessment
-3. system returns matches
-4. users submit inquiry to platform only
-5. admin controls referral
-6. partner portal works
-7. CMS works
-8. legal pages exist
-9. analytics tracked
+1. [x] Users can browse centers with filters
+2. [x] Users can complete AI assessment
+3. [x] System returns matches with explanations
+4. [x] Users submit inquiry to platform only (not centers)
+5. [x] Admin controls referral with commission visibility
+6. [x] Partner portal works (edit, photos, blog, history)
+7. [x] CMS works (blog + static + legal pages)
+8. [x] Legal pages exist and are published
+9. [x] Role-based access control works
+10. [x] Email notifications working
+11. [x] Mobile responsive
+12. [x] Photos on centers and blog articles
 
 ---
 
-# 20. Build Order
+# 16. Future Roadmap
 
-### Phase A
-- architecture
-- DB schema
-- auth
-
-### Phase B
-- homepage
-- listing
-- profiles
-
-### Phase C
-- assessment + matching
-
-### Phase D
-- inquiry + email
-
-### Phase E
-- admin + partner portal
-
----
-
-# 21. Future Roadmap
-
-- user reviews
-- admission tracking
-- payment system
-- multilingual
-- mobile app
-- CRM automation
+- [ ] User reviews/ratings
+- [ ] Admission tracking
+- [ ] Payment/invoicing system
+- [ ] Multilingual support
+- [ ] Mobile app
+- [ ] CRM automation
+- [ ] AI chat assistant
+- [ ] Real-time notifications
+- [ ] Country/condition landing pages (SEO)
+- [ ] Advanced analytics dashboard
+- [ ] Stripe integration
+- [ ] Saved centers functionality (full implementation)
 
 ---
 

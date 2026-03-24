@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Confidential Inquiry | Digital Sanctuary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#dbe4e7",
+              "tertiary": "#4a6274",
+              "tertiary-fixed": "#c7e0f5",
+              "tertiary-container": "#c7e0f5",
+              "on-secondary": "#edfcff",
+              "primary-dim": "#39575f",
+              "primary-fixed": "#c8e8f2",
+              "error-container": "#fe8983",
+              "on-background": "#2b3437",
+              "error-dim": "#4e0309",
+              "surface-tint": "#45636b",
+              "inverse-primary": "#cdeef7",
+              "surface": "#f8f9fa",
+              "primary": "#45636b",
+              "on-tertiary": "#f5f9ff",
+              "on-secondary-fixed": "#304246",
+              "surface-container-highest": "#dbe4e7",
+              "on-error": "#fff7f6",
+              "on-secondary-fixed-variant": "#4c5f63",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-container": "#38565e",
+              "secondary-container": "#d2e6eb",
+              "surface-bright": "#f8f9fa",
+              "primary-container": "#c8e8f2",
+              "on-surface": "#2b3437",
+              "on-error-container": "#752121",
+              "inverse-surface": "#0c0f10",
+              "secondary-dim": "#44565a",
+              "outline": "#737c7f",
+              "surface-container-high": "#e3e9ec",
+              "on-secondary-container": "#425559",
+              "primary-fixed-dim": "#badae3",
+              "outline-variant": "#abb3b7",
+              "on-tertiary-fixed": "#273e4f",
+              "background": "#f8f9fa",
+              "on-tertiary-container": "#3a5162",
+              "on-primary-fixed": "#25444c",
+              "tertiary-fixed-dim": "#b9d2e7",
+              "secondary-fixed-dim": "#c4d8dc",
+              "secondary": "#4f6266",
+              "on-surface-variant": "#586064",
+              "on-primary-fixed-variant": "#426068",
+              "error": "#9f403d",
+              "inverse-on-surface": "#9b9d9e",
+              "on-primary": "#ecfaff",
+              "on-tertiary-fixed-variant": "#435b6c",
+              "secondary-fixed": "#d2e6eb",
+              "surface-container-low": "#f1f4f6",
+              "surface-dim": "#d1dce0",
+              "surface-container": "#eaeff1",
+              "tertiary-dim": "#3e5667"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .serif-text {
+            font-family: 'Noto Serif', serif;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+<div class="text-2xl font-['Noto_Serif'] font-bold text-[#45636b] dark:text-[#5c7e87]">Digital Sanctuary</div>
+<nav class="hidden md:flex space-x-8">
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Our Specialists</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Services</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Process</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#45636b] transition-colors duration-300" href="#">About</a>
+</nav>
+<div class="flex items-center space-x-4">
+<button class="flex items-center gap-2 px-5 py-2 rounded-full bg-primary text-on-primary font-medium hover:bg-primary-dim transition-all duration-300">
+<span class="material-symbols-outlined text-sm" data-icon="lock">lock</span>
+<span>Secure Login</span>
+</button>
+</div>
+</div>
+<div class="bg-slate-100 dark:bg-slate-800 h-[1px] w-full"></div>
+</header>
+<main class="flex-grow">
+<div class="max-w-7xl mx-auto px-8 py-16 md:py-24">
+<!-- Hero Title -->
+<div class="mb-16 md:w-2/3">
+<h1 class="text-4xl md:text-5xl lg:text-6xl font-headline font-bold text-primary mb-6 tracking-tight">Submit a confidential inquiry</h1>
+<p class="text-lg md:text-xl text-on-surface-variant font-body max-w-2xl leading-relaxed">
+                    RehabAtlas will review before connecting you. Your journey toward recovery begins with a secure, discreet conversation.
+                </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+<!-- Left Column: The Form -->
+<div class="lg:col-span-7 bg-surface-container-lowest rounded-xl p-8 md:p-12 shadow-[0_32px_64px_-12px_rgba(43,52,55,0.06)] border border-outline-variant/15">
+<form class="space-y-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Name -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300" placeholder="Full name" type="text"/>
+</div>
+<!-- Email -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Email</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300" placeholder="example@email.com" type="email"/>
+</div>
+<!-- Phone -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Phone / WhatsApp</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300" placeholder="+1 (000) 000-0000" type="tel"/>
+</div>
+<!-- Country -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Country</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300 appearance-none">
+<option>Select location</option>
+<option>United States</option>
+<option>United Kingdom</option>
+<option>Canada</option>
+<option>Australia</option>
+<option>Other</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Who needs help -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Who needs help?</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300 appearance-none">
+<option>Select option</option>
+<option>Myself</option>
+<option>A loved one</option>
+<option>A patient/client</option>
+</select>
+</div>
+<!-- Age Range -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Age range</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300 appearance-none">
+<option>Select age range</option>
+<option>Under 18</option>
+<option>18 - 30</option>
+<option>31 - 50</option>
+<option>51+</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Concern -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Primary concern</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300 appearance-none">
+<option>Select focus area</option>
+<option>Substance Use</option>
+<option>Mental Health</option>
+<option>Behavioral Health</option>
+<option>Dual Diagnosis</option>
+</select>
+</div>
+<!-- Urgency -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Urgency</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300 appearance-none">
+<option>Select level</option>
+<option>Immediate (Within 24h)</option>
+<option>Moderate (Within 7 days)</option>
+<option>Exploratory</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Preferred Center -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Preferred center (if any)</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300" placeholder="Center name" type="text"/>
+</div>
+<!-- Budget -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Monthly Budget Range</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300 appearance-none">
+<option>Select range</option>
+<option>Under $10k</option>
+<option>$10k - $30k</option>
+<option>$30k - $60k</option>
+<option>$60k+</option>
+</select>
+</div>
+</div>
+<!-- Message -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-on-surface-variant px-1">Message</label>
+<textarea class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-highest transition-all duration-300" placeholder="Briefly describe the situation and how we can best support you..." rows="4"></textarea>
+</div>
+<!-- Consent -->
+<div class="flex items-start gap-3 py-2">
+<input class="mt-1 rounded text-primary focus:ring-primary border-outline-variant bg-surface-container-low" id="consent" type="checkbox"/>
+<label class="text-sm text-on-surface-variant leading-relaxed" for="consent">
+                                I consent to RehabAtlas processing my data according to the Privacy Policy. I understand that this information is encrypted and strictly confidential.
+                            </label>
+</div>
+<!-- CTA -->
+<button class="w-full py-4 bg-primary text-on-primary font-bold rounded-full text-lg hover:bg-primary-dim shadow-lg shadow-primary/10 transition-all duration-300" type="submit">
+                            Submit Inquiry
+                        </button>
+</form>
+</div>
+<!-- Right Column: Trust & Side Panel -->
+<aside class="lg:col-span-5 space-y-12 lg:sticky lg:top-32">
+<!-- Trust Card -->
+<div class="bg-surface-container-low rounded-xl p-8 border border-outline-variant/15">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="encrypted">encrypted</span>
+</div>
+<h3 class="font-headline text-xl font-bold text-on-surface">Privacy First</h3>
+</div>
+<p class="text-on-surface-variant leading-relaxed mb-6">
+                            Your inquiry is encrypted using industry-leading protocols. Information is only shared with specialized medical reviewers and the selected centers under strict confidentiality agreements.
+                        </p>
+<ul class="space-y-4">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="check_circle">check_circle</span>
+<span class="text-sm font-medium text-on-surface">HIPAA Compliant Infrastructure</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="check_circle">check_circle</span>
+<span class="text-sm font-medium text-on-surface">256-bit AES Encryption</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="check_circle">check_circle</span>
+<span class="text-sm font-medium text-on-surface">Anonymous Routing Available</span>
+</li>
+</ul>
+</div>
+<!-- Why Us Section -->
+<div class="px-4">
+<h4 class="font-headline text-2xl font-bold text-primary mb-8">Why contact us first?</h4>
+<div class="space-y-10">
+<div class="flex gap-6">
+<div class="shrink-0 text-primary-dim">
+<span class="material-symbols-outlined text-3xl" data-icon="clinical_notes">clinical_notes</span>
+</div>
+<div>
+<h5 class="font-bold text-on-surface mb-2">Expert Vetting</h5>
+<p class="text-sm text-on-surface-variant leading-relaxed">We review your needs against 200+ clinical markers to ensure the center's modality matches your specific diagnosis.</p>
+</div>
+</div>
+<div class="flex gap-6">
+<div class="shrink-0 text-primary-dim">
+<span class="material-symbols-outlined text-3xl" data-icon="shield_person">shield_person</span>
+</div>
+<div>
+<h5 class="font-bold text-on-surface mb-2">Advocacy &amp; Support</h5>
+<p class="text-sm text-on-surface-variant leading-relaxed">We act as your private advocate during the intake process, ensuring transparency in costs and treatment plans.</p>
+</div>
+</div>
+<div class="flex gap-6">
+<div class="shrink-0 text-primary-dim">
+<span class="material-symbols-outlined text-3xl" data-icon="patient_list">patient_list</span>
+</div>
+<div>
+<h5 class="font-bold text-on-surface mb-2">Pre-Intake Review</h5>
+<p class="text-sm text-on-surface-variant leading-relaxed">Our clinical team can help prepare your documentation to accelerate admission into high-demand centers.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Quote Block -->
+<div class="relative overflow-hidden bg-primary p-8 rounded-xl text-on-primary">
+<div class="relative z-10">
+<p class="italic font-headline text-lg mb-4 opacity-90">"Recovery is not just about the destination, but about the dignity of the journey from the very first step."</p>
+<span class="text-xs font-bold uppercase tracking-widest opacity-60">— Clinical Director</span>
+</div>
+<div class="absolute -right-8 -bottom-8 opacity-10">
+<span class="material-symbols-outlined text-[120px]" data-icon="format_quote">format_quote</span>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-50 dark:bg-slate-950 w-full mt-auto border-t border-slate-200 dark:border-slate-800">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-8 py-12 max-w-7xl mx-auto gap-6">
+<div class="flex flex-col items-center md:items-start gap-2">
+<div class="font-['Noto_Serif'] font-bold text-[#45636b] dark:text-[#5c7e87] text-lg">Digital Sanctuary</div>
+<p class="font-['Inter'] text-sm tracking-wide text-slate-500 dark:text-slate-400">© 2024 Digital Sanctuary. All rights reserved. Encrypted &amp; HIPAA Compliant.</p>
+</div>
+<nav class="flex flex-wrap justify-center gap-6">
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Privacy Policy</a>
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Terms of Service</a>
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Confidentiality Agreement</a>
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-[#45636b] transition-colors duration-300" href="#">Contact Support</a>
+</nav>
+</div>
+</footer>
+</body></html>
