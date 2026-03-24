@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  Phone,
   Mail,
   Clock,
   AlertTriangle,
@@ -25,15 +24,9 @@ const HERO_IMAGE =
 
 const CONTACT_INFO = [
   {
-    icon: Phone,
-    label: "Phone",
-    value: "+1 (800) 000-0000",
-    sub: "Monday – Saturday, 8 AM – 8 PM EST",
-  },
-  {
     icon: Mail,
     label: "Email",
-    value: "info@rehabatlas.com",
+    value: "info@rehab-atlas.com",
     sub: "We respond within 2–4 business hours",
   },
   {
