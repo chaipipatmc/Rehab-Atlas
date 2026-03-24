@@ -34,13 +34,17 @@ export async function sendAgentEmail(params: {
 }): Promise<void> {
   const appUrl = getAppUrl();
 
-  // Build action buttons with short, clean URLs
-  // Token is now a 12-char code like "aB3xK9mQ2pLn" — no long HMAC strings
+  // Build action section — use plain-text URLs to avoid Resend's click-tracking proxy
+  // (Resend rewrites <a href> tags through a proxy with SSL cert issues)
   const actionButtons = params.actions
     .map((a) => {
       const url = `${appUrl}/api/agents/action?t=${a.token}&d=${a.decision}${a.center_id ? `&c=${a.center_id}` : ""}`;
       const color = a.color || (a.decision === "approved" ? "#45636b" : a.decision === "rejected" ? "#dc2626" : "#f59e0b");
-      return `<a href="${escapeHtml(url)}" style="display:inline-block;padding:10px 24px;background:${color};color:white;text-decoration:none;border-radius:24px;font-size:14px;font-weight:600;margin-right:8px;">${escapeHtml(a.label)}</a>`;
+      return `<div style="margin-bottom:12px;">
+        <span style="display:inline-block;padding:8px 20px;background:${color};color:white;border-radius:24px;font-size:14px;font-weight:600;">${escapeHtml(a.label)}</span>
+        <div style="margin-top:6px;font-size:12px;color:#6b7d82;">Copy and paste this link in your browser:</div>
+        <div style="margin-top:4px;padding:10px 14px;background:#f4f6f7;border-radius:8px;font-size:13px;font-family:monospace;word-break:break-all;color:#2d3436;">${escapeHtml(url)}</div>
+      </div>`;
     })
     .join("\n");
 
