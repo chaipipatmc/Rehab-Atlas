@@ -11,8 +11,6 @@ import {
   Headphones,
   ArrowRight,
   CheckCircle,
-  Percent,
-  DollarSign,
 } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -234,82 +232,6 @@ export default function PartnerJoinPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Commission Models */}
-      <section className="py-16 md:py-20 bg-surface">
-        <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
-          <div className="text-center mb-12">
-            <h2 className="text-headline-lg font-semibold text-foreground">
-              Partnership & Commission
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground max-w-lg mx-auto">
-              We offer two flexible commission structures, customised to your referral volume and business model.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Percentage-based */}
-            <div className="bg-surface-container-lowest rounded-2xl p-8 shadow-ambient ghost-border">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center flex-shrink-0">
-                  <Percent className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Percentage-Based
-                  </h3>
-                  <p className="text-xs text-muted-foreground">Per successful admission</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                An agreed percentage of the first admission fee for each patient successfully
-                admitted through a Rehab-Atlas referral. This model aligns our incentives
-                directly with your admissions outcomes.
-              </p>
-              <ul className="mt-5 space-y-2">
-                {["Rate agreed during onboarding", "Applied to verified admissions only", "Monthly reconciliation"].map((pt) => (
-                  <li key={pt} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CheckCircle className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                    {pt}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Fixed fee */}
-            <div className="bg-surface-container-lowest rounded-2xl p-8 shadow-ambient ghost-border">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Fixed Fee
-                  </h3>
-                  <p className="text-xs text-muted-foreground">Per qualified referral</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                A flat rate per qualified lead forwarded to your center. Predictable costs
-                make this model well-suited for centers that prefer straightforward, volume-based
-                planning without variable commission exposure.
-              </p>
-              <ul className="mt-5 space-y-2">
-                {["Fixed amount per qualified lead", "Transparent invoicing", "No variable cost surprises"].map((pt) => (
-                  <li key={pt} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CheckCircle className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                    {pt}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <p className="text-center text-xs text-muted-foreground italic">
-            Terms are customised per partner. Contact us to discuss which model suits your center.
-          </p>
         </div>
       </section>
 
