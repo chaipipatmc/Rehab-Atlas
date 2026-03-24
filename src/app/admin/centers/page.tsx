@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { PublishToggle } from "@/components/admin/publish-toggle";
 
 const PAGE_SIZE = 20;
 
@@ -112,11 +113,14 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/admin/centers/${center.id}`}>
-                      <Pencil className="h-4 w-4" />
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <PublishToggle id={center.id} type="center" currentStatus={center.status} />
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/admin/centers/${center.id}`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
