@@ -98,6 +98,22 @@ const mdComponents: Components = {
   code: ({ children }) => (
     <code className="bg-[#f0f3f4] rounded px-1.5 py-0.5 text-xs">{children}</code>
   ),
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-6 rounded-xl border border-[#e0e4e6]">
+      <table className="w-full text-sm">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-[#f4f6f7] text-[10px] uppercase tracking-wider text-[#7a8a90]">{children}</thead>
+  ),
+  tbody: ({ children }) => <tbody className="divide-y divide-[#e8ecee]">{children}</tbody>,
+  tr: ({ children }) => <tr className="hover:bg-[#f8f9fa] transition-colors">{children}</tr>,
+  th: ({ children }) => (
+    <th className="text-left px-4 py-3 font-semibold">{children}</th>
+  ),
+  td: ({ children }) => (
+    <td className="px-4 py-3 text-[#5a6a70] leading-relaxed">{children}</td>
+  ),
 };
 
 export default async function CMSPage({ params }: PageProps) {
