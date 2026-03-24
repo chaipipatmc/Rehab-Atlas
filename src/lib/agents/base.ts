@@ -3,7 +3,7 @@
  * Token generation, task CRUD, webhook verification, logging.
  */
 
-import { createHmac, randomUUID } from "crypto";
+import { createHmac, randomUUID, randomBytes } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AgentType, AgentRecommendation, AgentTask } from "@/types/agent";
 
@@ -13,6 +13,11 @@ const WEBHOOK_SECRET = process.env.AGENT_WEBHOOK_SECRET || "rehab-atlas-agent-se
 
 // ── Token Management ──
 
+/** Generate a short, URL-safe action code (12 chars) for email links */
+export function generateShortCode(): string {
+  return randomBytes(9).toString("base64url").slice(0, 12);
+}
+
 export function generateActionToken(taskId: string): string {
   const payload = `${taskId}.${Date.now()}`;
   const sig = createHmac("sha256", HMAC_KEY).update(payload).digest("hex").slice(0, 32);
@@ -20,6 +25,12 @@ export function generateActionToken(taskId: string): string {
 }
 
 export function validateActionToken(token: string): { taskId: string } | null {
+  // Support short codes — look up in DB
+  if (!token.includes(".")) {
+    // This is a short code, not an HMAC token — handled by the action route
+    return null;
+  }
+
   const parts = token.split(".");
   if (parts.length !== 3) return null;
 
@@ -36,6 +47,17 @@ export function validateActionToken(token: string): { taskId: string } | null {
   if (Date.now() > expiresAt) return null;
 
   return { taskId };
+}
+
+/** Look up a task by its short action code */
+export async function findTaskByShortCode(code: string): Promise<AgentTask | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("agent_tasks")
+    .select("*")
+    .eq("action_token", code)
+    .single();
+  return (data as AgentTask) || null;
 }
 
 // ── Task CRUD ──
@@ -64,7 +86,7 @@ export async function createAgentTask(params: {
   if (existing) return null;
 
   const taskId = randomUUID();
-  const token = generateActionToken(taskId);
+  const token = generateShortCode(); // Short 12-char code for clean email URLs
   const tokenExpires = new Date(Date.now() + TOKEN_TTL_HOURS * 60 * 60 * 1000).toISOString();
 
   const { data, error } = await admin

@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { validateActionToken, updateTaskStatus, logAgentAction, getAppUrl } from "@/lib/agents/base";
+import { validateActionToken, findTaskByShortCode, updateTaskStatus, logAgentAction, getAppUrl } from "@/lib/agents/base";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendLeadForwardEmail } from "@/lib/email/send";
 
@@ -25,15 +25,29 @@ export async function GET(request: Request) {
     return brandedPage("Invalid Request", "Missing or invalid parameters.", 400);
   }
 
-  // Validate token before showing the page
-  const parsed = validateActionToken(token);
-  if (!parsed) {
-    return brandedPage("Link Expired", "This action link has expired (24h). Please use the admin dashboard instead.", 410);
+  // Look up task by short code first, fall back to HMAC token
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let task: any = null;
+  const admin = createAdminClient();
+
+  if (!token.includes(".")) {
+    task = await findTaskByShortCode(token);
+  } else {
+    const parsed = validateActionToken(token);
+    if (parsed) {
+      const { data } = await admin.from("agent_tasks").select("*").eq("id", parsed.taskId).single();
+      task = data;
+    }
   }
 
-  // Check task exists and hasn't been actioned
-  const admin = createAdminClient();
-  const { data: task } = await admin.from("agent_tasks").select("id, agent_type, entity_type, owner_decision").eq("id", parsed.taskId).single();
+  if (!task) {
+    return brandedPage("Link Expired", "This action link has expired (24h) or is invalid. Please use the admin dashboard instead.", 410);
+  }
+
+  // Check token expiry for short codes
+  if (task.token_expires && new Date(task.token_expires as string) < new Date()) {
+    return brandedPage("Link Expired", "This action link has expired (24h). Please use the admin dashboard instead.", 410);
+  }
 
   if (!task) {
     return brandedPage("Task Not Found", "This task no longer exists.", 404);
@@ -95,16 +109,23 @@ export async function POST(request: Request) {
     return brandedPage("Invalid Request", "Missing or invalid parameters.", 400);
   }
 
-  const parsed = validateActionToken(token);
-  if (!parsed) {
-    return brandedPage("Link Expired", "This action link has expired (24h). Please use the admin dashboard instead.", 410);
+  // Look up task by short code or HMAC token
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let task: any = null;
+  const admin = createAdminClient();
+
+  if (!token.includes(".")) {
+    task = await findTaskByShortCode(token);
+  } else {
+    const parsed = validateActionToken(token);
+    if (parsed) {
+      const { data } = await admin.from("agent_tasks").select("*").eq("id", parsed.taskId).single();
+      task = data;
+    }
   }
 
-  const admin = createAdminClient();
-  const { data: task, error } = await admin.from("agent_tasks").select("*").eq("id", parsed.taskId).single();
-
-  if (error || !task) {
-    return brandedPage("Task Not Found", "This task no longer exists.", 404);
+  if (!task) {
+    return brandedPage("Link Expired", "This action link has expired or is invalid.", 410);
   }
 
   if (task.owner_decision) {
