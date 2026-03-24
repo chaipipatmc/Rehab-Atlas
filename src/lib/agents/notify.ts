@@ -69,6 +69,10 @@ export async function sendAgentEmail(params: {
       to: ADMIN_EMAIL,
       subject: params.subject,
       html,
+      headers: {
+        "X-Entity-Ref-ID": `agent-${Date.now()}`, // Unique ID to prevent threading
+      },
+      tags: [{ name: "click_tracking", value: "disabled" }],
     });
   } catch (err) {
     console.error("Agent email failed:", err);
