@@ -310,62 +310,133 @@ export default function AdminAgentsPage() {
               const isExpanded = expandedTask === task.id;
               const isAwaiting = task.status === "awaiting_owner";
 
+              const checklist = task.checklist as Record<string, unknown> | null;
+              const isOutreachEmail = task.agent_type === "outreach_research" && !!checklist?.body_text;
+
               return (
                 <tr key={task.id} className="border-t border-surface-container-low hover:bg-surface-container-low/50 transition-colors duration-200 align-top">
-                  <td className="px-6 py-4">
-                    <button onClick={() => setExpandedTask(isExpanded ? null : task.id)} className="text-left">
+                  <td className="px-6 py-4" colSpan={isExpanded && isOutreachEmail ? 6 : 1}>
+                    <button onClick={() => setExpandedTask(isExpanded ? null : task.id)} className="text-left w-full">
                       <p className="text-sm font-medium text-foreground">{agentInfo?.label || task.agent_type}</p>
-                      {isExpanded && task.ai_summary && (
+                      {isExpanded && !isOutreachEmail && task.ai_summary && (
                         <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-xs">{task.ai_summary}</p>
                       )}
                     </button>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {task.entity_type}
-                  </td>
-                  <td className="px-6 py-4">
-                    {task.ai_recommendation && (
-                      <Badge variant="outline" className={
-                        task.ai_recommendation === "approve" ? "text-emerald-700 bg-emerald-50" :
-                        task.ai_recommendation === "reject" ? "text-red-700 bg-red-50" :
-                        "text-amber-700 bg-amber-50"
-                      }>
-                        {task.ai_recommendation}
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 ${statusInfo.color}`}>
-                      <StatusIcon className="h-3 w-3" />
-                      {statusInfo.label}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs text-muted-foreground">
-                    {new Date(task.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                  </td>
-                  <td className="px-6 py-4">
-                    {isAwaiting && task.action_token && (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleAction(task.id, task.action_token!, "approved")}
-                          disabled={actioning === task.id}
-                          className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-3 py-1 transition-colors disabled:opacity-50"
-                        >
-                          {actioning === task.id ? "..." : "Approve"}
-                        </button>
-                        <button
-                          onClick={() => handleAction(task.id, task.action_token!, "rejected")}
-                          disabled={actioning === task.id}
-                          className="text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-full px-3 py-1 transition-colors disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
+
+                    {/* Full email preview for outreach tasks */}
+                    {isExpanded && isOutreachEmail && (
+                      <div className="mt-4 bg-surface-container-low rounded-xl p-5 max-w-2xl">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">Email Preview</h4>
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 ${statusInfo.color}`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                        <div className="space-y-2 text-sm mb-4">
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground font-medium w-12 shrink-0">To:</span>
+                            <span className="text-foreground">{String(checklist.to_email || "")}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground font-medium w-12 shrink-0">From:</span>
+                            <span className="text-foreground">{String(checklist.persona || "Sarah")} &lt;info@rehab-atlas.com&gt;</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground font-medium w-12 shrink-0">Subj:</span>
+                            <span className="text-foreground font-medium">{String(checklist.subject || "")}</span>
+                          </div>
+                        </div>
+                        <div className="border-t border-surface-container pt-4">
+                          <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed font-sans">{String(checklist.body_text || "")}</pre>
+                        </div>
+                        {(checklist.personalization_points as string[])?.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-surface-container">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1">Personalization points</p>
+                            <div className="flex flex-wrap gap-1">
+                              {(checklist.personalization_points as string[]).map((p, i) => (
+                                <span key={i} className="text-[10px] bg-primary/10 text-primary rounded-full px-2 py-0.5">{p}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {isAwaiting && task.action_token && (
+                          <div className="mt-4 pt-4 border-t border-surface-container flex items-center gap-3">
+                            <button
+                              onClick={() => handleAction(task.id, task.action_token!, "approved")}
+                              disabled={actioning === task.id}
+                              className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5 transition-colors disabled:opacity-50"
+                            >
+                              {actioning === task.id ? "Sending..." : "Approve & Send"}
+                            </button>
+                            <button
+                              onClick={() => handleAction(task.id, task.action_token!, "rejected")}
+                              disabled={actioning === task.id}
+                              className="text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-full px-4 py-1.5 transition-colors disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                            <span className="text-[10px] text-muted-foreground">Approving will send this email via info@rehab-atlas.com</span>
+                          </div>
+                        )}
+                        {task.owner_decision && (
+                          <div className="mt-4 pt-3 border-t border-surface-container">
+                            <span className="text-xs text-muted-foreground capitalize">Decision: {task.owner_decision}</span>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {task.owner_decision && (
-                      <span className="text-xs text-muted-foreground capitalize">{task.owner_decision}</span>
-                    )}
                   </td>
+                  {!(isExpanded && isOutreachEmail) && (
+                    <>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {task.entity_type}
+                      </td>
+                      <td className="px-6 py-4">
+                        {task.ai_recommendation && (
+                          <Badge variant="outline" className={
+                            task.ai_recommendation === "approve" ? "text-emerald-700 bg-emerald-50" :
+                            task.ai_recommendation === "reject" ? "text-red-700 bg-red-50" :
+                            "text-amber-700 bg-amber-50"
+                          }>
+                            {task.ai_recommendation}
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 ${statusInfo.color}`}>
+                          <StatusIcon className="h-3 w-3" />
+                          {statusInfo.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                        {new Date(task.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="px-6 py-4">
+                        {isAwaiting && task.action_token && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleAction(task.id, task.action_token!, "approved")}
+                              disabled={actioning === task.id}
+                              className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-3 py-1 transition-colors disabled:opacity-50"
+                            >
+                              {actioning === task.id ? "..." : "Approve"}
+                            </button>
+                            <button
+                              onClick={() => handleAction(task.id, task.action_token!, "rejected")}
+                              disabled={actioning === task.id}
+                              className="text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-full px-3 py-1 transition-colors disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                        {task.owner_decision && (
+                          <span className="text-xs text-muted-foreground capitalize">{task.owner_decision}</span>
+                        )}
+                      </td>
+                    </>
+                  )}
                 </tr>
               );
             })}
