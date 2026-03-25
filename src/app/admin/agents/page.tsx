@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import {
   Building2, FileText, UserSearch, Clock,
   CheckCircle, XCircle, AlertCircle, Loader2,
-  Bot, Zap,
+  Bot, Zap, Search, Send, MessageSquare, FileSignature,
+  Activity, Target,
 } from "lucide-react";
 
 interface AgentConfig {
@@ -16,6 +17,12 @@ interface AgentConfig {
   content_admin: boolean;
   follow_up: boolean;
   lead_verify: boolean;
+  outreach_research: boolean;
+  outreach_followup: boolean;
+  outreach_response: boolean;
+  outreach_agreement: boolean;
+  outreach_activation: boolean;
+  outreach_orchestrator: boolean;
 }
 
 interface AgentTaskRow {
@@ -55,6 +62,42 @@ const AGENT_INFO = {
     description: "Sends daily reminders for incomplete profiles and stale content. Runs every morning at 9 AM.",
     icon: Clock,
     color: "text-violet-600",
+  },
+  outreach_research: {
+    label: "Outreach Research",
+    description: "Researches center websites and drafts personalized outreach emails for partner acquisition.",
+    icon: Search,
+    color: "text-sky-600",
+  },
+  outreach_followup: {
+    label: "Outreach Follow-up",
+    description: "Auto-sends follow-up emails (Day 3, 7, 14) to centers that haven't responded.",
+    icon: Send,
+    color: "text-sky-600",
+  },
+  outreach_response: {
+    label: "Response Handler",
+    description: "Detects inbound replies from centers, analyzes sentiment, and routes to appropriate next step.",
+    icon: MessageSquare,
+    color: "text-emerald-600",
+  },
+  outreach_agreement: {
+    label: "Agreement Agent",
+    description: "Prepares customized partnership agreements and sends via PandaDoc for e-signature.",
+    icon: FileSignature,
+    color: "text-violet-600",
+  },
+  outreach_activation: {
+    label: "Activation Agent",
+    description: "Updates center commission data in the database after agreement signing. Sends welcome emails.",
+    icon: Activity,
+    color: "text-emerald-600",
+  },
+  outreach_orchestrator: {
+    label: "Master Orchestrator",
+    description: "Coordinates all outreach agents, advances pipeline stages, and generates daily digest reports.",
+    icon: Target,
+    color: "text-primary",
   },
 };
 
@@ -153,9 +196,54 @@ export default function AdminAgentsPage() {
         </p>
       </div>
 
-      {/* Agent Toggle Cards */}
+      {/* Internal Agent Toggle Cards */}
+      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Internal Agents</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {(Object.entries(AGENT_INFO) as [keyof typeof AGENT_INFO, typeof AGENT_INFO[keyof typeof AGENT_INFO]][]).filter(([key]) => !key.startsWith("outreach_")).map(([key, info]) => {
+          const enabled = config?.[key] || false;
+          const Icon = info.icon;
+
+          return (
+            <div
+              key={key}
+              className={`bg-surface-container-lowest rounded-2xl p-6 shadow-ambient transition-all duration-300 ${
+                enabled ? "ring-2 ring-primary/20" : ""
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${enabled ? "bg-primary/10" : "bg-surface-container"}`}>
+                    <Icon className={`h-5 w-5 ${enabled ? info.color : "text-muted-foreground"}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">{info.label}</h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {enabled ? (
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+                          <Zap className="h-3 w-3" /> Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">Manual mode</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Switch
+                  checked={enabled}
+                  onCheckedChange={(v) => toggleAgent(key, v)}
+                  disabled={toggling === key}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-3 leading-relaxed">{info.description}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Outreach Agent Toggle Cards */}
+      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Outreach Pipeline Agents</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        {(Object.entries(AGENT_INFO) as [keyof typeof AGENT_INFO, typeof AGENT_INFO[keyof typeof AGENT_INFO]][]).map(([key, info]) => {
+        {(Object.entries(AGENT_INFO) as [keyof typeof AGENT_INFO, typeof AGENT_INFO[keyof typeof AGENT_INFO]][]).filter(([key]) => key.startsWith("outreach_")).map(([key, info]) => {
           const enabled = config?.[key] || false;
           const Icon = info.icon;
 

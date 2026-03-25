@@ -7,7 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getAgentConfig, setAgentEnabled } from "@/lib/agents/config";
 import type { AgentType } from "@/types/agent";
 
-const VALID_AGENTS: AgentType[] = ["center_admin", "content_admin", "follow_up", "lead_verify"];
+const VALID_AGENTS: AgentType[] = [
+  "center_admin", "content_admin", "follow_up", "lead_verify",
+  "outreach_research", "outreach_followup", "outreach_response",
+  "outreach_agreement", "outreach_activation", "outreach_orchestrator",
+];
 
 // GET: Return current agent config
 export async function GET() {

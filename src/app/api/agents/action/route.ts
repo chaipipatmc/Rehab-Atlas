@@ -8,6 +8,8 @@ import { NextResponse } from "next/server";
 import { validateActionToken, findTaskByShortCode, updateTaskStatus, logAgentAction, getAppUrl } from "@/lib/agents/base";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendLeadForwardEmail } from "@/lib/email/send";
+import { sendApprovedOutreach } from "@/lib/agents/outreach/research";
+import { sendApprovedAgreement } from "@/lib/agents/outreach/agreement";
 
 // GET: Show confirmation page (user clicks email link → sees branded page → clicks Confirm)
 export async function GET(request: Request) {
@@ -247,7 +249,49 @@ async function executePostAction(
         break;
       }
     }
-  } else if (decision === "needs_info") {
+  }
+
+  // --- Outreach agent approvals ---
+  if (decision === "approved") {
+    switch (agentType) {
+      case "outreach_research": {
+        // Send approved outreach email
+        const checklist = task.checklist as Record<string, unknown> | null;
+        if (checklist) {
+          await sendApprovedOutreach(entityId, {
+            to_email: checklist.to_email as string,
+            subject: checklist.subject as string,
+            body_text: checklist.body_text as string,
+          });
+        }
+        break;
+      }
+
+      case "outreach_agreement": {
+        // Send approved agreement via PandaDoc
+        const agreementChecklist = task.checklist as Record<string, unknown> | null;
+        if (agreementChecklist?.agreement_details) {
+          await sendApprovedAgreement(
+            entityId,
+            agreementChecklist.agreement_details as Parameters<typeof sendApprovedAgreement>[1]
+          );
+        }
+        break;
+      }
+    }
+  }
+
+  if (decision === "rejected") {
+    // Mark outreach pipeline entries as declined when rejected
+    if (agentType.startsWith("outreach_")) {
+      await admin
+        .from("outreach_pipeline")
+        .update({ stage: "declined" })
+        .eq("id", entityId);
+    }
+  }
+
+  if (decision !== "approved" && decision !== "rejected" && decision === "needs_info") {
     if (agentType === "lead_verify") {
       await admin.from("leads").update({ status: "awaiting_info" }).eq("id", entityId);
     }

@@ -13,6 +13,8 @@ import {
   HelpCircle,
   Plus,
   UserCog,
+  Target,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,8 @@ const navItems = [
   { href: "/admin/users", label: "Users & Partners", icon: UserCog },
   { href: "/admin/content", label: "Content", icon: FileText },
   { href: "/admin/edit-requests", label: "Edit Requests", icon: ClipboardList },
+  { href: "/admin/outreach", label: "Outreach", icon: Target },
+  { href: "/admin/commission", label: "Commission", icon: Receipt },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

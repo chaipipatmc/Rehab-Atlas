@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, BookOpen } from "lucide-react";
 import { MultiImageUpload } from "@/components/admin/image-upload";
 
 interface PhotoItem {
@@ -36,6 +36,7 @@ export default function AdminCenterEditPage() {
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [blogStats, setBlogStats] = useState<{ thisMonth: number; lastMonth: number } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -54,6 +55,35 @@ export default function AdminCenterEditPage() {
         .eq("center_id", params.id)
         .order("sort_order");
       setPhotos((photoData || []) as PhotoItem[]);
+
+      // Load blog counts for commission tier
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const startOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1).toISOString();
+      const endOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+      const { data: thisMonthBlogs } = await supabase
+        .from("pages")
+        .select("id")
+        .eq("author_center_id", params.id)
+        .eq("author_type", "partner")
+        .eq("status", "published")
+        .gte("created_at", startOfMonth);
+
+      const { data: lastMonthBlogs } = await supabase
+        .from("pages")
+        .select("id")
+        .eq("author_center_id", params.id)
+        .eq("author_type", "partner")
+        .eq("status", "published")
+        .gte("created_at", startOfLastMonth)
+        .lte("created_at", endOfLastMonth);
+
+      setBlogStats({
+        thisMonth: thisMonthBlogs?.length || 0,
+        lastMonth: lastMonthBlogs?.length || 0,
+      });
 
       setLoading(false);
     }
@@ -470,6 +500,69 @@ export default function AdminCenterEditPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Effective Commission & Blog Tier */}
+        {center.agreement_status === "active" && center.commission_type === "percentage" && blogStats && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                Effective Commission & Blog Tier
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const appliedRate = blogStats.lastMonth >= 6 ? 8 : blogStats.lastMonth >= 3 ? 10 : 12;
+                const appliedTier = blogStats.lastMonth >= 6 ? "Premium" : blogStats.lastMonth >= 3 ? "Standard" : "Base";
+                const projectedRate = blogStats.thisMonth >= 6 ? 8 : blogStats.thisMonth >= 3 ? 10 : 12;
+                const projectedTier = blogStats.thisMonth >= 6 ? "Premium" : blogStats.thisMonth >= 3 ? "Standard" : "Base";
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const now = new Date();
+                const currentMonthName = monthNames[now.getMonth()];
+                const lastMonthName = monthNames[now.getMonth() === 0 ? 11 : now.getMonth() - 1];
+                const nextMonthName = monthNames[now.getMonth() === 11 ? 0 : now.getMonth() + 1];
+                const blogsToNextTier = blogStats.thisMonth >= 6 ? 0 : blogStats.thisMonth >= 3 ? (6 - blogStats.thisMonth) : (3 - blogStats.thisMonth);
+
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-primary/5 rounded-xl p-4">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Applied Rate ({currentMonthName})</p>
+                        <p className="text-2xl font-semibold text-primary mt-1">{appliedRate}%</p>
+                        <p className="text-xs text-muted-foreground mt-1">{appliedTier} — {blogStats.lastMonth} blog{blogStats.lastMonth !== 1 ? "s" : ""} in {lastMonthName}</p>
+                      </div>
+                      <div className="bg-surface-container-low rounded-xl p-4">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Projected Rate ({nextMonthName})</p>
+                        <p className="text-2xl font-semibold text-foreground mt-1">{projectedRate}%</p>
+                        <p className="text-xs text-muted-foreground mt-1">{projectedTier} — {blogStats.thisMonth} blog{blogStats.thisMonth !== 1 ? "s" : ""} so far in {currentMonthName}</p>
+                      </div>
+                    </div>
+
+                    {/* Tier Progress */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { rate: 12, label: "Base", desc: "0-2 blogs", active: blogStats.thisMonth < 3 },
+                        { rate: 10, label: "Standard", desc: "3+ blogs", active: blogStats.thisMonth >= 3 && blogStats.thisMonth < 6 },
+                        { rate: 8, label: "Premium", desc: "6+ blogs", active: blogStats.thisMonth >= 6 },
+                      ].map((tier) => (
+                        <div key={tier.label} className={`rounded-lg p-2 text-center text-xs ${tier.active ? "bg-primary/10 ring-1 ring-primary/20 font-medium" : "bg-surface-container-low text-muted-foreground"}`}>
+                          <span className="font-semibold">{tier.rate}%</span> {tier.label}
+                          <br /><span className="text-[10px]">{tier.desc}/mo</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {blogsToNextTier > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {blogsToNextTier} more blog{blogsToNextTier !== 1 ? "s" : ""} this month to reach the next tier.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Editorial Ratings */}
         <Card>

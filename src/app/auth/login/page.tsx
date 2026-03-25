@@ -21,6 +21,8 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
@@ -93,9 +95,30 @@ function LoginForm() {
               />
             </div>
             <div>
-              <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground">
-                Password
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Password
+                </Label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!email) { setError("Enter your email first"); return; }
+                    setResetLoading(true);
+                    setError("");
+                    const supabase = createClient();
+                    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                      redirectTo: `${window.location.origin}/auth/callback`,
+                    });
+                    setResetLoading(false);
+                    if (resetError) { setError(resetError.message); }
+                    else { setResetSent(true); }
+                  }}
+                  disabled={resetLoading}
+                  className="text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  {resetLoading ? "Sending..." : "Forgot password?"}
+                </button>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -105,6 +128,9 @@ function LoginForm() {
                 className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border"
               />
             </div>
+            {resetSent && (
+              <p className="text-sm text-emerald-600">Password reset link sent to {email}. Check your inbox.</p>
+            )}
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}

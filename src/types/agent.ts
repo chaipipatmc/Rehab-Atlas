@@ -2,7 +2,10 @@
 // Rehab-Atlas Agent System — Type Definitions
 // ============================================
 
-export type AgentType = "center_admin" | "content_admin" | "follow_up" | "lead_verify";
+export type AgentType =
+  | "center_admin" | "content_admin" | "follow_up" | "lead_verify"
+  | "outreach_research" | "outreach_followup" | "outreach_response"
+  | "outreach_agreement" | "outreach_activation" | "outreach_orchestrator";
 export type TaskStatus = "pending" | "processing" | "awaiting_owner" | "approved" | "rejected" | "expired" | "error";
 export type AgentRecommendation = "approve" | "reject" | "needs_info";
 export type OwnerDecision = "approved" | "rejected" | "needs_info";
@@ -131,6 +134,118 @@ export interface LeadAIAnalysis {
   match_quality_assessment: string;
   urgency_flag: boolean;
   recommended_centers: string[];
+}
+
+// --- Outreach Pipeline ---
+
+export type OutreachStage =
+  | "new" | "researching" | "research_complete" | "outreach_drafted"
+  | "outreach_sent" | "followed_up" | "responded" | "negotiating" | "terms_agreed"
+  | "agreement_drafted" | "agreement_sent" | "agreement_signed" | "active"
+  | "stalled" | "declined";
+
+export type ResponseSentiment = "positive" | "neutral" | "negative" | "question";
+export type BlogTier = "none" | "standard" | "premium";
+export type ESignStatus = "draft" | "sent" | "viewed" | "center_signed" | "owner_signed" | "completed" | "declined" | "expired";
+
+export interface OutreachPipeline {
+  id: string;
+  center_id: string;
+  stage: OutreachStage;
+  research_data: CenterResearch | null;
+  research_completed_at: string | null;
+  outreach_email_id: string | null;
+  outreach_thread_id: string | null;
+  outreach_persona: string;
+  outreach_sent_at: string | null;
+  follow_up_count: number;
+  last_follow_up_at: string | null;
+  next_follow_up_at: string | null;
+  responded_at: string | null;
+  response_summary: string | null;
+  response_sentiment: ResponseSentiment | null;
+  proposed_commission_rate: number;
+  agreed_commission_rate: number | null;
+  agreed_commission_type: string;
+  blog_tier: BlogTier | null;
+  special_terms: string | null;
+  agreement_document_url: string | null;
+  esign_envelope_id: string | null;
+  esign_status: ESignStatus | null;
+  agreement_sent_at: string | null;
+  agreement_signed_at: string | null;
+  assigned_to: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachEmail {
+  id: string;
+  pipeline_id: string;
+  center_id: string | null;
+  direction: "outbound" | "inbound";
+  gmail_message_id: string | null;
+  gmail_thread_id: string | null;
+  from_email: string;
+  to_email: string;
+  subject: string;
+  body_text: string | null;
+  body_html: string | null;
+  email_type: string;
+  sent_at: string;
+  created_at: string;
+}
+
+export interface CenterResearch {
+  programs: string[];
+  specialties: string[];
+  target_audience: string;
+  website_summary: string;
+  unique_selling_points: string[];
+  contact_person_name: string | null;
+  tone_analysis: string;
+}
+
+export interface OutreachEmailDraft {
+  subject: string;
+  body_html: string;
+  body_text: string;
+  personalization_points: string[];
+}
+
+export interface AgreementDetails {
+  center_name: string;
+  center_country: string;
+  center_city: string;
+  contact_person: string;
+  contact_email: string;
+  commission_rate: number;
+  blog_tier: BlogTier;
+  special_terms: string | null;
+  contract_start: string;
+  contract_end: string;
+}
+
+export interface PipelineFunnelMetrics {
+  total_centers: number;
+  by_stage: Record<OutreachStage, number>;
+  response_rate: number;
+  close_rate: number;
+  avg_days_to_close: number;
+  this_week_contacted: number;
+  this_week_responded: number;
+  this_week_signed: number;
+}
+
+export interface OutreachBlogCount {
+  id: string;
+  center_id: string;
+  year_month: string;
+  approved_count: number;
+  tier: BlogTier | null;
+  effective_rate: number | null;
+  calculated_at: string;
 }
 
 // --- Webhook Payload ---

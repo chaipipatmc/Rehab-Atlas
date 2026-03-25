@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Building2, Pencil, Image, Clock, LayoutDashboard, BookOpen } from "lucide-react";
+import { Building2, Pencil, Image, Clock, LayoutDashboard, BookOpen, Users, Receipt } from "lucide-react";
 
 const navItems = [
   { href: "/partner", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/partner/leads", label: "Referrals", icon: Users },
+  { href: "/partner/commission", label: "Commission", icon: Receipt },
   { href: "/partner/edit", label: "Edit Profile", icon: Pencil },
   { href: "/partner/photos", label: "Photos", icon: Image },
   { href: "/partner/blog", label: "My Articles", icon: BookOpen },

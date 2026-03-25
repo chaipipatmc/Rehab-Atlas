@@ -15,6 +15,12 @@ const DEFAULT_CONFIG: Record<AgentType, boolean> = {
   content_admin: false,
   follow_up: false,
   lead_verify: false,
+  outreach_research: false,
+  outreach_followup: false,
+  outreach_response: false,
+  outreach_agreement: false,
+  outreach_activation: false,
+  outreach_orchestrator: false,
 };
 
 /**
@@ -44,7 +50,11 @@ export async function isAgentEnabled(agentType: AgentType): Promise<boolean> {
  * Get all agent states.
  */
 export async function getAgentConfig(): Promise<Record<AgentType, boolean>> {
-  const agents: AgentType[] = ["center_admin", "content_admin", "follow_up", "lead_verify"];
+  const agents: AgentType[] = [
+    "center_admin", "content_admin", "follow_up", "lead_verify",
+    "outreach_research", "outreach_followup", "outreach_response",
+    "outreach_agreement", "outreach_activation", "outreach_orchestrator",
+  ];
   const config: Record<string, boolean> = {};
 
   for (const agent of agents) {
