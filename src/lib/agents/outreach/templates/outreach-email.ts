@@ -37,18 +37,15 @@ export function generateInitialOutreach(params: TemplateParams): {
 
 I came across ${params.centerName} while researching ${specialty} providers, and I was impressed by ${usp}.
 
-My name is ${persona}, and I work with Rehab-Atlas — a global platform that connects people seeking rehabilitation with the right centers for their needs. We help clients worldwide find quality treatment options, and I think your center would be a great fit for our network.
+My name is ${persona}, and I'm reaching out from Rehab-Atlas. We're building a global platform that helps people find the right rehabilitation center for their needs, and we're currently in the early stages of growing our network of partner centers.
 
-Here's how it works: we list your center on our platform and match you with clients who are actively looking for the kind of care you provide. There's no upfront cost to join.
+We'd love to invite ${params.centerName} to join us as one of our early partners. Being part of our platform from the start means your center gets visibility from day one as we grow, and you'd be helping shape how we connect people with quality care.
 
-Our commission structure is simple:
-- 12% referral fee on clients we send your way
-- 10% if your team publishes 3 articles per month on our platform
-- 8% if you publish 6 articles per month
+The way it works is straightforward — we list your center on our platform and refer clients who match your programs. When a client we refer is admitted, a 12% commission applies. Centers that contribute articles to our platform enjoy lower rates: 10% with 3 published articles per month, or 8% with 6 articles. It's a great way to share your expertise while keeping costs down.
 
-The articles help build your center's online presence while reducing your partnership costs — it's a genuine win-win.
+There's no upfront cost to join — we only earn when you do.
 
-Would you be open to a quick conversation about this? I'd love to share more details and answer any questions.
+If this sounds interesting, feel free to reply to this email and we can go from there. I'm happy to answer any questions you might have.
 
 Looking forward to hearing from you.
 
@@ -65,7 +62,13 @@ rehab-atlas.com`;
  * Claude AI system prompt for generating personalized outreach emails.
  */
 export function getOutreachSystemPrompt(persona: string = PERSONA): string {
-  return `You are ${persona} from the Partnerships team at Rehab-Atlas, a global platform that helps people find rehabilitation centers worldwide.
+  return `You are ${persona} from the Partnerships team at Rehab-Atlas, a new global platform that helps people find rehabilitation centers worldwide. Rehab-Atlas is in its early stages and actively building its network of partner centers.
+
+CRITICAL RULES — get these right:
+1. Commission is paid BY THE CENTER TO US (Rehab-Atlas), NOT the other way around. We refer clients to them, and they pay us a commission when a referred client is admitted. NEVER say "we pay you" — it's "a 12% commission applies" or "the commission is 12%".
+2. NEVER suggest a phone call, video call, or brief call. All communication is via email only. Ask them to reply to this email.
+3. Emphasize that Rehab-Atlas is a new/early-stage platform. We're inviting them to join as an early partner. Being early means they get visibility from the start as we grow.
+4. There is NO upfront cost to join.
 
 You write emails that sound natural and human — like a real person typing at their desk. Never use:
 - Corporate jargon ("leverage", "synergize", "maximize", "optimize", "empower")
@@ -79,14 +82,15 @@ Your emails should:
 - Have short paragraphs (2-3 sentences max)
 - Reference something specific about their center from the research
 - Mention the commission structure naturally, not as a sales pitch
-- End with one clear, low-pressure ask
+- End by asking them to reply to this email if interested
 - Use the signature: "${persona}\\nPartnerships, Rehab-Atlas\\ninfo@rehab-atlas.com\\nrehab-atlas.com"
 
-Commission details to weave in naturally:
-- 12% referral fee (standard)
+Commission structure (the center pays us):
+- 12% commission on admitted clients referred through our platform (standard rate)
 - 10% if the center publishes 3 approved articles per month on our platform
 - 8% if they publish 6 approved articles per month
 - Articles are counted monthly (1st to 31st), only approved articles count
+- No upfront cost — commission only applies when a referred client is admitted
 
 Return a JSON object with:
 {
@@ -101,7 +105,7 @@ Return a JSON object with:
  */
 export function getOutreachUserPrompt(params: TemplateParams): string {
   const research = params.research;
-  return `Write a personalized introduction email to ${params.centerName}.
+  return `Write a personalized introduction email to ${params.centerName}, inviting them to join Rehab-Atlas as an early partner.
 
 Contact person: ${params.contactPerson || "Unknown (use generic greeting)"}
 
@@ -112,6 +116,12 @@ Research findings:
 - Website summary: ${research.website_summary}
 - Unique selling points: ${research.unique_selling_points.join(", ")}
 - Tone of their website: ${research.tone_analysis}
+
+REMINDERS:
+- Commission is paid by THEM to US (not us to them) — 12% on admitted referrals
+- NO phone calls — ask them to reply via email
+- We are a NEW platform in early stages, inviting early partners
+- No upfront cost
 
 Write the email now. Make it feel like a real human wrote it.`;
 }

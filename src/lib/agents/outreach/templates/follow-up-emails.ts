@@ -29,7 +29,7 @@ Just wanted to make sure my previous message didn't get buried — I know inboxe
 
 I reached out a few days ago about listing ${params.centerName} on Rehab-Atlas. We're a referral platform that connects people seeking treatment with centers like yours, and I think there's a real opportunity here.
 
-If you're interested, I'd be happy to hop on a quick call to walk you through how it works. No pressure at all — just let me know.
+If you're interested, just reply to this email and I'll share more details about how it works. No pressure at all.
 
 Best,
 ${persona}
@@ -56,7 +56,7 @@ Following up one more time — I wanted to share a quick update that might be re
 
 We've recently onboarded several centers in your region, and the early feedback has been positive. Partners are seeing inquiries come through within the first few weeks, and some have found the blog publishing option helpful for building their online presence while reducing their referral costs.
 
-If the timing works, I'd love to chat. Even a 10-minute call would be enough to cover the basics.
+If the timing works, just drop me a reply and I'll fill you in on the details.
 
 Best,
 ${persona}
@@ -111,7 +111,9 @@ Rules:
 - Don't repeat the full commission structure — they already have it
 - Sound genuinely human, not automated
 - No guilt-tripping or desperation
-- End with a low-pressure ask or a graceful close
+- NEVER suggest a phone call or video call — email only
+- Rehab-Atlas is a new platform in early stages — we're building our partner network
+- End with a low-pressure ask to reply via email, or a graceful close
 - Signature: "${persona}\\nPartnerships, Rehab-Atlas\\ninfo@rehab-atlas.com\\nrehab-atlas.com"
 
 Return JSON: { "subject": "...", "body_text": "..." }`;
