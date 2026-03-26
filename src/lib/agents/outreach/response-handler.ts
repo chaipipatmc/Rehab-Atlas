@@ -133,7 +133,8 @@ Previous context: We offered a partnership with ${pipeline.proposed_commission_r
   if (analysis?.agreed_to_partner) {
     nextStage = "terms_agreed";
   } else if (sentiment === "negative" && !analysis?.has_questions) {
-    nextStage = "declined";
+    // Don't immediately decline — send a polite follow-up to understand why and try to convince
+    nextStage = "negotiating";
   } else if (analysis?.has_questions || analysis?.counter_offer_rate) {
     nextStage = "negotiating";
   } else {
@@ -158,6 +159,72 @@ Previous context: We offered a partnership with ${pipeline.proposed_commission_r
         : {}),
     })
     .eq("id", pipeline.id);
+
+  // If negative, send a polite follow-up to understand why and try to re-engage
+  if (sentiment === "negative" && !analysis?.has_questions) {
+    try {
+      const winBackReply = await analyzeWithClaude<{ body_text: string }>({
+        systemPrompt: `You are ${PERSONA} from Rehab-Atlas Partnerships. A rehab center has declined or expressed disinterest in partnering. Write a short, respectful reply that:
+1. Thanks them for their honesty
+2. Asks politely what their concern is — is it the commission, timing, or something else?
+3. Mentions the launch offer (0% commission for 2 months with 3 blogs/month) in case they missed it
+4. Keeps the door open without being pushy
+5. Max 4-5 sentences. Sound human, not desperate.
+6. NO phone calls — email only
+Return JSON: { "body_text": "..." }`,
+        userPrompt: `Center: ${center?.name || "Unknown"}
+Their reply: ${reply.body}
+Our previous offer: ${pipeline.proposed_commission_rate}% commission`,
+        responseSchema: z.object({ body_text: z.string() }),
+        maxTokens: 400,
+      });
+
+      const fallbackBody = `Hi,
+
+Thanks for getting back to me — I appreciate you taking the time.
+
+If you don't mind me asking, was there something specific that didn't feel right? I'd genuinely like to understand, whether it's the timing, the commission structure, or something else entirely.
+
+Just in case it wasn't clear in my initial message, we're currently offering 0% commission for the first 2 months for early partners — the only ask is 3 blog articles per month, which come with backlinks to your website for SEO.
+
+Either way, no hard feelings. If anything changes down the road, we'd love to hear from you.
+
+Best,
+${PERSONA}
+Partnerships, Rehab-Atlas
+info@rehab-atlas.com
+rehab-atlas.com`;
+
+      const bodyText = winBackReply?.body_text || fallbackBody;
+
+      await sendEmail({
+        to: reply.from.match(/<([^>]+)>/)?.[1] || reply.from,
+        subject: `Re: ${reply.subject}`,
+        bodyText,
+        threadId: pipeline.outreach_thread_id || undefined,
+      });
+
+      await admin.from("outreach_emails").insert({
+        pipeline_id: pipeline.id,
+        center_id: pipeline.center_id,
+        direction: "outbound",
+        gmail_thread_id: pipeline.outreach_thread_id,
+        from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
+        to_email: reply.from.match(/<([^>]+)>/)?.[1] || reply.from,
+        subject: `Re: ${reply.subject}`,
+        body_text: bodyText,
+        email_type: "negotiation",
+      });
+
+      await logAgentAction({
+        agent_type: "outreach_response",
+        action: "win_back_sent",
+        details: { pipeline_id: pipeline.id, center_name: center?.name },
+      });
+    } catch (err) {
+      console.error("Win-back reply failed:", err);
+    }
+  }
 
   // If they have questions or it needs negotiation, create task for admin
   if (analysis?.has_questions || nextStage === "negotiating") {
