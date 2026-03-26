@@ -121,25 +121,41 @@ export default function AdminAgentsPage() {
   const [editedBody, setEditedBody] = useState("");
   const [editedSubject, setEditedSubject] = useState("");
   const [regenerateNote, setRegenerateNote] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("awaiting_owner");
+  const [taskPage, setTaskPage] = useState(1);
+  const [taskTotal, setTaskTotal] = useState(0);
+  const TASKS_PER_PAGE = 50;
+
+  async function loadTasks(filter?: string, page?: number) {
+    const supabase = createClient();
+    const currentFilter = filter ?? statusFilter;
+    const currentPage = page ?? taskPage;
+    const offset = (currentPage - 1) * TASKS_PER_PAGE;
+
+    let query = supabase
+      .from("agent_tasks")
+      .select("id, agent_type, entity_type, status, ai_recommendation, ai_summary, created_at, owner_decision, action_token, checklist", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(offset, offset + TASKS_PER_PAGE - 1);
+
+    if (currentFilter !== "all") {
+      query = query.eq("status", currentFilter);
+    }
+
+    const { data, count } = await query;
+    setTasks((data || []) as AgentTaskRow[]);
+    setTaskTotal(count || 0);
+  }
 
   useEffect(() => {
     async function load() {
-      // Load agent config
       const configRes = await fetch("/api/agents/config");
       if (configRes.ok) setConfig(await configRes.json());
-
-      // Load recent tasks
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("agent_tasks")
-        .select("id, agent_type, entity_type, status, ai_recommendation, ai_summary, created_at, owner_decision, action_token, checklist")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      setTasks((data || []) as AgentTaskRow[]);
-
+      await loadTasks("awaiting_owner", 1);
       setLoading(false);
     }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function toggleAgent(agent: string, enabled: boolean) {
@@ -168,14 +184,7 @@ export default function AdminAgentsPage() {
       const res = await fetch("/api/agents/action", { method: "POST", body: form });
       if (res.ok) {
         toast.success(`Task ${decision}`);
-        // Refresh tasks
-        const supabase = createClient();
-        const { data } = await supabase
-          .from("agent_tasks")
-          .select("id, agent_type, entity_type, status, ai_recommendation, ai_summary, created_at, owner_decision, action_token, checklist")
-          .order("created_at", { ascending: false })
-          .limit(20);
-        setTasks((data || []) as AgentTaskRow[]);
+        await loadTasks();
       } else {
         toast.error("Action failed");
       }
@@ -288,11 +297,25 @@ export default function AdminAgentsPage() {
         })}
       </div>
 
-      {/* Recent Tasks */}
+      {/* Agent Tasks */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient overflow-hidden">
-        <div className="px-6 py-4">
-          <h2 className="text-lg font-semibold text-foreground">Recent Agent Activity</h2>
-          <p className="text-xs text-muted-foreground mt-1">Tasks processed by agents</p>
+        <div className="px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Agent Activity</h2>
+            <p className="text-xs text-muted-foreground mt-1">{taskTotal} task{taskTotal !== 1 ? "s" : ""}</p>
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setTaskPage(1); loadTasks(e.target.value, 1); }}
+            className="text-sm bg-surface-container-low rounded-lg px-3 py-1.5 ghost-border text-foreground"
+          >
+            <option value="awaiting_owner">Awaiting Approval</option>
+            <option value="all">All Tasks</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="pending">Processing</option>
+            <option value="error">Errors</option>
+          </select>
         </div>
 
         <table className="w-full">
@@ -515,12 +538,37 @@ export default function AdminAgentsPage() {
             {tasks.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                  No agent activity yet. Enable an agent above to get started.
+                  {statusFilter === "awaiting_owner" ? "No tasks awaiting your approval." : "No agent activity yet. Enable an agent above to get started."}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+
+        {/* Pagination */}
+        {taskTotal > TASKS_PER_PAGE && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-surface-container-low">
+            <p className="text-xs text-muted-foreground">
+              Showing {(taskPage - 1) * TASKS_PER_PAGE + 1}–{Math.min(taskPage * TASKS_PER_PAGE, taskTotal)} of {taskTotal}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={taskPage <= 1}
+                onClick={() => { const p = taskPage - 1; setTaskPage(p); loadTasks(undefined, p); }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground rounded-full px-3 py-1 border border-surface-container disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <button
+                disabled={taskPage * TASKS_PER_PAGE >= taskTotal}
+                onClick={() => { const p = taskPage + 1; setTaskPage(p); loadTasks(undefined, p); }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground rounded-full px-3 py-1 border border-surface-container disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
