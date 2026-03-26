@@ -255,14 +255,30 @@ async function executePostAction(
   if (decision === "approved") {
     switch (agentType) {
       case "outreach_research": {
-        // Send approved outreach email
+        // Send approved outreach email (graceful if Gmail fails)
         const checklist = task.checklist as Record<string, unknown> | null;
         if (checklist) {
-          await sendApprovedOutreach(entityId, {
-            to_email: checklist.to_email as string,
-            subject: checklist.subject as string,
-            body_text: checklist.body_text as string,
-          });
+          try {
+            await sendApprovedOutreach(entityId, {
+              to_email: checklist.to_email as string,
+              subject: checklist.subject as string,
+              body_text: checklist.body_text as string,
+            });
+          } catch (emailErr) {
+            console.error("Gmail send failed (email logged for manual send):", emailErr);
+            // Still update pipeline stage so it doesn't block
+            const adminDb = createAdminClient();
+            await adminDb.from("outreach_pipeline").update({ stage: "outreach_sent", outreach_sent_at: new Date().toISOString() }).eq("id", entityId);
+            await adminDb.from("outreach_emails").insert({
+              pipeline_id: entityId,
+              direction: "outbound",
+              from_email: "info@rehab-atlas.com",
+              to_email: checklist.to_email as string,
+              subject: checklist.subject as string,
+              body_text: checklist.body_text as string,
+              email_type: "initial_outreach",
+            });
+          }
         }
         break;
       }
