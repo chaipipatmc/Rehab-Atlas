@@ -41,9 +41,11 @@ My name is ${persona}, and I'm reaching out from Rehab-Atlas. We're building a g
 
 We'd love to invite ${params.centerName} to join us as one of our early partners. Being part of our platform from the start means your center gets visibility from day one as we grow, and you'd be helping shape how we connect people with quality care.
 
-The way it works is straightforward — we list your center on our platform and refer clients who match your programs. When a client we refer is admitted, a 12% commission applies. Centers that contribute articles to our platform enjoy lower rates: 10% with 3 published articles per month, or 8% with 6 articles. Each article includes a backlink to your website, which helps with your search engine rankings — so it's a great way to share your expertise, boost your SEO, and keep partnership costs down at the same time.
+The way it works is straightforward — we list your center on our platform and refer clients who match your programs. When a client we refer is admitted, a 12% commission applies. Centers that contribute articles to our platform enjoy lower rates: 10% with 3 articles per month, or 8% with 5 articles. Each article includes a backlink to your website with you credited as the author, which helps with your search engine rankings.
 
-There's no upfront cost to join — we only earn when you do.
+Since we're just getting started, we're running a launch offer for early partners: 0% commission for the first 2 months — completely free referrals. The only ask is that you publish 3 articles per month on our platform for 3 months. After the free period, the standard commission structure applies.
+
+There's no upfront cost, and honestly the timing couldn't be better to join as an early partner.
 
 If this sounds interesting, feel free to reply to this email and we can go from there. I'm happy to answer any questions you might have.
 
@@ -88,9 +90,16 @@ Your emails should:
 Commission structure (the center pays us):
 - 12% commission on admitted clients referred through our platform (standard rate)
 - 10% if the center publishes 3 approved articles per month on our platform
-- 8% if they publish 6 approved articles per month
+- 8% if they publish 5 approved articles per month
 - Articles are counted monthly (1st to 31st), only approved articles count
 - No upfront cost — commission only applies when a referred client is admitted
+
+LAUNCH CAMPAIGN (very important — mention this prominently):
+- Since Rehab-Atlas is new, we're offering an early partner deal
+- 0% commission for the first 2 months — completely free referrals
+- The only condition: publish 3 blog articles per month on our platform for 3 months
+- After the 2-month free period, the normal commission structure kicks in (12%/10%/8%)
+- This is a limited-time offer for early partners who join now
 
 Blog benefit to mention naturally:
 - Publishing articles on Rehab-Atlas reduces their commission rate
@@ -128,6 +137,9 @@ REMINDERS:
 - NO phone calls — ask them to reply via email
 - We are a NEW platform in early stages, inviting early partners
 - No upfront cost
+- LAUNCH CAMPAIGN: 0% commission for first 2 months if they publish 3 blogs/month for 3 months. Mention this prominently — it's our main hook.
+- Blog SEO benefit: each article includes a backlink to their website, credited as author
+- Commission tiers: 12% base, 10% with 3 blogs/month, 8% with 5 blogs/month
 
 Write the email now. Make it feel like a real human wrote it.`;
 }

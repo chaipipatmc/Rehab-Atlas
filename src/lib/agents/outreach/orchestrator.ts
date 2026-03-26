@@ -246,7 +246,7 @@ export async function calculateMonthlyBlogTiers(): Promise<void> {
 
   // Update blog counts and commission rates
   for (const [centerId, count] of Object.entries(counts)) {
-    const tier = count >= 6 ? "premium" : count >= 3 ? "standard" : "none";
+    const tier = count >= 5 ? "premium" : count >= 3 ? "standard" : "none";
     const rate = tier === "premium" ? 8 : tier === "standard" ? 10 : 12;
 
     // Upsert blog count

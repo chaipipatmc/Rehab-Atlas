@@ -42,8 +42,8 @@ export function buildAgreementDetails(params: {
  * Get the blog tier based on agreed commission rate.
  */
 export function getBlogTierFromRate(rate: number): BlogTier {
-  if (rate <= 8) return "premium";
-  if (rate <= 10) return "standard";
+  if (rate <= 8) return "premium";  // 5+ blogs/month
+  if (rate <= 10) return "standard"; // 3-4 blogs/month
   return "none";
 }
 
@@ -54,7 +54,7 @@ export function getCommissionDescription(rate: number, blogTier: BlogTier): stri
   const tierDescriptions: Record<BlogTier, string> = {
     none: `${rate}% referral commission on all clients referred through Rehab-Atlas`,
     standard: `${rate}% referral commission, contingent on publishing 3 approved articles per calendar month on the Rehab-Atlas platform. Standard rate of 12% applies in months where the article requirement is not met.`,
-    premium: `${rate}% referral commission, contingent on publishing 6 approved articles per calendar month on the Rehab-Atlas platform. Standard rate of 12% applies in months where the article requirement is not met.`,
+    premium: `${rate}% referral commission, contingent on publishing 5 approved articles per calendar month on the Rehab-Atlas platform. Standard rate of 12% applies in months where the article requirement is not met.`,
   };
 
   return tierDescriptions[blogTier];

@@ -90,11 +90,11 @@ export default async function PartnerDashboard() {
   const blogsThisMonth = currentMonthBlogs?.length || 0;
 
   // Determine effective rate and tier
-  const effectiveRate = blogsThisMonth >= 6 ? 8 : blogsThisMonth >= 3 ? 10 : 12;
-  const currentTier = blogsThisMonth >= 6 ? "Premium" : blogsThisMonth >= 3 ? "Standard" : "Base";
-  const blogsToNextTier = blogsThisMonth >= 6 ? 0 : blogsThisMonth >= 3 ? (6 - blogsThisMonth) : (3 - blogsThisMonth);
-  const nextTierRate = blogsThisMonth >= 6 ? null : blogsThisMonth >= 3 ? 8 : 10;
-  const nextTierBlogs = blogsThisMonth >= 6 ? null : blogsThisMonth >= 3 ? 6 : 3;
+  const effectiveRate = blogsThisMonth >= 5 ? 8 : blogsThisMonth >= 3 ? 10 : 12;
+  const currentTier = blogsThisMonth >= 5 ? "Premium" : blogsThisMonth >= 3 ? "Standard" : "Base";
+  const blogsToNextTier = blogsThisMonth >= 5 ? 0 : blogsThisMonth >= 3 ? (5 - blogsThisMonth) : (3 - blogsThisMonth);
+  const nextTierRate = blogsThisMonth >= 5 ? null : blogsThisMonth >= 3 ? 8 : 10;
+  const nextTierBlogs = blogsThisMonth >= 5 ? null : blogsThisMonth >= 3 ? 5 : 3;
 
   // Last month's blog count (determines this month's applied rate)
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -111,8 +111,8 @@ export default async function PartnerDashboard() {
     .lte("created_at", endOfLastMonth);
 
   const blogsLastMonth = lastMonthBlogs?.length || 0;
-  const appliedRate = blogsLastMonth >= 6 ? 8 : blogsLastMonth >= 3 ? 10 : 12;
-  const appliedTier = blogsLastMonth >= 6 ? "Premium" : blogsLastMonth >= 3 ? "Standard" : "Base";
+  const appliedRate = blogsLastMonth >= 5 ? 8 : blogsLastMonth >= 3 ? 10 : 12;
+  const appliedTier = blogsLastMonth >= 5 ? "Premium" : blogsLastMonth >= 3 ? "Standard" : "Base";
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const currentMonthName = monthNames[now.getMonth()];
@@ -215,7 +215,7 @@ export default async function PartnerDashboard() {
             {[
               { blogs: 0, rate: 12, label: "Base", tier: blogsThisMonth < 3 },
               { blogs: 3, rate: 10, label: "Standard", tier: blogsThisMonth >= 3 && blogsThisMonth < 6 },
-              { blogs: 6, rate: 8, label: "Premium", tier: blogsThisMonth >= 6 },
+              { blogs: 5, rate: 8, label: "Premium", tier: blogsThisMonth >= 5 },
             ].map(({ blogs, rate, label, tier }) => (
               <div
                 key={label}

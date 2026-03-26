@@ -110,7 +110,7 @@ async function processReply(
   // Analyze with Claude
   const analysis = await analyzeWithClaude<ResponseAnalysis>({
     systemPrompt: `You analyze inbound email replies from rehabilitation centers being invited to join Rehab-Atlas.
-Determine the sender's intent and sentiment. Our standard commission is 12% (10% with 3 blogs/month, 8% with 6 blogs/month).
+Determine the sender's intent and sentiment. Our standard commission is 12% (10% with 3 blogs/month, 8% with 5 blogs/month). We also have a launch campaign: 0% commission for first 2 months with 3 blogs/month for 3 months.
 Return JSON with: sentiment, summary, key_points, agreed_to_partner, has_questions, counter_offer_rate (null if none), suggested_reply (null if no reply needed).`,
     userPrompt: `Center: ${center?.name || "Unknown"}
 Their reply:

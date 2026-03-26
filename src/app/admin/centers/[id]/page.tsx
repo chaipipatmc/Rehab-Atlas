@@ -512,16 +512,16 @@ export default function AdminCenterEditPage() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const appliedRate = blogStats.lastMonth >= 6 ? 8 : blogStats.lastMonth >= 3 ? 10 : 12;
-                const appliedTier = blogStats.lastMonth >= 6 ? "Premium" : blogStats.lastMonth >= 3 ? "Standard" : "Base";
-                const projectedRate = blogStats.thisMonth >= 6 ? 8 : blogStats.thisMonth >= 3 ? 10 : 12;
-                const projectedTier = blogStats.thisMonth >= 6 ? "Premium" : blogStats.thisMonth >= 3 ? "Standard" : "Base";
+                const appliedRate = blogStats.lastMonth >= 5 ? 8 : blogStats.lastMonth >= 3 ? 10 : 12;
+                const appliedTier = blogStats.lastMonth >= 5 ? "Premium" : blogStats.lastMonth >= 3 ? "Standard" : "Base";
+                const projectedRate = blogStats.thisMonth >= 5 ? 8 : blogStats.thisMonth >= 3 ? 10 : 12;
+                const projectedTier = blogStats.thisMonth >= 5 ? "Premium" : blogStats.thisMonth >= 3 ? "Standard" : "Base";
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 const now = new Date();
                 const currentMonthName = monthNames[now.getMonth()];
                 const lastMonthName = monthNames[now.getMonth() === 0 ? 11 : now.getMonth() - 1];
                 const nextMonthName = monthNames[now.getMonth() === 11 ? 0 : now.getMonth() + 1];
-                const blogsToNextTier = blogStats.thisMonth >= 6 ? 0 : blogStats.thisMonth >= 3 ? (6 - blogStats.thisMonth) : (3 - blogStats.thisMonth);
+                const blogsToNextTier = blogStats.thisMonth >= 5 ? 0 : blogStats.thisMonth >= 3 ? (5 - blogStats.thisMonth) : (3 - blogStats.thisMonth);
 
                 return (
                   <div className="space-y-4">
@@ -543,7 +543,7 @@ export default function AdminCenterEditPage() {
                       {[
                         { rate: 12, label: "Base", desc: "0-2 blogs", active: blogStats.thisMonth < 3 },
                         { rate: 10, label: "Standard", desc: "3+ blogs", active: blogStats.thisMonth >= 3 && blogStats.thisMonth < 6 },
-                        { rate: 8, label: "Premium", desc: "6+ blogs", active: blogStats.thisMonth >= 6 },
+                        { rate: 8, label: "Premium", desc: "5+ blogs", active: blogStats.thisMonth >= 5 },
                       ].map((tier) => (
                         <div key={tier.label} className={`rounded-lg p-2 text-center text-xs ${tier.active ? "bg-primary/10 ring-1 ring-primary/20 font-medium" : "bg-surface-container-low text-muted-foreground"}`}>
                           <span className="font-semibold">{tier.rate}%</span> {tier.label}
