@@ -35,8 +35,13 @@ export async function POST(request: Request) {
   }
 
   // Default: run orchestrator
-  await runOrchestrator();
-  return NextResponse.json({ success: true });
+  try {
+    await runOrchestrator();
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Orchestrator error:", err);
+    return NextResponse.json({ error: "Orchestrator failed", details: String(err) }, { status: 500 });
+  }
 }
 
 export async function GET(request: Request) {
