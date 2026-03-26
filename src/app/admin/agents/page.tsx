@@ -117,6 +117,10 @@ export default function AdminAgentsPage() {
   const [toggling, setToggling] = useState<string | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [editingDraft, setEditingDraft] = useState<string | null>(null);
+  const [editedBody, setEditedBody] = useState("");
+  const [editedSubject, setEditedSubject] = useState("");
+  const [regenerateNote, setRegenerateNote] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -324,10 +328,16 @@ export default function AdminAgentsPage() {
                     </button>
 
                     {/* Full email preview for outreach tasks */}
-                    {isExpanded && isOutreachEmail && (
+                    {isExpanded && isOutreachEmail && (() => {
+                      const isEditing = editingDraft === task.id;
+                      const centerName = String(checklist.center_name || "");
+                      return (
                       <div className="mt-4 bg-surface-container-low rounded-xl p-5 max-w-2xl">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">Email Preview</h4>
+                          <div>
+                            <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">Email Preview</h4>
+                            {centerName && <p className="text-sm font-medium text-primary mt-1">{centerName}</p>}
+                          </div>
                           <span className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 ${statusInfo.color}`}>
                             <StatusIcon className="h-3 w-3" />
                             {statusInfo.label}
@@ -344,13 +354,29 @@ export default function AdminAgentsPage() {
                           </div>
                           <div className="flex gap-2">
                             <span className="text-muted-foreground font-medium w-12 shrink-0">Subj:</span>
-                            <span className="text-foreground font-medium">{String(checklist.subject || "")}</span>
+                            {isEditing ? (
+                              <input
+                                value={editedSubject}
+                                onChange={(e) => setEditedSubject(e.target.value)}
+                                className="flex-1 text-sm bg-white border rounded-lg px-2 py-1 ghost-border"
+                              />
+                            ) : (
+                              <span className="text-foreground font-medium">{String(checklist.subject || "")}</span>
+                            )}
                           </div>
                         </div>
                         <div className="border-t border-surface-container pt-4">
-                          <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed font-sans">{String(checklist.body_text || "")}</pre>
+                          {isEditing ? (
+                            <textarea
+                              value={editedBody}
+                              onChange={(e) => setEditedBody(e.target.value)}
+                              className="w-full text-sm bg-white border rounded-lg p-3 ghost-border font-sans leading-relaxed min-h-[300px]"
+                            />
+                          ) : (
+                            <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed font-sans">{String(checklist.body_text || "")}</pre>
+                          )}
                         </div>
-                        {(checklist.personalization_points as string[])?.length > 0 && (
+                        {!isEditing && (checklist.personalization_points as string[])?.length > 0 && (
                           <div className="mt-3 pt-3 border-t border-surface-container">
                             <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1">Personalization points</p>
                             <div className="flex flex-wrap gap-1">
@@ -361,22 +387,63 @@ export default function AdminAgentsPage() {
                           </div>
                         )}
                         {isAwaiting && task.action_token && (
-                          <div className="mt-4 pt-4 border-t border-surface-container flex items-center gap-3">
-                            <button
-                              onClick={() => handleAction(task.id, task.action_token!, "approved")}
-                              disabled={actioning === task.id}
-                              className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5 transition-colors disabled:opacity-50"
-                            >
-                              {actioning === task.id ? "Sending..." : "Approve & Send"}
-                            </button>
-                            <button
-                              onClick={() => handleAction(task.id, task.action_token!, "rejected")}
-                              disabled={actioning === task.id}
-                              className="text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-full px-4 py-1.5 transition-colors disabled:opacity-50"
-                            >
-                              Reject
-                            </button>
-                            <span className="text-[10px] text-muted-foreground">Approving will send this email via info@rehab-atlas.com</span>
+                          <div className="mt-4 pt-4 border-t border-surface-container">
+                            {isEditing ? (
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={async () => {
+                                    // Save edits to the task checklist
+                                    const supabase = createClient();
+                                    await supabase.from("agent_tasks").update({
+                                      checklist: { ...checklist, subject: editedSubject, body_text: editedBody },
+                                    }).eq("id", task.id);
+                                    // Update local state
+                                    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, checklist: { ...checklist, subject: editedSubject, body_text: editedBody } } : t));
+                                    setEditingDraft(null);
+                                    toast.success("Draft updated");
+                                  }}
+                                  className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5 transition-colors"
+                                >
+                                  Save Changes
+                                </button>
+                                <button
+                                  onClick={() => setEditingDraft(null)}
+                                  className="text-xs font-medium text-muted-foreground hover:text-foreground rounded-full px-4 py-1.5 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    onClick={() => handleAction(task.id, task.action_token!, "approved")}
+                                    disabled={actioning === task.id}
+                                    className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5 transition-colors disabled:opacity-50"
+                                  >
+                                    {actioning === task.id ? "Sending..." : "Approve & Send"}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingDraft(task.id);
+                                      setEditedSubject(String(checklist.subject || ""));
+                                      setEditedBody(String(checklist.body_text || ""));
+                                    }}
+                                    className="text-xs font-medium text-primary hover:text-primary/80 rounded-full px-4 py-1.5 transition-colors border border-primary/20"
+                                  >
+                                    Edit Draft
+                                  </button>
+                                  <button
+                                    onClick={() => handleAction(task.id, task.action_token!, "rejected")}
+                                    disabled={actioning === task.id}
+                                    className="text-xs font-medium text-red-600 hover:text-red-700 rounded-full px-4 py-1.5 transition-colors"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">Approving will send this email via info@rehab-atlas.com. Edit to modify before sending.</p>
+                              </div>
+                            )}
                           </div>
                         )}
                         {task.owner_decision && (
@@ -385,12 +452,17 @@ export default function AdminAgentsPage() {
                           </div>
                         )}
                       </div>
-                    )}
+                      );
+                    })()}
                   </td>
                   {!(isExpanded && isOutreachEmail) && (
                     <>
                       <td className="px-6 py-4 text-sm text-muted-foreground">
-                        {task.entity_type}
+                        {checklist?.center_name ? (
+                          <span className="text-foreground">{String(checklist.center_name)}</span>
+                        ) : (
+                          task.entity_type
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {task.ai_recommendation && (

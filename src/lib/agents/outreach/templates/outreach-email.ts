@@ -41,7 +41,7 @@ My name is ${persona}, and I'm reaching out from Rehab-Atlas. We're building a g
 
 We'd love to invite ${params.centerName} to join us as one of our early partners. Being part of our platform from the start means your center gets visibility from day one as we grow, and you'd be helping shape how we connect people with quality care.
 
-The way it works is straightforward — we list your center on our platform and refer clients who match your programs. When a client we refer is admitted, a 12% commission applies. Centers that contribute articles to our platform enjoy lower rates: 10% with 3 published articles per month, or 8% with 6 articles. It's a great way to share your expertise while keeping costs down.
+The way it works is straightforward — we list your center on our platform and refer clients who match your programs. When a client we refer is admitted, a 12% commission applies. Centers that contribute articles to our platform enjoy lower rates: 10% with 3 published articles per month, or 8% with 6 articles. Each article includes a backlink to your website, which helps with your search engine rankings — so it's a great way to share your expertise, boost your SEO, and keep partnership costs down at the same time.
 
 There's no upfront cost to join — we only earn when you do.
 
@@ -91,6 +91,12 @@ Commission structure (the center pays us):
 - 8% if they publish 6 approved articles per month
 - Articles are counted monthly (1st to 31st), only approved articles count
 - No upfront cost — commission only applies when a referred client is admitted
+
+Blog benefit to mention naturally:
+- Publishing articles on Rehab-Atlas reduces their commission rate
+- Each article includes a backlink to the center's website — this helps their SEO rankings
+- The center is credited as the author, building their authority and online visibility
+- It's a win-win: lower commission costs + better search engine presence for the center
 
 Return a JSON object with:
 {

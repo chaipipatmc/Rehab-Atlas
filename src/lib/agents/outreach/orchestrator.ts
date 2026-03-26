@@ -31,16 +31,21 @@ export async function runOrchestrator(): Promise<void> {
     action: "orchestrator_run_started",
   });
 
-  // 1. Process new centers → start research
+  // 1. Process new centers → start research (1 at a time to stay within serverless timeout)
   if (await isAgentEnabled("outreach_research")) {
     const { data: newEntries } = await admin
       .from("outreach_pipeline")
       .select("center_id")
       .eq("stage", "new")
-      .limit(5);
+      .order("created_at", { ascending: true })
+      .limit(1);
 
     for (const entry of newEntries || []) {
-      await processResearchAndDraft(entry.center_id as string);
+      try {
+        await processResearchAndDraft(entry.center_id as string);
+      } catch (err) {
+        console.error("Research failed for center:", entry.center_id, err);
+      }
     }
   }
 

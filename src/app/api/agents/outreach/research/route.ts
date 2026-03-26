@@ -8,6 +8,8 @@ import { isAgentEnabled } from "@/lib/agents/config";
 import { verifyWebhookSecret } from "@/lib/agents/base";
 import { processResearchAndDraft } from "@/lib/agents/outreach/research";
 
+export const maxDuration = 60;
+
 // POST: Trigger research for a center (admin or webhook)
 export async function POST(request: Request) {
   // Accept webhook secret OR admin auth

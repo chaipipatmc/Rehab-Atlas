@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
 import { verifyWebhookSecret } from "@/lib/agents/base";
 import { runOrchestrator, sendDailyDigest, calculateMonthlyBlogTiers } from "@/lib/agents/outreach/orchestrator";
 
+export const maxDuration = 60; // Allow up to 60s for orchestrator (Vercel Pro) or 10s (Hobby)
+
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function POST(request: Request) {
