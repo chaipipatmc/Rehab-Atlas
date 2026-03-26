@@ -129,31 +129,35 @@ function slugify(title: string): string {
 }
 
 /**
- * Search Unsplash for a relevant featured image.
+ * Search Unsplash for relevant images.
+ * Returns up to `count` image URLs.
  */
-async function searchUnsplashImage(query: string): Promise<string | null> {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+async function searchUnsplashImages(query: string, count: number = 5): Promise<string[]> {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY?.trim();
   if (!accessKey) {
-    console.warn("UNSPLASH_ACCESS_KEY not set, skipping image");
-    return null;
+    console.warn("UNSPLASH_ACCESS_KEY not set, skipping images");
+    return [];
   }
 
   try {
     const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=landscape&per_page=1`,
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=landscape&per_page=${count}`,
       { headers: { Authorization: `Client-ID ${accessKey}` } }
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) return [];
 
     const data = await response.json();
-    const photo = data.results?.[0];
-    if (!photo) return null;
+    const photos = data.results || [];
 
-    // Use regular size (1080px wide) for good quality without being too large
-    return photo.urls?.regular || photo.urls?.small || null;
+    return photos
+      .map((p: Record<string, unknown>) => {
+        const urls = p.urls as Record<string, string> | undefined;
+        return urls?.regular || urls?.small || null;
+      })
+      .filter(Boolean) as string[];
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -239,6 +243,12 @@ WRITING RULES:
 - Avoid stigmatizing language: say "person with addiction" not "addict"
 - Include a brief conclusion with an encouraging message
 
+IMAGE PLACEHOLDERS:
+- Insert exactly 3-4 image placeholders between sections using this format: {{IMAGE_1}}, {{IMAGE_2}}, {{IMAGE_3}}, {{IMAGE_4}}
+- Place them BETWEEN sections (after an H2 heading's content, before the next H2)
+- Do NOT put them at the very beginning or end — spread them evenly through the article
+- Each placeholder should be on its own line
+
 SEO RULES:
 - Use the main keyword in the first paragraph
 - Include related long-tail keywords naturally throughout
@@ -309,13 +319,28 @@ export async function createArticleDraft(): Promise<boolean> {
     return false;
   }
 
-  // Search for featured image
-  const imageUrl = await searchUnsplashImage(topicInfo.imageQuery);
+  // Search for images (1 featured + up to 4 inline)
+  const images = await searchUnsplashImages(topicInfo.imageQuery, 5);
+  const featuredImage = images[0] || null;
+  const inlineImages = images.slice(1);
 
-  // Prepend featured image to content if found
+  // Build content with featured image and inline images
   let fullContent = article.content;
-  if (imageUrl) {
-    fullContent = `![featured](${imageUrl})\n\n${article.content}`;
+
+  // Replace image placeholders with real Unsplash images
+  for (let i = 0; i < 4; i++) {
+    const placeholder = `{{IMAGE_${i + 1}}}`;
+    if (fullContent.includes(placeholder) && inlineImages[i]) {
+      fullContent = fullContent.replace(placeholder, `\n![](${inlineImages[i]})\n`);
+    } else {
+      // Remove unused placeholders
+      fullContent = fullContent.replace(placeholder, "");
+    }
+  }
+
+  // Prepend featured image
+  if (featuredImage) {
+    fullContent = `![featured](${featuredImage})\n\n${fullContent}`;
   }
 
   // Ensure unique slug
@@ -365,8 +390,9 @@ export async function createArticleDraft(): Promise<boolean> {
       slug: finalSlug,
       category: topicInfo.category,
       word_count: wordCount,
-      has_featured_image: !!imageUrl,
-      image_url: imageUrl,
+      has_featured_image: !!featuredImage,
+      image_url: featuredImage,
+      inline_images: inlineImages.length,
       meta_title: article.meta_title,
       meta_description: article.meta_description,
     },
@@ -384,7 +410,8 @@ export async function createArticleDraft(): Promise<boolean> {
       slug: finalSlug,
       category: topicInfo.category,
       word_count: wordCount,
-      has_image: !!imageUrl,
+      has_image: !!featuredImage,
+      total_images: images.length,
     },
   });
 
