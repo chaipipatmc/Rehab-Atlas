@@ -10,7 +10,7 @@
 
 const GMAIL_API = "https://www.googleapis.com/gmail/v1/users/me";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const OUTREACH_EMAIL = process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com";
+const OUTREACH_EMAIL = (process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com").trim();
 
 // Cache access token in memory (valid ~1 hour)
 let accessTokenCache: { token: string; expiresAt: number } | null = null;
@@ -24,9 +24,9 @@ async function getAccessToken(): Promise<string | null> {
     return accessTokenCache.token;
   }
 
-  const clientId = process.env.GMAIL_CLIENT_ID;
-  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
-  const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
+  const clientId = process.env.GMAIL_CLIENT_ID?.trim();
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET?.trim();
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN?.trim();
 
   if (!clientId || !clientSecret || !refreshToken) {
     console.error("Gmail credentials missing:", {
