@@ -12,20 +12,26 @@ import { google, gmail_v1 } from "googleapis";
 
 const OUTREACH_EMAIL = process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com";
 
+let gmailClientCache: gmail_v1.Gmail | null | undefined = undefined;
+
 function getGmailClient(): gmail_v1.Gmail | null {
+  if (gmailClientCache !== undefined) return gmailClientCache;
+
   const clientId = process.env.GMAIL_CLIENT_ID;
   const clientSecret = process.env.GMAIL_CLIENT_SECRET;
   const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
 
   if (!clientId || !clientSecret || !refreshToken) {
     console.warn("Gmail API credentials not configured. Outreach emails will be drafted only.");
+    gmailClientCache = null;
     return null;
   }
 
   const oauth2 = new google.auth.OAuth2(clientId, clientSecret);
   oauth2.setCredentials({ refresh_token: refreshToken });
 
-  return google.gmail({ version: "v1", auth: oauth2 });
+  gmailClientCache = google.gmail({ version: "v1", auth: oauth2 });
+  return gmailClientCache;
 }
 
 /**

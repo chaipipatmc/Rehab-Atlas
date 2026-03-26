@@ -9,7 +9,7 @@ import { verifyWebhookSecret } from "@/lib/agents/base";
 import { processResearchAndDraft } from "@/lib/agents/outreach/research";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 // POST: Trigger research for a center (admin or webhook)
 export async function POST(request: Request) {
