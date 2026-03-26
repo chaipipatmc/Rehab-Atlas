@@ -94,7 +94,8 @@ export interface SendEmailResult {
 
 /**
  * Send an email via Gmail API.
- * Returns null if Gmail is not configured (draft-only mode).
+ * Throws if Gmail is configured but sending fails.
+ * Returns null only if Gmail credentials are not set.
  */
 export async function sendEmail(params: {
   to: string;
@@ -105,7 +106,10 @@ export async function sendEmail(params: {
   inReplyTo?: string;
 }): Promise<SendEmailResult | null> {
   const gmail = getGmailClient();
-  if (!gmail) return null;
+  if (!gmail) {
+    console.error("Gmail client not available. GMAIL_CLIENT_ID set:", !!process.env.GMAIL_CLIENT_ID, "GMAIL_CLIENT_SECRET set:", !!process.env.GMAIL_CLIENT_SECRET, "GMAIL_REFRESH_TOKEN set:", !!process.env.GMAIL_REFRESH_TOKEN);
+    return null;
+  }
 
   const raw = buildRawEmail({
     to: params.to,
@@ -116,18 +120,24 @@ export async function sendEmail(params: {
     inReplyTo: params.inReplyTo,
   });
 
-  const response = await gmail.users.messages.send({
-    userId: "me",
-    requestBody: {
-      raw,
-      threadId: params.threadId || undefined,
-    },
-  });
+  try {
+    const response = await gmail.users.messages.send({
+      userId: "me",
+      requestBody: {
+        raw,
+        threadId: params.threadId || undefined,
+      },
+    });
 
-  return {
-    messageId: response.data.id || "",
-    threadId: response.data.threadId || "",
-  };
+    console.log("Gmail sent successfully to:", params.to, "id:", response.data.id);
+    return {
+      messageId: response.data.id || "",
+      threadId: response.data.threadId || "",
+    };
+  } catch (err) {
+    console.error("Gmail API send failed to:", params.to, "error:", err);
+    throw err; // Re-throw so callers know it failed
+  }
 }
 
 /**
