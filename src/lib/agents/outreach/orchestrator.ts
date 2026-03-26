@@ -51,49 +51,69 @@ export async function runOrchestrator(): Promise<void> {
 
   // 2. Process follow-ups
   if (await isAgentEnabled("outreach_followup")) {
-    await processFollowUps();
+    try {
+      await processFollowUps();
+    } catch (err) {
+      console.error("Follow-up processing failed:", err);
+    }
   }
 
   // 3. Check for inbound replies
   if (await isAgentEnabled("outreach_response")) {
-    await processInboundReplies();
+    try {
+      await processInboundReplies();
+    } catch (err) {
+      console.error("Response processing failed:", err);
+    }
   }
 
   // 4. Prepare agreements for terms_agreed centers
-  if (await isAgentEnabled("outreach_agreement")) {
-    const { data: agreed } = await admin
-      .from("outreach_pipeline")
-      .select("id")
-      .eq("stage", "terms_agreed")
-      .limit(10);
+  try {
+    if (await isAgentEnabled("outreach_agreement")) {
+      const { data: agreed } = await admin
+        .from("outreach_pipeline")
+        .select("id")
+        .eq("stage", "terms_agreed")
+        .limit(10);
 
-    for (const entry of agreed || []) {
-      await prepareAgreement(entry.id as string);
+      for (const entry of agreed || []) {
+        await prepareAgreement(entry.id as string);
+      }
     }
+  } catch (err) {
+    console.error("Agreement processing failed:", err);
   }
 
   // 5. Check agreement signing status
-  const { data: sentAgreements } = await admin
-    .from("outreach_pipeline")
-    .select("id")
-    .eq("stage", "agreement_sent")
-    .limit(20);
+  try {
+    const { data: sentAgreements } = await admin
+      .from("outreach_pipeline")
+      .select("id")
+      .eq("stage", "agreement_sent")
+      .limit(20);
 
-  for (const entry of sentAgreements || []) {
-    await checkAgreementStatus(entry.id as string);
+    for (const entry of sentAgreements || []) {
+      await checkAgreementStatus(entry.id as string);
+    }
+  } catch (err) {
+    console.error("Agreement status check failed:", err);
   }
 
   // 6. Activate centers with signed agreements
-  if (await isAgentEnabled("outreach_activation")) {
-    const { data: signed } = await admin
-      .from("outreach_pipeline")
-      .select("id")
-      .eq("stage", "agreement_signed")
-      .limit(10);
+  try {
+    if (await isAgentEnabled("outreach_activation")) {
+      const { data: signed } = await admin
+        .from("outreach_pipeline")
+        .select("id")
+        .eq("stage", "agreement_signed")
+        .limit(10);
 
-    for (const entry of signed || []) {
-      await activateCenter(entry.id as string);
+      for (const entry of signed || []) {
+        await activateCenter(entry.id as string);
+      }
     }
+  } catch (err) {
+    console.error("Activation failed:", err);
   }
 
   // 7. Detect stalled pipelines (no update in 30 days)
