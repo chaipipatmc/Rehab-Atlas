@@ -38,3 +38,15 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react` (NOT Radix). K
 4. **Blog author tracking** — `author_type` field: 'rehabatlas' or 'partner', with `author_center_id` for backlinks
 
 5. **Commission fields** — check before forwarding leads: `commission_type`, `commission_rate`, `commission_fixed_amount`
+
+6. **Commission tiers** — 12% base, 10% with 3 blogs/month, 8% with 5 blogs/month. Launch campaign: 0% for first 2 months with 3 blogs/month
+
+7. **Outreach pipeline** — `outreach_pipeline` table tracks center recruitment stages (new → researching → outreach_drafted → outreach_sent → responded → terms_agreed → agreement_sent → active)
+
+8. **Gmail API** — outreach emails sent via direct fetch calls to Gmail REST API (NOT googleapis SDK). Token refresh handled manually. All emails CC'd to info@rehab-atlas.com
+
+9. **PandaDoc** — partnership agreements use template `Ctzua6xmeLzCVnMwsmYR9L` with tokens for center details
+
+10. **Content Creator** — auto-generates blog articles via Claude AI with Unsplash images. 70+ predefined SEO topics. Runs weekdays only. Drafts require admin approval before publishing
+
+11. **Lead outcome tracking** — `lead_forwards.partner_status` (pending/admitted/not_admitted). Partners update at `/partner/leads`. Commission reports at `/partner/commission` and `/admin/commission`

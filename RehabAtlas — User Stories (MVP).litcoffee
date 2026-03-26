@@ -559,17 +559,121 @@ So that the admin team can make informed referral decisions.
 
 ---
 
+---
+
+## 5. Post-MVP User Stories — Outreach & Commission
+
+### US-045 — Outreach Pipeline [DONE]
+**As an admin,**
+I want an automated outreach pipeline that researches centers, drafts personalized emails, and manages follow-ups,
+So that I can recruit partner centers at scale without manual effort.
+
+**Status:** Implemented
+- 6-agent pipeline: Research → Follow-up → Response Handler → Agreement → Activation → Orchestrator
+- Gmail API sends emails as "Sarah" from info@rehab-atlas.com
+- Pipeline dashboard at `/admin/outreach` with funnel metrics
+- Email preview + edit before approval at `/admin/agents`
+
+---
+
+### US-046 — Commission Tracking [DONE]
+**As an admin,**
+I want to track commission owed by each partner center based on admitted referrals,
+So that I can invoice partners and manage revenue.
+
+**Status:** Implemented
+- Tiered commission: 12% base, 10% with 3 blogs/month, 8% with 5 blogs/month
+- Launch campaign: 0% for first 2 months with 3 blogs/month
+- Admin commission overview at `/admin/commission`
+- Monthly reports with payment status tracking
+
+---
+
+### US-047 — Partner Lead Tracking [DONE]
+**As a partner,**
+I want to see referrals sent to my center and update their admission status,
+So that I can track outcomes and understand my commission obligations.
+
+**Status:** Implemented
+- Partner referrals page at `/partner/leads`
+- Simple admitted/not_admitted status update
+- Commission report at `/partner/commission` with monthly summary
+
+---
+
+### US-048 — Partner Commission Visibility [DONE]
+**As a partner,**
+I want to see my current commission rate and blog progress,
+So that I know how publishing more articles reduces my costs.
+
+**Status:** Implemented
+- Commission & blog tier card on partner dashboard
+- Shows current rate, blog count this month, tier progress, blogs needed for next tier
+
+---
+
+### US-049 — Agreement E-Signature [DONE]
+**As an admin,**
+I want partnership agreements to be sent via e-signature service,
+So that centers can sign digitally and we have a legal record.
+
+**Status:** Implemented
+- PandaDoc integration with template tokens
+- Admin approves agreement before sending
+- Center signs first, admin counter-signs
+- Pipeline auto-advances after signing
+
+---
+
+### US-050 — Auto-Onboarding [DONE]
+**As an admin,**
+I want centers that agree to partner to be automatically onboarded,
+So that no manual account creation is needed.
+
+**Status:** Implemented
+- Response Handler detects positive replies
+- Auto-creates Supabase auth user + partner profile
+- Sends login credentials via email
+- Pipeline advances to terms_agreed
+
+---
+
+### US-051 — Content Creator Agent [DONE]
+**As an admin,**
+I want an AI agent that automatically writes SEO blog articles about rehab and addiction,
+So that I can build organic traffic without manual content creation.
+
+**Status:** Implemented
+- Claude AI writes 1500-2000 word articles from 70+ SEO topics
+- Unsplash API for featured + 3-4 inline images
+- Saves as draft for admin review at `/admin/content`
+- Runs weekdays at 1 PM Bangkok time
+
+---
+
+### US-052 — Forgot Password [DONE]
+**As a user,**
+I want to reset my password from the login page,
+So that I can recover access to my account.
+
+**Status:** Implemented
+- "Forgot password?" link on login page
+- Sends Supabase password reset email
+- Green confirmation message shown
+
+---
+
 ## Summary
 
 | Category | Total | Done |
 |----------|-------|------|
-| End Users | 13 | 13 |
-| Admin | 8 | 8 |
-| Partners | 7 | 7 |
-| System | 6 | 6 |
-| **Total** | **44** | **44** |
+| End Users | 14 | 14 |
+| Admin | 12 | 12 |
+| Partners | 10 | 10 |
+| System | 16 | 16 |
+| **Total** | **52** | **52** |
 
-All 44 user stories are implemented.
+All 52 user stories are implemented.
 
 ---
 

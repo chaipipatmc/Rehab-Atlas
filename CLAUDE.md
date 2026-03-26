@@ -13,16 +13,20 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 - **UI:** Tailwind CSS v4 + shadcn/ui v4 (uses @base-ui/react, NOT Radix)
 - **Design System:** "The Quiet Authority" — Noto Serif + Inter, teal palette (#45636b), no hard borders, glassmorphism nav
 - **AI:** Template-based matching by default; Claude API (`@anthropic-ai/sdk`, claude-sonnet-4-20250514) optional when ANTHROPIC_API_KEY is set
-- **Email:** Resend (transactional notifications to chaipipat.mc@gmail.com)
-- **Deployment:** Vercel
+- **Email:** Resend (transactional) + Gmail API (outreach via info@rehab-atlas.com)
+- **E-Signature:** PandaDoc (partnership agreements)
+- **Images:** Unsplash API (blog featured + inline images)
+- **Deployment:** Vercel (Pro plan)
 
 ## Critical Business Rules
 
 1. **ALL inquiries go to RehabAtlas admin only** — never directly to centers
 2. **Admin controls lead routing** — must review before forwarding
-3. **Commission tracking** — each center has commission_type (none/percentage/fixed), shown before forwarding leads
-4. **Partner edits require admin approval** — partners cannot directly modify their listing (including staff changes)
-5. **Blog has two sources** — RehabAtlas editorial + partner-submitted (with backlink to center profile)
+3. **Commission tracking** — tiered: 12% base, 10% with 3 blogs/month, 8% with 5 blogs/month. Launch campaign: 0% for first 2 months with 3 blogs/month for 3 months
+4. **Commission basis** — calculated from treatment fee listed on platform. Price changes require agreement amendment
+5. **Partner edits require admin approval** — partners cannot directly modify their listing (including staff changes)
+6. **Blog has two sources** — RehabAtlas editorial (AI-generated) + partner-submitted (with backlink to center profile)
+7. **Lead outcome tracking** — partners mark forwarded leads as admitted/not_admitted. Commission applies to admitted clients only
 
 ## User Roles
 
@@ -56,8 +60,9 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 
 ## AI Agent System
 
-4 agents automate admin workflows. Each can be toggled on/off at `/admin/agents`. When OFF = manual mode (original behavior). When ON = agents process events → email owner for approval.
+11 agents automate workflows. Each can be toggled on/off at `/admin/agents`. When OFF = manual mode. When ON = agents process events → email owner for approval.
 
+### Internal Agents
 | Agent | Trigger | What It Does |
 |-------|---------|-------------|
 | **Center Admin** | DB webhook on `centers` + `center_edit_requests` | Checks completeness (15-point checklist), AI reviews quality |
@@ -65,27 +70,54 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 | **Lead Verify** | DB webhook on `leads` (new) | Validates lead, checks commission agreement, AI match analysis |
 | **Follow-up** | Daily cron (09:00 Bangkok) | Sends reminders for stale drafts/incomplete profiles |
 
+### Outreach Pipeline Agents (`src/lib/agents/outreach/`)
+| Agent | Trigger | What It Does |
+|-------|---------|-------------|
+| **Research & Outreach** ("Sarah") | Orchestrator | Scrapes center websites, drafts personalized outreach emails via Claude AI |
+| **Follow-up** | Daily cron | Auto-sends Day 3/7/14 follow-ups to unresponsive centers |
+| **Response Handler** | Every 15 min cron | Detects Gmail replies, analyzes sentiment, auto-onboards positive responses |
+| **Agreement** | Pipeline stage | Prepares PandaDoc agreements for admin approval before e-signature |
+| **Activation** | PandaDoc webhook | Updates commission in DB after both parties sign |
+| **Master Orchestrator** | Every 30 min cron | Coordinates all outreach agents, advances pipeline stages |
+
+### Content Agent
+| Agent | Trigger | What It Does |
+|-------|---------|-------------|
+| **Content Creator** | Daily cron (weekdays, 1 PM Bangkok) | Auto-researches rehab topics, writes 1500-2000 word SEO articles with Unsplash images, saves as draft for admin approval |
+
 Architecture: `src/lib/agents/` (logic) + `src/app/api/agents/` (routes) + `src/app/admin/agents/` (dashboard)
 
-Key tables: `agent_tasks` (task queue), `agent_follow_ups` (sequences), `agent_log` (audit), `site_settings` (toggles)
+Key tables: `agent_tasks` (task queue), `agent_follow_ups` (sequences), `agent_log` (audit), `site_settings` (toggles), `outreach_pipeline`, `outreach_emails`, `outreach_blog_counts`, `commission_reports`
 
-Notifications: Email (Resend) + LINE Notify (urgent items). Owner approves/rejects via email action links (HMAC-signed, 24h TTL).
+Notifications: Email (Resend) + LINE Notify (urgent items) + Gmail API (outreach emails via info@rehab-atlas.com). Owner approves/rejects via dashboard or email action links (HMAC-signed, 24h TTL).
 
 ## Database Schema
 
-Tables: `centers`, `center_photos`, `center_faqs`, `profiles`, `center_edit_requests`, `assessments`, `leads`, `lead_forwards`, `pages`, `site_faqs`
+Tables: `centers`, `center_photos`, `center_faqs`, `profiles`, `center_edit_requests`, `assessments`, `leads`, `lead_forwards`, `pages`, `site_faqs`, `center_staff`, `center_analytics`, `agent_tasks`, `agent_follow_ups`, `agent_log`, `site_settings`, `outreach_pipeline`, `outreach_emails`, `outreach_blog_counts`, `commission_reports`
 
 Key center fields: `commission_type`, `commission_rate`, `commission_fixed_amount`, `agreement_status`, `contract_start`, `contract_end`, `account_manager`
+
+Lead forward fields: `partner_status` (pending/admitted/not_admitted), `treatment_fee`, `commission_rate`, `commission_amount`
 
 Blog author fields on `pages`: `author_type` (rehabatlas/partner), `author_name`, `author_center_id`, `submitted_by`
 
 ## Email Notifications
 
-Sent to ADMIN_EMAIL (chaipipat.mc@gmail.com) on:
+**Transactional (Resend):** Sent to ADMIN_EMAIL (chaipipat.mc@gmail.com) on:
 - New inquiry/lead submitted
 - Partner verification request
 - Partner blog submission
 - Lead forwarded to center (sent to center's inquiry_email)
+- Agent task notifications (approval needed)
+- Partner activation confirmation
+
+**Outreach (Gmail API via info@rehab-atlas.com):**
+- Personalized outreach emails to rehab centers (persona: "Sarah")
+- Follow-up emails (Day 3, 7, 14)
+- Win-back replies for negative responses
+- Partner onboarding credentials
+- Agreement notification emails
+- All outreach CC'd to info@rehab-atlas.com
 
 ## File Structure Convention
 
@@ -95,7 +127,9 @@ Sent to ADMIN_EMAIL (chaipipat.mc@gmail.com) on:
 - User pages: `src/app/account/` (protected by auth)
 - API routes: `src/app/api/`
 - Components: `src/components/` (ui/, layout/, centers/, admin/, leads/, shared/)
-- Lib: `src/lib/` (supabase/, matching/, email/, constants, validators, utils)
+- Lib: `src/lib/` (supabase/, matching/, email/, agents/, agents/outreach/, constants, validators, utils)
+- Outreach agents: `src/lib/agents/outreach/` (gmail.ts, esign.ts, research.ts, followup.ts, response-handler.ts, agreement.ts, activation.ts, orchestrator.ts, templates/)
+- Content agent: `src/lib/agents/content-creator.ts`
 
 ## Important: When making changes
 

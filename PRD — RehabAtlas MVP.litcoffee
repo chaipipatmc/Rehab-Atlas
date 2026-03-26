@@ -368,20 +368,61 @@ New → Under Review → Awaiting Info → Ready to Forward → Forwarded → Cl
 
 ---
 
-# 16. Future Roadmap
+# 16. Post-MVP Features (Implemented)
+
+## 16.1 Outreach Pipeline (Partner Acquisition)
+- 6-agent automated outreach system (Research, Follow-up, Response Handler, Agreement, Activation, Orchestrator)
+- Gmail API integration for personalized outreach emails (persona: "Sarah")
+- PandaDoc e-signature for partnership agreements
+- Auto-onboarding: creates partner account + sends credentials when center agrees
+- Win-back agent for negative replies
+- Pipeline dashboard at `/admin/outreach` with funnel metrics
+- Crons: orchestrator every 30 min, response check every 15 min, follow-ups daily
+
+## 16.2 Commission Tracking
+- Tiered commission: 12% base, 10% with 3 blogs/month, 8% with 5 blogs/month
+- Launch campaign: 0% commission for first 2 months with 3 blogs/month for 3 months
+- Commission based on listed treatment fee on platform
+- Lead outcome tracking: partners mark leads as admitted/not_admitted at `/partner/leads`
+- Monthly commission reports at `/partner/commission` and `/admin/commission`
+- Payment status tracking: pending/invoiced/paid/overdue/waived
+- Blog tier auto-calculation: 1st of each month cron
+
+## 16.3 Content Creator Agent
+- Auto-researches rehab/addiction topics from 70+ predefined SEO-valuable topics
+- Claude AI writes 1500-2000 word articles with proper SEO structure
+- Unsplash API for featured image + 3-4 inline images per article
+- Saves as draft for admin approval at `/admin/content`
+- Runs weekdays at 1 PM Bangkok (3-5 articles per week)
+- Skips weekends, avoids duplicate topics
+
+## 16.4 Partner Portal Enhancements
+- Referrals page (`/partner/leads`): view forwarded leads, mark admitted/not admitted
+- Commission report (`/partner/commission`): monthly summary, payment status, current rate
+- Commission & blog tier card on partner dashboard: current rate, blog count, tier progress
+- Forgot password on login page
+
+## 16.5 Admin Enhancements
+- Commission overview (`/admin/commission`): all centers, totals by payment status
+- Outreach pipeline dashboard (`/admin/outreach`): funnel metrics, stage tracking
+- Agent activity: filtering (awaiting/approved/rejected), pagination (50/page), email preview with edit capability
+- Center edit page: effective commission & blog tier display
+
+---
+
+# 17. Future Roadmap
 
 - [ ] User reviews/ratings
-- [ ] Admission tracking
-- [ ] Payment/invoicing system
+- [ ] Payment/invoicing system (Stripe)
 - [ ] Multilingual support
 - [ ] Mobile app
-- [ ] CRM automation
 - [ ] AI chat assistant
 - [ ] Real-time notifications
 - [ ] Country/condition landing pages (SEO)
-- [ ] Advanced analytics dashboard
-- [ ] Stripe integration
+- [ ] Advanced analytics dashboard (GA4 + custom)
 - [ ] Saved centers functionality (full implementation)
+- [ ] Google Search Console integration
+- [ ] Treatment-specific landing pages for SEO
 
 ---
 

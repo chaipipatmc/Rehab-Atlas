@@ -48,7 +48,10 @@ A global rehab center discovery and referral marketplace built with Next.js, Sup
 - **Tailwind CSS v4** + shadcn/ui v4 (@base-ui/react)
 - **Claude API** (@anthropic-ai/sdk) for AI matching explanations
 - **Resend** for transactional emails
-- **Vercel** for deployment
+- **Gmail API** for outreach emails (via info@rehab-atlas.com)
+- **PandaDoc** for partnership agreement e-signatures
+- **Unsplash API** for blog article images
+- **Vercel Pro** for deployment (crons every 15-30 min)
 
 ## Design System
 
@@ -79,11 +82,17 @@ A global rehab center discovery and referral marketplace built with Next.js, Sup
    ```bash
    cp .env.example .env.local
    ```
-4. Run SQL migrations in Supabase SQL Editor:
+4. Run SQL migrations in Supabase SQL Editor (in order):
    ```
    supabase/migrations/001_initial_schema.sql
    supabase/migrations/002_commission_fields.sql
    supabase/migrations/003_blog_author_fields.sql
+   supabase/migrations/004_center_staff.sql
+   supabase/migrations/005_agent_tables.sql
+   supabase/migrations/006_center_analytics.sql
+   supabase/migrations/007_outreach_pipeline.sql
+   supabase/migrations/008_commission_tracking.sql
+   supabase/migrations/009_content_creator_agent.sql
    ```
 5. Start dev server:
    ```bash
