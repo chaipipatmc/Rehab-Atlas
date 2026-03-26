@@ -1,6 +1,6 @@
 /**
  * Gmail API Client for Outreach Pipeline
- * Handles sending/receiving emails via info@rehab-atlas.com
+ * Uses direct fetch calls (no googleapis dependency) for reliable serverless operation.
  *
  * Setup required:
  * 1. Google Cloud project with Gmail API enabled
@@ -8,30 +8,59 @@
  * 3. Run scripts/gmail-auth.ts to obtain refresh token
  */
 
-import { google, gmail_v1 } from "googleapis";
-
+const GMAIL_API = "https://www.googleapis.com/gmail/v1/users/me";
+const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const OUTREACH_EMAIL = process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com";
 
-let gmailClientCache: gmail_v1.Gmail | null | undefined = undefined;
+// Cache access token in memory (valid ~1 hour)
+let accessTokenCache: { token: string; expiresAt: number } | null = null;
 
-function getGmailClient(): gmail_v1.Gmail | null {
-  if (gmailClientCache !== undefined) return gmailClientCache;
+/**
+ * Get a fresh access token using the refresh token.
+ */
+async function getAccessToken(): Promise<string | null> {
+  // Return cached token if still valid (with 5 min buffer)
+  if (accessTokenCache && accessTokenCache.expiresAt > Date.now() + 300000) {
+    return accessTokenCache.token;
+  }
 
   const clientId = process.env.GMAIL_CLIENT_ID;
   const clientSecret = process.env.GMAIL_CLIENT_SECRET;
   const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
 
   if (!clientId || !clientSecret || !refreshToken) {
-    console.warn("Gmail API credentials not configured. Outreach emails will be drafted only.");
-    gmailClientCache = null;
+    console.error("Gmail credentials missing:", {
+      clientId: !!clientId,
+      clientSecret: !!clientSecret,
+      refreshToken: !!refreshToken,
+    });
     return null;
   }
 
-  const oauth2 = new google.auth.OAuth2(clientId, clientSecret);
-  oauth2.setCredentials({ refresh_token: refreshToken });
+  const response = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }).toString(),
+  });
 
-  gmailClientCache = google.gmail({ version: "v1", auth: oauth2 });
-  return gmailClientCache;
+  if (!response.ok) {
+    const err = await response.text();
+    console.error("Gmail token refresh failed:", response.status, err);
+    return null;
+  }
+
+  const data = await response.json();
+  accessTokenCache = {
+    token: data.access_token,
+    expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+  };
+
+  return data.access_token;
 }
 
 /**
@@ -43,12 +72,11 @@ function buildRawEmail(params: {
   subject: string;
   bodyText: string;
   bodyHtml?: string;
-  threadId?: string;
   inReplyTo?: string;
   references?: string;
 }): string {
   const boundary = `boundary_${Date.now()}`;
-  const ccEmail = process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com";
+  const ccEmail = OUTREACH_EMAIL;
   const headers = [
     `From: ${params.from}`,
     `To: ${params.to}`,
@@ -58,7 +86,6 @@ function buildRawEmail(params: {
     `MIME-Version: 1.0`,
   ];
 
-  // Threading headers for replies
   if (params.inReplyTo) {
     headers.push(`In-Reply-To: ${params.inReplyTo}`);
   }
@@ -94,8 +121,7 @@ export interface SendEmailResult {
 
 /**
  * Send an email via Gmail API.
- * Throws if Gmail is configured but sending fails.
- * Returns null only if Gmail credentials are not set.
+ * Throws if sending fails. Returns null only if credentials are not set.
  */
 export async function sendEmail(params: {
   to: string;
@@ -105,11 +131,8 @@ export async function sendEmail(params: {
   threadId?: string;
   inReplyTo?: string;
 }): Promise<SendEmailResult | null> {
-  const gmail = getGmailClient();
-  if (!gmail) {
-    console.error("Gmail client not available. GMAIL_CLIENT_ID set:", !!process.env.GMAIL_CLIENT_ID, "GMAIL_CLIENT_SECRET set:", !!process.env.GMAIL_CLIENT_SECRET, "GMAIL_REFRESH_TOKEN set:", !!process.env.GMAIL_REFRESH_TOKEN);
-    return null;
-  }
+  const token = await getAccessToken();
+  if (!token) return null;
 
   const raw = buildRawEmail({
     to: params.to,
@@ -120,29 +143,34 @@ export async function sendEmail(params: {
     inReplyTo: params.inReplyTo,
   });
 
-  try {
-    const response = await gmail.users.messages.send({
-      userId: "me",
-      requestBody: {
-        raw,
-        threadId: params.threadId || undefined,
-      },
-    });
+  const response = await fetch(`${GMAIL_API}/messages/send`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      raw,
+      threadId: params.threadId || undefined,
+    }),
+  });
 
-    console.log("Gmail sent successfully to:", params.to, "id:", response.data.id);
-    return {
-      messageId: response.data.id || "",
-      threadId: response.data.threadId || "",
-    };
-  } catch (err) {
-    console.error("Gmail API send failed to:", params.to, "error:", err);
-    throw err; // Re-throw so callers know it failed
+  if (!response.ok) {
+    const err = await response.text();
+    console.error("Gmail send failed:", response.status, err);
+    throw new Error(`Gmail send failed: ${response.status} ${err}`);
   }
+
+  const data = await response.json();
+  console.log("Gmail sent successfully to:", params.to, "id:", data.id);
+  return {
+    messageId: data.id || "",
+    threadId: data.threadId || "",
+  };
 }
 
 /**
  * Get all replies in a Gmail thread.
- * Used to detect inbound responses from centers.
  */
 export async function getThreadMessages(threadId: string): Promise<Array<{
   id: string;
@@ -154,18 +182,21 @@ export async function getThreadMessages(threadId: string): Promise<Array<{
   date: string;
   isInbound: boolean;
 }>> {
-  const gmail = getGmailClient();
-  if (!gmail) return [];
+  const token = await getAccessToken();
+  if (!token) return [];
 
-  const thread = await gmail.users.threads.get({
-    userId: "me",
-    id: threadId,
-    format: "full",
+  const response = await fetch(`${GMAIL_API}/threads/${threadId}?format=full`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 
-  const messages = thread.data.messages || [];
-  return messages.map((msg) => {
-    const headers = msg.payload?.headers || [];
+  if (!response.ok) return [];
+
+  const thread = await response.json();
+  const messages = thread.messages || [];
+
+  return messages.map((msg: Record<string, unknown>) => {
+    const payload = msg.payload as Record<string, unknown> | undefined;
+    const headers = (payload?.headers || []) as Array<{ name: string; value: string }>;
     const getHeader = (name: string) => headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value || "";
 
     const from = getHeader("From");
@@ -175,24 +206,26 @@ export async function getThreadMessages(threadId: string): Promise<Array<{
 
     // Decode body
     let body = "";
-    if (msg.payload?.body?.data) {
-      body = Buffer.from(msg.payload.body.data, "base64url").toString("utf-8");
-    } else if (msg.payload?.parts) {
-      const textPart = msg.payload.parts.find((p) => p.mimeType === "text/plain");
-      if (textPart?.body?.data) {
-        body = Buffer.from(textPart.body.data, "base64url").toString("utf-8");
+    const payloadBody = payload?.body as Record<string, unknown> | undefined;
+    if (payloadBody?.data) {
+      body = Buffer.from(payloadBody.data as string, "base64url").toString("utf-8");
+    } else if (payload?.parts) {
+      const parts = payload.parts as Array<Record<string, unknown>>;
+      const textPart = parts.find((p) => p.mimeType === "text/plain");
+      const textBody = textPart?.body as Record<string, unknown> | undefined;
+      if (textBody?.data) {
+        body = Buffer.from(textBody.data as string, "base64url").toString("utf-8");
       }
     }
 
-    // Inbound = not from our outreach email
     const isInbound = !from.toLowerCase().includes(OUTREACH_EMAIL.toLowerCase());
 
     return {
-      id: msg.id || "",
+      id: (msg.id as string) || "",
       from,
       to,
       subject,
-      snippet: msg.snippet || "",
+      snippet: (msg.snippet as string) || "",
       body,
       date,
       isInbound,
@@ -229,20 +262,21 @@ export async function getLatestInboundReply(threadId: string): Promise<{
  * Check daily send count against limit.
  */
 export async function getDailySendCount(): Promise<number> {
-  const gmail = getGmailClient();
-  if (!gmail) return 0;
+  const token = await getAccessToken();
+  if (!token) return 0;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const afterEpoch = Math.floor(today.getTime() / 1000);
 
-  const response = await gmail.users.messages.list({
-    userId: "me",
-    q: `from:${OUTREACH_EMAIL} after:${afterEpoch}`,
-    maxResults: 100,
-  });
+  const response = await fetch(
+    `${GMAIL_API}/messages?q=${encodeURIComponent(`from:${OUTREACH_EMAIL} after:${afterEpoch}`)}&maxResults=100`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
 
-  return response.data.resultSizeEstimate || 0;
+  if (!response.ok) return 0;
+  const data = await response.json();
+  return data.resultSizeEstimate || 0;
 }
 
 /**
