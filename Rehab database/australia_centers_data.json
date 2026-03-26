@@ -1,0 +1,458 @@
+[
+  {
+    "region": "Australia",
+    "centerName": "Arrow Health",
+    "website": "https://arrowhealth.com.au/",
+    "phone": "+61395337888",
+    "recoveryUrl": "https://recovery.com/arrow-health-australia/",
+    "email": "enquiries@arrowhealth.com.au"
+  },
+  {
+    "region": "Australia",
+    "centerName": "Goodsky Mental Health Retreat",
+    "website": "https://www.goodsky.com.au/",
+    "phone": "+611800-940-962",
+    "recoveryUrl": "https://recovery.com/goodsky/",
+    "email": "info@goodsky.com.au"
+  },
+  {
+    "region": "Australia",
+    "centerName": "Heal for Life Foundation",
+    "website": "https://healforlife.com.au/adults/private-retreats/",
+    "phone": "+61-1300-419-579",
+    "recoveryUrl": "https://recovery.com/heal-for-life-australia/",
+    "email": "admin@healforlife.com.au"
+  },
+  {
+    "region": "Australia",
+    "centerName": "Palladium Private",
+    "website": "https://www.palladiumprivate.com/",
+    "phone": "+61-1800-431-562",
+    "recoveryUrl": "https://recovery.com/palladium-private/",
+    "email": "admissions@palladiumprivate.com"
+  },
+  {
+    "region": "Australia",
+    "centerName": "Sapphire Recovery",
+    "website": "https://sapphirerecovery.com.au",
+    "phone": "+61721106064",
+    "recoveryUrl": "https://recovery.com/sapphire-recovery/",
+    "email": "assistance@sapphirerecovery.com.au"
+  },
+  {
+    "region": "Australia",
+    "centerName": "The Bay",
+    "website": "",
+    "phone": "+61-3-4427-7495",
+    "recoveryUrl": "https://recovery.com/the-bay-retreats/",
+    "email": ""
+  },
+  {
+    "region": "Australia",
+    "centerName": "The Health Retreat",
+    "website": "https://www.thehealthretreat.net.au/",
+    "phone": "+61-1300-776-339",
+    "recoveryUrl": "https://recovery.com/health-retreat-australia/",
+    "email": "info@healthretreat.com.au"
+  },
+  {
+    "region": "Australia",
+    "centerName": "Zen Private",
+    "website": "",
+    "phone": "(0406)562051",
+    "recoveryUrl": "https://recovery.com/residential/zen-private/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Aston Private",
+    "website": "",
+    "phone": "+61478138089",
+    "recoveryUrl": "https://recovery.com/residential/aston-private/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Aurora Kellyville Private Hospital",
+    "website": "https://kellyvilleprivate.com.au/",
+    "phone": "+611300122144",
+    "recoveryUrl": "https://recovery.com/aurora-kellyville-new-south-wales/",
+    "email": "kvl.intake@aurorahealth.com.au"
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Beachwood Recovery House",
+    "website": "https://www.southpacificprivate.com.au/seeking-help-for-another/beachwood/",
+    "phone": "+61-8-9515-9527",
+    "recoveryUrl": "https://recovery.com/beachwood-recovery-house-australia/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Byron Private",
+    "website": "https://www.byronprivaterehab.com.au/who-is-rehab-for-2",
+    "phone": "+61-1800-841-758",
+    "recoveryUrl": "https://recovery.com/byron-private-new-south-wales-australia/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Gunnebah Addiction Retreat",
+    "website": "https://www.gunnebah.com.au/",
+    "phone": "+611300834142",
+    "recoveryUrl": "https://recovery.com/gunnebah-australia/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Raindrum",
+    "website": "",
+    "phone": "+611300007607",
+    "recoveryUrl": "https://recovery.com/raindrum-byron-bay-australia/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Reset My Future Sydney",
+    "website": "",
+    "phone": "+611800300813",
+    "recoveryUrl": "https://recovery.com/outpatient/reset-my-future-sydney/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Savasana Private",
+    "website": "https://savasanaprivate.com.au/",
+    "phone": "+61-2-7804-4106",
+    "recoveryUrl": "https://recovery.com/savasana-private-sydney-australia/",
+    "email": "confidential@savasanaprivate.com.au"
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "South Pacific Private",
+    "website": "https://www.southpacificprivate.com.au/",
+    "phone": "+61-2-5839-5394",
+    "recoveryUrl": "https://recovery.com/south-pacific-private-new-south-wales-australia/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Southern Highlands Addiction Retreat",
+    "website": "https://southernhighlandsrehab.com.au/blog/your-path-to-recovery-what-happens-in-rehab",
+    "phone": "+610258496514",
+    "recoveryUrl": "https://recovery.com/southern-highlands-addiction-canyonleigh-australia/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Sydney Detox and Rehab",
+    "website": "https://sydneydetoxandrehab.com/",
+    "phone": "+61-3-8595-0365",
+    "recoveryUrl": "https://recovery.com/sydney-detox-and-rehab/",
+    "email": "manager@sydneydetoxandrehab.com"
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "The Buttery Private",
+    "website": "https://www.buttery.org.au/",
+    "phone": "+61-1800-001-202",
+    "recoveryUrl": "https://recovery.com/buttery-private-australia/",
+    "email": "intake@buttery.org.au"
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "The Cabin Sydney",
+    "website": "https://www.thecabinsydney.com.au/",
+    "phone": "+61-1300-884-440",
+    "recoveryUrl": "https://recovery.com/the-cabin-sydney-australia/",
+    "email": "contact@thecabin.com"
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "The Sanctuary Byron Bay",
+    "website": "https://www.sanctuarybb.com",
+    "phone": "+61-1800-841-796",
+    "recoveryUrl": "https://recovery.com/sanctuary-byron-bay/",
+    "email": "info@sanctuarybb.com"
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "The Sydney Retreat",
+    "website": "",
+    "phone": "+61-1800-951-845",
+    "recoveryUrl": "https://recovery.com/the-sydney-retreat-sydney-australia/",
+    "email": ""
+  },
+  {
+    "region": "New South Wales",
+    "centerName": "Tranquilo Wellness",
+    "website": "",
+    "phone": "+61-2-5944-3696",
+    "recoveryUrl": "https://recovery.com/tranquilo-wellness-sydney-australia/",
+    "email": ""
+  },
+  {
+    "region": "Queensland",
+    "centerName": "Aurora Belmont Private Clinic",
+    "website": "https://belmontprivate.com.au/",
+    "phone": "+611800955665",
+    "recoveryUrl": "https://recovery.com/aurora-belmont-carina-queensland/",
+    "email": "belmont.admissions@aurorahealth.com.au"
+  },
+  {
+    "region": "Queensland",
+    "centerName": "Aurora Currumbin Clinic",
+    "website": "https://currumbinclinic.com.au/",
+    "phone": "+610755344944",
+    "recoveryUrl": "https://recovery.com/aurora-currumbin-queensland/",
+    "email": "currumbin.admissions@aurorahealth.com.au"
+  },
+  {
+    "region": "Queensland",
+    "centerName": "Gold Coast Addiction & Treatment Rehab",
+    "website": "https://goldcoastaddictionandtreatmentrehab.com/",
+    "phone": "+61-1800-560-864",
+    "recoveryUrl": "https://recovery.com/gold-coast-addiction-australia/",
+    "email": "george@goldcoastaddictionandtreatmentrehab.com"
+  },
+  {
+    "region": "Queensland",
+    "centerName": "Hader Clinic Queensland",
+    "website": "https://haderclinicqld.com.au/",
+    "phone": "+611300-856-847",
+    "recoveryUrl": "https://recovery.com/hader-clinic-queensland-brisbane-queensland/",
+    "email": "reception@haderclinicqld.com.au"
+  },
+  {
+    "region": "Queensland",
+    "centerName": "Lives Lived Well Mirikai",
+    "website": "",
+    "phone": "+61-1300-727-957",
+    "recoveryUrl": "https://recovery.com/residential/lives-lived-well-mirikai/",
+    "email": ""
+  },
+  {
+    "region": "Queensland",
+    "centerName": "NAWA Wellness",
+    "website": "https://nawawellness.com.au/",
+    "phone": "+61-7-4520-4394",
+    "recoveryUrl": "https://recovery.com/nawa-wellness-queensland-australia/",
+    "email": ""
+  },
+  {
+    "region": "Queensland",
+    "centerName": "Noosa Confidential",
+    "website": "https://noosaconfidential.com.au/",
+    "phone": "+611800957791",
+    "recoveryUrl": "https://recovery.com/noosa-confidential/",
+    "email": "enquiries@noosaconfidential.com.au"
+  },
+  {
+    "region": "Queensland",
+    "centerName": "Salt Recovery",
+    "website": "https://saltrecovery.com.au/",
+    "phone": "+61499083974",
+    "recoveryUrl": "https://recovery.com/salt-recovery-queensland-australia/",
+    "email": "info@saltrecovery.com.au"
+  },
+  {
+    "region": "Queensland",
+    "centerName": "The Banyans",
+    "website": "https://thebanyans.com.au/questions/finance-options/",
+    "phone": "(+61)1800-961-589",
+    "recoveryUrl": "https://recovery.com/the-banyans/",
+    "email": "wellness@thebanyans.com.au"
+  },
+  {
+    "region": "Queensland",
+    "centerName": "The Banyans Day Program",
+    "website": "",
+    "phone": "+611300926081",
+    "recoveryUrl": "https://recovery.com/outpatient/the-banyans-day-program/",
+    "email": ""
+  },
+  {
+    "region": "Queensland",
+    "centerName": "The Bardo Health & Wellness",
+    "website": "",
+    "phone": "+61411071146",
+    "recoveryUrl": "https://recovery.com/residential/the-bardo-health-and-wellness/",
+    "email": ""
+  },
+  {
+    "region": "Queensland",
+    "centerName": "The Hermitage Centre",
+    "website": "https://www.goldcoastdetoxandrehab.com",
+    "phone": "+61-1800-841-795",
+    "recoveryUrl": "https://recovery.com/the-hermitage-centre-gold-coast-australia/",
+    "email": "manager@goldcoastdetoxandrehab.com"
+  },
+  {
+    "region": "Victoria",
+    "centerName": "East Side Recovery",
+    "website": "https://eastsiderecovery.com.au/",
+    "phone": "+61397621991",
+    "recoveryUrl": "https://recovery.com/east-side-recovery-boronia-victoria/",
+    "email": "enquiries@eastsiderecovery.com.au"
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Hills & Ranges Private - Monreale House",
+    "website": "https://harprehab.com/",
+    "phone": "+61-3-4051-1211",
+    "recoveryUrl": "https://recovery.com/monreale-house-hills-and-ranges-australia/",
+    "email": "help@harprehab.com"
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Hills and Ranges Private Manor",
+    "website": "https://harprehab.com/",
+    "phone": "+61-1800-103-629",
+    "recoveryUrl": "https://recovery.com/hills-and-ranges-private/",
+    "email": "help@harprehab.com"
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Hills and Ranges Private Retreat",
+    "website": "https://harprehab.com/",
+    "phone": "+61-8-6629-4271",
+    "recoveryUrl": "https://recovery.com/hills-and-ranges-private-retreat/",
+    "email": "help@harprehab.com"
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Refocus Rehab Melbourne",
+    "website": "https://refocus.com.au/",
+    "phone": "+61-1300-197-351",
+    "recoveryUrl": "https://recovery.com/rehab-melbourne-australia/",
+    "email": "support@refocus.com.au"
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Reset My Future Melbourne",
+    "website": "",
+    "phone": "+611800300813",
+    "recoveryUrl": "https://recovery.com/outpatient/reset-my-future-melbourne/",
+    "email": ""
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Retreat South",
+    "website": "https://www.retreatsouth.com.au/",
+    "phone": "+61-1800-841-774",
+    "recoveryUrl": "https://recovery.com/retreat-south/",
+    "email": ""
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Seahaven Private",
+    "website": "https://seahaven.com.au/",
+    "phone": "(03)87384252",
+    "recoveryUrl": "https://recovery.com/seahaven-private-melbourne-australia/",
+    "email": ""
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Turning Point Australia 1 East",
+    "website": "https://www.turningpoint.org.au/about-us/visit-us/1-east-box-hill",
+    "phone": "(03)89954939",
+    "recoveryUrl": "https://recovery.com/turning-point-australia-1-east-box-hill-australia/",
+    "email": ""
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Turning Point Australia Carrington Road",
+    "website": "https://www.turningpoint.org.au/about-us/visit-us/carrington-road-box-hill",
+    "phone": "(03)98431288",
+    "recoveryUrl": "https://recovery.com/turning-point-australia-carrington-road-box-hill-australia/",
+    "email": ""
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Turning Point Australia Church Street",
+    "website": "",
+    "phone": "(03)84138413",
+    "recoveryUrl": "https://recovery.com/outpatient/turning-point-australia-richmond-victoria-australia/",
+    "email": ""
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Turning Point Australia Grey Street",
+    "website": "",
+    "phone": "1800778278",
+    "recoveryUrl": "https://recovery.com/outpatient/turning-point-australia-grey-street-ringwood-east-australia/",
+    "email": ""
+  },
+  {
+    "region": "Victoria",
+    "centerName": "Turning Point Australia Wellington House",
+    "website": "https://www.turningpoint.org.au/about-us/visit-us/wellington-house-box-hill",
+    "phone": "(03)98954939",
+    "recoveryUrl": "https://recovery.com/turning-point-australia-wellington-house-box-hill-australia/",
+    "email": ""
+  },
+  {
+    "region": "Western Australia",
+    "centerName": "Cyrenian House - Gnangara Program",
+    "website": "https://cyrenianhouse.com/rick-hammersley-therapeutic-community/",
+    "phone": "+61(08)93289200",
+    "recoveryUrl": "https://recovery.com/cyrenian-house-gnangara-program-perth/",
+    "email": "enquiry@cyrenianhouse.com"
+  },
+  {
+    "region": "Western Australia",
+    "centerName": "Cyrenian House - Munda Mia",
+    "website": "https://cyrenianhouse.com/munda-mia-therapeutic-community/#",
+    "phone": "+61(08)93289200",
+    "recoveryUrl": "https://recovery.com/cyrenian-house-munda-mia/",
+    "email": "enquiry@cyrenianhouse.com"
+  },
+  {
+    "region": "Western Australia",
+    "centerName": "Cyrenian House - Saranna Women and Children's",
+    "website": "https://cyrenianhouse.com/rick-hammersley-therapeutic-community/#saranna-women-and-children",
+    "phone": "+61(08)93289200",
+    "recoveryUrl": "https://recovery.com/cyrenian-house-saranna-women-and-childrens-program/",
+    "email": "enquiry@cyrenianhouse.com"
+  },
+  {
+    "region": "Western Australia",
+    "centerName": "Cyrenian House - Serenity Lodge",
+    "website": "https://cyrenianhouse.com/serenity-lodge-therapeutic-community/#",
+    "phone": "+61(08)93289200",
+    "recoveryUrl": "https://recovery.com/cyrenian-house-serenity-lodge/",
+    "email": "enquiry@cyrenianhouse.com"
+  },
+  {
+    "region": "Western Australia",
+    "centerName": "Perth Clinic",
+    "website": "https://www.perthclinic.com.au/",
+    "phone": "+61894814888",
+    "recoveryUrl": "https://recovery.com/perth-clinic-western-australia/",
+    "email": "info@perthclinic.com.au"
+  },
+  {
+    "region": "Western Australia",
+    "centerName": "Pindari House",
+    "website": "https://pindari.org.au/",
+    "phone": "0427386381",
+    "recoveryUrl": "https://recovery.com/pindari-perth-western-australia/",
+    "email": "info@pindari.org.au"
+  },
+  {
+    "region": "Western Australia",
+    "centerName": "Shalom House Perth",
+    "website": "https://www.shalomhouse.com.au/",
+    "phone": "+610488661725",
+    "recoveryUrl": "https://recovery.com/shalom-house-henley-brook-western-australia/",
+    "email": "info@shalomhouse.com.au"
+  },
+  {
+    "region": "Western Australia",
+    "centerName": "Six Seasons Recovery",
+    "website": "https://sixseasonsrecovery.com.au/",
+    "phone": "+61-8-9126-9241",
+    "recoveryUrl": "https://recovery.com/six-seasons-recovery-australia/",
+    "email": "info@sixseasonsrecovery.com.au"
+  }
+]

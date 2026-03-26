@@ -9,7 +9,7 @@ import {
   Building2, FileText, UserSearch, Clock,
   CheckCircle, XCircle, AlertCircle, Loader2,
   Bot, Zap, Search, Send, MessageSquare, FileSignature,
-  Activity, Target,
+  Activity, Target, PenTool,
 } from "lucide-react";
 
 interface AgentConfig {
@@ -23,6 +23,7 @@ interface AgentConfig {
   outreach_agreement: boolean;
   outreach_activation: boolean;
   outreach_orchestrator: boolean;
+  content_creator: boolean;
 }
 
 interface AgentTaskRow {
@@ -98,6 +99,12 @@ const AGENT_INFO = {
     description: "Coordinates all outreach agents, advances pipeline stages, and generates daily digest reports.",
     icon: Target,
     color: "text-primary",
+  },
+  content_creator: {
+    label: "Content Creator",
+    description: "Auto-researches rehab & addiction topics, writes SEO blog articles with Unsplash images, and saves as drafts for your approval. Runs daily on weekdays.",
+    icon: PenTool,
+    color: "text-rose-600",
   },
 };
 
@@ -257,6 +264,50 @@ export default function AdminAgentsPage() {
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Outreach Pipeline Agents</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
         {(Object.entries(AGENT_INFO) as [keyof typeof AGENT_INFO, typeof AGENT_INFO[keyof typeof AGENT_INFO]][]).filter(([key]) => key.startsWith("outreach_")).map(([key, info]) => {
+          const enabled = config?.[key] || false;
+          const Icon = info.icon;
+
+          return (
+            <div
+              key={key}
+              className={`bg-surface-container-lowest rounded-2xl p-6 shadow-ambient transition-all duration-300 ${
+                enabled ? "ring-2 ring-primary/20" : ""
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${enabled ? "bg-primary/10" : "bg-surface-container"}`}>
+                    <Icon className={`h-5 w-5 ${enabled ? info.color : "text-muted-foreground"}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">{info.label}</h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {enabled ? (
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+                          <Zap className="h-3 w-3" /> Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">Manual mode</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Switch
+                  checked={enabled}
+                  onCheckedChange={(v) => toggleAgent(key, v)}
+                  disabled={toggling === key}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-3 leading-relaxed">{info.description}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Content Agents */}
+      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Content Agents</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+        {(Object.entries(AGENT_INFO) as [keyof typeof AGENT_INFO, typeof AGENT_INFO[keyof typeof AGENT_INFO]][]).filter(([key]) => key === "content_creator").map(([key, info]) => {
           const enabled = config?.[key] || false;
           const Icon = info.icon;
 

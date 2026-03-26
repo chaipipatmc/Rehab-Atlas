@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Apify__search-actors",
+      "mcp__Apify__apify-slash-rag-web-browser",
+      "mcp__Apify__get-actor-output",
+      "Bash(py --version)",
+      "mcp__Apify__fetch-actor-details",
+      "mcp__Apify__call-actor",
+      "mcp__Apify__get-actor-run",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
+    ]
+  }
+}

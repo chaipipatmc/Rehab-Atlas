@@ -21,6 +21,7 @@ const DEFAULT_CONFIG: Record<AgentType, boolean> = {
   outreach_agreement: false,
   outreach_activation: false,
   outreach_orchestrator: false,
+  content_creator: false,
 };
 
 /**
@@ -54,6 +55,7 @@ export async function getAgentConfig(): Promise<Record<AgentType, boolean>> {
     "center_admin", "content_admin", "follow_up", "lead_verify",
     "outreach_research", "outreach_followup", "outreach_response",
     "outreach_agreement", "outreach_activation", "outreach_orchestrator",
+    "content_creator",
   ];
   const config: Record<string, boolean> = {};
 

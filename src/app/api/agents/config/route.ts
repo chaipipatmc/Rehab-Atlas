@@ -11,6 +11,7 @@ const VALID_AGENTS: AgentType[] = [
   "center_admin", "content_admin", "follow_up", "lead_verify",
   "outreach_research", "outreach_followup", "outreach_response",
   "outreach_agreement", "outreach_activation", "outreach_orchestrator",
+  "content_creator",
 ];
 
 // GET: Return current agent config

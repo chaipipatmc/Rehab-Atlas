@@ -23,6 +23,10 @@
     {
       "path": "/api/agents/outreach/orchestrator?action=blog_tiers",
       "schedule": "0 0 1 * *"
+    },
+    {
+      "path": "/api/agents/content-creator",
+      "schedule": "0 6 * * 1-5"
     }
   ]
 }
