@@ -9,8 +9,11 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { analyzeWithClaude } from "@/lib/agents/claude";
-import { getLatestInboundReply, getThreadMessages } from "./gmail";
+import { getLatestInboundReply, getThreadMessages, sendEmail } from "./gmail";
 import type { OutreachPipeline, ResponseSentiment } from "@/types/agent";
+
+const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com";
 
 const responseAnalysisSchema = z.object({
   sentiment: z.enum(["positive", "neutral", "negative", "question"]),
@@ -178,8 +181,15 @@ Previous context: We offered a partnership with ${pipeline.proposed_commission_r
     });
   }
 
-  // If they agreed, create task to confirm and move to agreement
+  // If they agreed, auto-onboard: create partner account + send credentials
   if (analysis?.agreed_to_partner) {
+    try {
+      await autoOnboardPartner(pipeline, center?.name || "", reply.from);
+    } catch (err) {
+      console.error("Auto-onboard failed:", err);
+    }
+
+    // Also create task for admin visibility
     await createAgentTask({
       agent_type: "outreach_response",
       entity_type: "outreach_pipeline",
@@ -189,10 +199,11 @@ Previous context: We offered a partnership with ${pipeline.proposed_commission_r
         agreed: true,
         commission_rate: analysis.counter_offer_rate || pipeline.proposed_commission_rate,
         summary,
+        auto_onboarded: true,
       },
-      ai_summary: `${center?.name} has agreed to partner! Commission: ${analysis.counter_offer_rate || pipeline.proposed_commission_rate}%`,
+      ai_summary: `${center?.name} agreed to partner! Account created and credentials sent. Moving to agreement.`,
       ai_recommendation: "approve",
-      confidence: 0.9,
+      confidence: 0.95,
     });
   }
 
@@ -231,4 +242,138 @@ export async function processThreadReply(threadId: string): Promise<void> {
   if (new Date(reply.date) <= new Date(lastCheck)) return;
 
   await processReply(pipelineData, reply);
+}
+
+/**
+ * Auto-onboard a partner when they agree:
+ * 1. Create Supabase auth user with temp password
+ * 2. Set profile as partner linked to center
+ * 3. Send credentials + instructions email
+ * 4. Update pipeline stage to terms_agreed
+ */
+async function autoOnboardPartner(
+  pipeline: OutreachPipeline,
+  centerName: string,
+  replyFromEmail: string
+): Promise<void> {
+  const admin = createAdminClient();
+
+  // Extract clean email from "Name <email>" format
+  const emailMatch = replyFromEmail.match(/<([^>]+)>/) || [null, replyFromEmail];
+  const contactEmail = (emailMatch[1] || replyFromEmail).trim().toLowerCase();
+
+  // Extract contact name from reply email
+  const nameMatch = replyFromEmail.match(/^([^<]+)</);
+  const contactName = nameMatch ? nameMatch[1].trim() : contactEmail.split("@")[0];
+
+  const tempPassword = "Welcome2RehabAtlas!";
+
+  // Check if user already exists
+  const { data: { users } } = await admin.auth.admin.listUsers();
+  const existing = users?.find((u) => u.email === contactEmail);
+
+  let userId: string;
+
+  if (existing) {
+    userId = existing.id;
+    // Update to partner role
+    await admin.from("profiles").upsert({
+      id: userId,
+      role: "partner",
+      center_id: pipeline.center_id,
+      full_name: contactName,
+    });
+  } else {
+    // Create new user
+    const { data: newUser, error } = await admin.auth.admin.createUser({
+      email: contactEmail,
+      password: tempPassword,
+      email_confirm: true,
+    });
+
+    if (error || !newUser.user) {
+      console.error("Failed to create partner user:", error?.message);
+      return;
+    }
+
+    userId = newUser.user.id;
+
+    await admin.from("profiles").upsert({
+      id: userId,
+      role: "partner",
+      center_id: pipeline.center_id,
+      full_name: contactName,
+    });
+  }
+
+  // Send credentials email
+  const credentialsBody = `Hi ${contactName.split(" ")[0]},
+
+That's great to hear — welcome to Rehab-Atlas!
+
+I've set up your partner account. Here are your login details:
+
+Website: ${APP_URL}/auth/login
+Email: ${contactEmail}
+Temporary password: ${tempPassword}
+
+Please log in and change your password right away. Once you're in, you'll find your partner dashboard where you can:
+
+- Set up your center profile (description, photos, services, pricing)
+- Start writing and submitting blog articles
+- Track referrals and performance
+
+Feel free to start building out your profile and drafting your first articles whenever you're ready. I'll send over our partnership agreement separately via PandaDoc for you to review and e-sign.
+
+If you have any questions along the way, just reply to this email.
+
+Best,
+${PERSONA}
+Partnerships, Rehab-Atlas
+info@rehab-atlas.com
+rehab-atlas.com`;
+
+  await sendEmail({
+    to: contactEmail,
+    subject: `Re: Welcome to Rehab-Atlas — your partner account is ready`,
+    bodyText: credentialsBody,
+    threadId: pipeline.outreach_thread_id || undefined,
+  });
+
+  // Log the email
+  await admin.from("outreach_emails").insert({
+    pipeline_id: pipeline.id,
+    center_id: pipeline.center_id,
+    direction: "outbound",
+    gmail_thread_id: pipeline.outreach_thread_id,
+    from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
+    to_email: contactEmail,
+    subject: "Re: Welcome to Rehab-Atlas — your partner account is ready",
+    body_text: credentialsBody,
+    email_type: "negotiation",
+  });
+
+  // Update pipeline to terms_agreed
+  await admin.from("outreach_pipeline").update({
+    stage: "terms_agreed",
+  }).eq("id", pipeline.id);
+
+  // Update research data with contact info
+  const research = pipeline.research_data || {};
+  await admin.from("outreach_pipeline").update({
+    research_data: { ...research, contact_person_name: contactName } as unknown as Record<string, unknown>,
+  }).eq("id", pipeline.id);
+
+  await logAgentAction({
+    agent_type: "outreach_response",
+    action: "partner_auto_onboarded",
+    details: {
+      pipeline_id: pipeline.id,
+      center_id: pipeline.center_id,
+      center_name: centerName,
+      contact_email: contactEmail,
+      contact_name: contactName,
+      user_id: userId,
+    },
+  });
 }
