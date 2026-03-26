@@ -3,6 +3,26 @@
     {
       "path": "/api/agents/follow-up",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/agents/outreach/orchestrator",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/agents/outreach/followup",
+      "schedule": "15 2 * * *"
+    },
+    {
+      "path": "/api/agents/outreach/response",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/agents/outreach/orchestrator?action=digest",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/agents/outreach/orchestrator?action=blog_tiers",
+      "schedule": "0 0 1 * *"
     }
   ]
 }
