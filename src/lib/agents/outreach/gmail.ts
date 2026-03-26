@@ -42,9 +42,12 @@ function buildRawEmail(params: {
   references?: string;
 }): string {
   const boundary = `boundary_${Date.now()}`;
+  const ccEmail = process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com";
   const headers = [
     `From: ${params.from}`,
     `To: ${params.to}`,
+    // Always CC info@rehab-atlas.com so admin can track all outreach
+    ...(params.to.toLowerCase() !== ccEmail.toLowerCase() ? [`Cc: ${ccEmail}`] : []),
     `Subject: ${params.subject}`,
     `MIME-Version: 1.0`,
   ];
