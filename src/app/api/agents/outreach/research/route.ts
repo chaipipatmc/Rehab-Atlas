@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { verifyWebhookSecret } from "@/lib/agents/base";
 import { processResearchAndDraft } from "@/lib/agents/outreach/research";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
 
@@ -32,6 +33,28 @@ export async function POST(request: Request) {
   const { center_id } = await request.json();
   if (!center_id) {
     return NextResponse.json({ error: "center_id required" }, { status: 400 });
+  }
+
+  // Batch mode: pick the next "new" center from the pipeline
+  if (center_id === "__batch__") {
+    const admin = createAdminClient();
+    const { data: next } = await admin
+      .from("outreach_pipeline")
+      .select("center_id")
+      .eq("stage", "new")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (!next) return NextResponse.json({ success: false, reason: "No new centers" });
+
+    try {
+      const success = await processResearchAndDraft(next.center_id as string);
+      return NextResponse.json({ success, center_id: next.center_id });
+    } catch (err) {
+      console.error("Batch research failed:", err);
+      return NextResponse.json({ success: false, error: String(err) });
+    }
   }
 
   const success = await processResearchAndDraft(center_id);

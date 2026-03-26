@@ -90,6 +90,7 @@ export default function OutreachDashboard() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [researching, setResearching] = useState(false);
 
   const loadData = useCallback(async () => {
     const params = new URLSearchParams();
@@ -195,6 +196,35 @@ export default function OutreachDashboard() {
             <RefreshCw className={`h-3 w-3 mr-1 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
+          {metrics.total > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full text-xs"
+              onClick={async () => {
+                setResearching(true);
+                const newCount = pipelines.filter(p => p.stage === "new").length || metrics.total - metrics.contacted;
+                toast.success(`Starting research for ${newCount} centers...`);
+                // Trigger orchestrator multiple times in parallel batches
+                const runs = Math.min(newCount, 20);
+                for (let i = 0; i < runs; i++) {
+                  fetch("/api/agents/outreach/research", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ center_id: "__batch__" }),
+                  }).catch(() => {});
+                  // Small delay between requests
+                  await new Promise(r => setTimeout(r, 500));
+                }
+                // Wait a bit then refresh
+                setTimeout(() => { loadData(); setResearching(false); }, 5000);
+              }}
+              disabled={researching}
+            >
+              <Search className={`h-3 w-3 mr-1 ${researching ? "animate-spin" : ""}`} />
+              {researching ? "Researching..." : "Research All New"}
+            </Button>
+          )}
           <Button
             size="sm"
             className="rounded-full gradient-primary text-white text-xs"
