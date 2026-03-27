@@ -42,11 +42,13 @@ export async function POST(request: Request) {
   const targetMonth = url.searchParams.get("month"); // Optional: force a specific month
 
   try {
-    const success = await planMonthlyCalendar(targetMonth || undefined);
-    return NextResponse.json({ success });
-  } catch (err) {
-    console.error("Content Planner error:", err);
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+    const result = await planMonthlyCalendar(targetMonth || undefined);
+    return NextResponse.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("Content Planner error:", message, stack);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 

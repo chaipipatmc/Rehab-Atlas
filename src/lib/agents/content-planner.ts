@@ -14,11 +14,10 @@ import { isAgentEnabled } from "@/lib/agents/config";
 /**
  * Generate a monthly editorial calendar using Claude AI.
  */
-export async function planMonthlyCalendar(forceMonth?: string): Promise<boolean> {
+export async function planMonthlyCalendar(forceMonth?: string): Promise<{ success: boolean; reason?: string; count?: number }> {
   const enabled = await isAgentEnabled("content_planner");
   if (!enabled) {
-    console.log("Content Planner: agent disabled");
-    return false;
+    return { success: false, reason: "agent disabled" };
   }
 
   const admin = createAdminClient();
@@ -48,8 +47,7 @@ export async function planMonthlyCalendar(forceMonth?: string): Promise<boolean>
   console.log(`Content Planner: checking ${monthName}, existing entries: ${existing}, error: ${countError?.message || "none"}`);
 
   if (existing && existing > 0) {
-    console.log(`Content Planner: calendar for ${monthName} already exists (${existing} entries)`);
-    return false;
+    return { success: false, reason: `calendar for ${monthName} already exists (${existing} entries)` };
   }
 
   // Get existing published articles to avoid repeating topics
@@ -78,8 +76,7 @@ export async function planMonthlyCalendar(forceMonth?: string): Promise<boolean>
 
   // Use Claude to plan the calendar
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("Content Planner: ANTHROPIC_API_KEY not set");
-    return false;
+    return { success: false, reason: "ANTHROPIC_API_KEY not set" };
   }
 
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
@@ -135,8 +132,7 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
-    console.error("Content Planner: failed to parse calendar from Claude response");
-    return false;
+    return { success: false, reason: "failed to parse calendar from Claude response" };
   }
 
   let calendarDays: Array<{
@@ -152,8 +148,7 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
   try {
     calendarDays = JSON.parse(jsonMatch[0]);
   } catch {
-    console.error("Content Planner: invalid JSON from Claude");
-    return false;
+    return { success: false, reason: "invalid JSON from Claude" };
   }
 
   // Insert all calendar entries
@@ -172,14 +167,12 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
   }
 
   if (entries.length === 0) {
-    console.error("Content Planner: no entries generated");
-    return false;
+    return { success: false, reason: "no entries generated from Claude response" };
   }
 
   const { error } = await admin.from("content_calendar").insert(entries);
   if (error) {
-    console.error("Content Planner: failed to insert calendar:", error.message);
-    return false;
+    return { success: false, reason: `database insert failed: ${error.message}` };
   }
 
   // Create agent task for admin to review/approve the calendar
@@ -206,7 +199,7 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
   });
 
   console.log(`Content Planner: created ${entries.length} topics for ${monthName}`);
-  return true;
+  return { success: true, count: entries.length };
 }
 
 /**
