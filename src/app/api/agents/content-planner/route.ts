@@ -38,13 +38,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, approved: count });
   }
 
-  // Plan next month
+  // Plan next month (or current month if no action specified)
+  const targetMonth = url.searchParams.get("month"); // Optional: force a specific month
+
   try {
-    const success = await planMonthlyCalendar();
+    const success = await planMonthlyCalendar(targetMonth || undefined);
     return NextResponse.json({ success });
   } catch (err) {
     console.error("Content Planner error:", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
   }
 }
 

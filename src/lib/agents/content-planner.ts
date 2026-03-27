@@ -14,15 +14,24 @@ import { isAgentEnabled } from "@/lib/agents/config";
 /**
  * Generate a monthly editorial calendar using Claude AI.
  */
-export async function planMonthlyCalendar(): Promise<boolean> {
+export async function planMonthlyCalendar(forceMonth?: string): Promise<boolean> {
   const enabled = await isAgentEnabled("content_planner");
-  if (!enabled) return false;
+  if (!enabled) {
+    console.log("Content Planner: agent disabled");
+    return false;
+  }
 
   const admin = createAdminClient();
 
-  // Determine which month to plan (next month)
+  // Determine which month to plan
   const now = new Date();
-  const targetMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  let targetMonth: Date;
+  if (forceMonth) {
+    const [y, m] = forceMonth.split("-").map(Number);
+    targetMonth = new Date(y, m - 1, 1);
+  } else {
+    targetMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  }
   const yearMonth = `${targetMonth.getFullYear()}-${String(targetMonth.getMonth() + 1).padStart(2, "0")}`;
   const monthName = targetMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
@@ -30,11 +39,13 @@ export async function planMonthlyCalendar(): Promise<boolean> {
   const startDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1).toISOString().split("T")[0];
   const endDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).toISOString().split("T")[0];
 
-  const { count: existing } = await admin
+  const { count: existing, error: countError } = await admin
     .from("content_calendar")
     .select("id", { count: "exact", head: true })
     .gte("planned_date", startDate)
     .lte("planned_date", endDate);
+
+  console.log(`Content Planner: checking ${monthName}, existing entries: ${existing}, error: ${countError?.message || "none"}`);
 
   if (existing && existing > 0) {
     console.log(`Content Planner: calendar for ${monthName} already exists (${existing} entries)`);
