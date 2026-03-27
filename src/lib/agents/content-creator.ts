@@ -129,36 +129,83 @@ function slugify(title: string): string {
 }
 
 /**
- * Search Unsplash for relevant images.
- * Returns up to `count` image URLs.
+ * Get all image URLs already used in existing blog articles.
  */
-async function searchUnsplashImages(query: string, count: number = 5): Promise<string[]> {
+async function getUsedImageUrls(): Promise<Set<string>> {
+  const admin = createAdminClient();
+  const { data: articles } = await admin
+    .from("pages")
+    .select("content")
+    .eq("page_type", "blog")
+    .not("content", "is", null);
+
+  const used = new Set<string>();
+  for (const article of articles || []) {
+    const content = article.content as string;
+    // Match all markdown image URLs: ![...](url)
+    const matches = content.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g);
+    for (const m of matches) {
+      // Extract the base Unsplash photo ID to catch width/quality variants
+      const url = m[1];
+      const idMatch = url.match(/images\.unsplash\.com\/photo-([^?/]+)/);
+      if (idMatch) {
+        used.add(idMatch[1]); // Store just the photo ID
+      } else {
+        used.add(url);
+      }
+    }
+  }
+  return used;
+}
+
+/**
+ * Search Unsplash for relevant images, excluding already-used ones.
+ * Returns up to `count` unique image URLs.
+ */
+async function searchUnsplashImages(query: string, count: number = 5, usedImages?: Set<string>): Promise<string[]> {
   const accessKey = process.env.UNSPLASH_ACCESS_KEY?.trim();
   if (!accessKey) {
     console.warn("UNSPLASH_ACCESS_KEY not set, skipping images");
     return [];
   }
 
-  try {
-    const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=landscape&per_page=${count}`,
-      { headers: { Authorization: `Client-ID ${accessKey}` } }
-    );
+  const used = usedImages || await getUsedImageUrls();
+  const results: string[] = [];
 
-    if (!response.ok) return [];
+  // Try multiple pages to find enough unused images
+  for (let page = 1; page <= 4 && results.length < count; page++) {
+    try {
+      const response = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=landscape&per_page=15&page=${page}`,
+        { headers: { Authorization: `Client-ID ${accessKey}` } }
+      );
 
-    const data = await response.json();
-    const photos = data.results || [];
+      if (!response.ok) break;
 
-    return photos
-      .map((p: Record<string, unknown>) => {
-        const urls = p.urls as Record<string, string> | undefined;
-        return urls?.regular || urls?.small || null;
-      })
-      .filter(Boolean) as string[];
-  } catch {
-    return [];
+      const data = await response.json();
+      const photos = data.results || [];
+      if (photos.length === 0) break;
+
+      for (const p of photos) {
+        if (results.length >= count) break;
+        const urls = (p as Record<string, unknown>).urls as Record<string, string> | undefined;
+        const url = urls?.regular || urls?.small;
+        if (!url) continue;
+
+        // Check if this photo was already used (by photo ID)
+        const idMatch = url.match(/images\.unsplash\.com\/photo-([^?/]+)/);
+        const photoId = idMatch ? idMatch[1] : url;
+        if (used.has(photoId)) continue;
+
+        results.push(url);
+        used.add(photoId); // Prevent duplicates within this batch too
+      }
+    } catch {
+      break;
+    }
   }
+
+  return results;
 }
 
 /**
@@ -323,6 +370,8 @@ export async function createArticleDraft(): Promise<boolean> {
     // Content planner not available, use fallback
   }
 
+  // Load all used images once — shared across all articles in this run
+  const usedImages = await getUsedImageUrls();
   let articlesWritten = 0;
 
   if (calendarTopics.length > 0) {
@@ -334,7 +383,8 @@ export async function createArticleDraft(): Promise<boolean> {
         calTopic.category,
         calTopic.brief,
         calTopic.keywords,
-        calTopic.id
+        calTopic.id,
+        usedImages
       );
       if (success) articlesWritten++;
     }
@@ -345,7 +395,7 @@ export async function createArticleDraft(): Promise<boolean> {
     for (let i = 0; i < targetCount; i++) {
       const topicInfo = await pickTopic();
       if (!topicInfo) break;
-      const success = await writeOneArticle(topicInfo.topic, topicInfo.category);
+      const success = await writeOneArticle(topicInfo.topic, topicInfo.category, undefined, undefined, undefined, usedImages);
       if (success) articlesWritten++;
     }
   }
@@ -363,6 +413,7 @@ async function writeOneArticle(
   brief?: string,
   keywords?: string[],
   calendarId?: string,
+  usedImages?: Set<string>,
 ): Promise<boolean> {
   console.log(`Content Creator: writing "${topic}" (${category})`);
 
@@ -385,8 +436,8 @@ async function writeOneArticle(
   };
   const imageQuery = imageQueries[category] || "wellness recovery nature";
 
-  // Search for images (1 featured + up to 4 inline)
-  const images = await searchUnsplashImages(imageQuery, 5);
+  // Search for images (1 featured + up to 4 inline), excluding already-used ones
+  const images = await searchUnsplashImages(imageQuery, 5, usedImages);
   const featuredImage = images[0] || null;
   const inlineImages = images.slice(1);
 
