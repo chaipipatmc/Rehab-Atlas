@@ -130,9 +130,16 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
   });
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
+
+  // Extract JSON array — handle markdown code blocks
+  let jsonStr = text;
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1].trim();
+  }
+  const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
-    return { success: false, reason: "failed to parse calendar from Claude response" };
+    return { success: false, reason: "failed to parse calendar — no JSON array found in response" };
   }
 
   let calendarDays: Array<{
