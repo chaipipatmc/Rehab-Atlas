@@ -84,7 +84,7 @@ export async function planMonthlyCalendar(forceMonth?: string): Promise<{ succes
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 4000,
+    max_tokens: 8000,
     system: `You are a content strategist for Rehab-Atlas, a global rehab center discovery platform. Plan a monthly editorial calendar with 2-3 blog article topics per weekday.
 
 PLANNING STRATEGY:
@@ -99,20 +99,9 @@ PLANNING STRATEGY:
 CATEGORIES (use these exact names):
 addiction-types, treatment-types, mental-health, recovery-guides, practical-guides, international-treatment, family-support
 
-Return a JSON array of objects. Each object has:
-{
-  "date": "YYYY-MM-DD",
-  "topics": [
-    {
-      "topic": "Article title",
-      "category": "category-name",
-      "brief": "2-sentence description of the angle and what to cover",
-      "keywords": ["primary keyword", "secondary keyword", "long-tail keyword"]
-    }
-  ]
-}
+Return a JSON array. Each element: {"date":"YYYY-MM-DD","topics":[{"topic":"Title","category":"cat","brief":"1 sentence angle","keywords":["kw1","kw2"]}]}
 
-Plan 2-3 topics per date. Return ONLY the JSON array, no other text.`,
+Keep briefs to 1 sentence max. 2 keywords per topic max. 2-3 topics per date. Return ONLY valid JSON, no markdown, no explanation.`,
     messages: [
       {
         role: "user",
