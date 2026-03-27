@@ -6,7 +6,7 @@ export type AgentType =
   | "center_admin" | "content_admin" | "follow_up" | "lead_verify"
   | "outreach_research" | "outreach_followup" | "outreach_response"
   | "outreach_agreement" | "outreach_activation" | "outreach_orchestrator"
-  | "content_creator";
+  | "content_creator" | "content_scheduler";
 export type TaskStatus = "pending" | "processing" | "awaiting_owner" | "approved" | "rejected" | "expired" | "error";
 export type AgentRecommendation = "approve" | "reject" | "needs_info";
 export type OwnerDecision = "approved" | "rejected" | "needs_info";

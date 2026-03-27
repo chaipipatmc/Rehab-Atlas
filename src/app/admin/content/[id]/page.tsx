@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Eye, Trash2, ExternalLink } from "lucide-react";
+import { Save, ArrowLeft, Eye, Trash2, ExternalLink, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 
@@ -97,6 +97,25 @@ export default function AdminContentEditPage() {
     setSaving(false);
   }
 
+  async function handleApprove() {
+    if (!page) return;
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("pages")
+      .update({ status: "approved" })
+      .eq("id", params.id);
+
+    if (error) {
+      toast.error("Failed to approve");
+    } else {
+      update("status", "approved");
+      toast.success("Added to publishing pool! The scheduler will publish it at the optimal time.");
+      router.refresh();
+    }
+    setSaving(false);
+  }
+
   async function handleDelete() {
     if (!confirm("Are you sure you want to delete this content?")) return;
     const supabase = createClient();
@@ -153,14 +172,25 @@ export default function AdminContentEditPage() {
             <Save className="mr-2 h-4 w-4" />
             Save
           </Button>
-          {page.status !== "published" && (
+          {page.status === "draft" && (
             <Button
-              onClick={handlePublish}
+              onClick={handleApprove}
               disabled={saving}
               className="rounded-full gradient-primary text-white hover:opacity-90 transition-opacity duration-300"
             >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Approve (Schedule)
+            </Button>
+          )}
+          {page.status !== "published" && (
+            <Button
+              variant="outline"
+              onClick={handlePublish}
+              disabled={saving}
+              className="rounded-full ghost-border border-0"
+            >
               <Eye className="mr-2 h-4 w-4" />
-              Publish
+              Publish Now
             </Button>
           )}
         </div>
@@ -211,6 +241,7 @@ export default function AdminContentEditPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="approved">Approved (in pool)</SelectItem>
                   <SelectItem value="published">Published</SelectItem>
                 </SelectContent>
               </Select>

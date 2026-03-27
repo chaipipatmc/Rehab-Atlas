@@ -9,7 +9,7 @@ import {
   Building2, FileText, UserSearch, Clock,
   CheckCircle, XCircle, AlertCircle, Loader2,
   Bot, Zap, Search, Send, MessageSquare, FileSignature,
-  Activity, Target, PenTool,
+  Activity, Target, PenTool, CalendarClock,
 } from "lucide-react";
 
 interface AgentConfig {
@@ -24,6 +24,7 @@ interface AgentConfig {
   outreach_activation: boolean;
   outreach_orchestrator: boolean;
   content_creator: boolean;
+  content_scheduler: boolean;
 }
 
 interface AgentTaskRow {
@@ -105,6 +106,12 @@ const AGENT_INFO = {
     description: "Auto-researches rehab & addiction topics, writes SEO blog articles with Unsplash images, and saves as drafts for your approval. Runs daily on weekdays.",
     icon: PenTool,
     color: "text-rose-600",
+  },
+  content_scheduler: {
+    label: "Content Scheduler",
+    description: "Publishes 1 approved article per day at peak SEO time (6 AM EST). Picks from the content pool with topic diversity rotation.",
+    icon: CalendarClock,
+    color: "text-indigo-600",
   },
 };
 
@@ -307,7 +314,7 @@ export default function AdminAgentsPage() {
       {/* Content Agents */}
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Content Agents</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        {(Object.entries(AGENT_INFO) as [keyof typeof AGENT_INFO, typeof AGENT_INFO[keyof typeof AGENT_INFO]][]).filter(([key]) => key === "content_creator").map(([key, info]) => {
+        {(Object.entries(AGENT_INFO) as [keyof typeof AGENT_INFO, typeof AGENT_INFO[keyof typeof AGENT_INFO]][]).filter(([key]) => key.startsWith("content_")).map(([key, info]) => {
           const enabled = config?.[key] || false;
           const Icon = info.icon;
 
