@@ -25,6 +25,7 @@ interface AgentConfig {
   outreach_orchestrator: boolean;
   content_creator: boolean;
   content_scheduler: boolean;
+  content_planner: boolean;
 }
 
 interface AgentTaskRow {
@@ -112,6 +113,12 @@ const AGENT_INFO = {
     description: "Publishes 1 approved article per day at peak SEO time (6 AM EST). Picks from the content pool with topic diversity rotation.",
     icon: CalendarClock,
     color: "text-indigo-600",
+  },
+  content_planner: {
+    label: "Content Planner",
+    description: "Plans monthly editorial calendar with 2-3 topics per weekday. Uses AI to ensure topic diversity, SEO strategy, and seasonal relevance. Runs on the 25th of each month.",
+    icon: CalendarClock,
+    color: "text-violet-600",
   },
 };
 

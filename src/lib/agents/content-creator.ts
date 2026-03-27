@@ -213,7 +213,7 @@ async function pickTopic(): Promise<{ category: string; topic: string; imageQuer
 /**
  * Generate article content using Claude AI.
  */
-async function generateArticle(topic: string, category: string): Promise<{
+async function generateArticle(topic: string, category: string, brief?: string, keywords?: string[]): Promise<{
   title: string;
   content: string;
   meta_title: string;
@@ -275,7 +275,7 @@ Return a JSON object with:
       messages: [
         {
           role: "user",
-          content: `Write a comprehensive article about: "${topic}"\n\nCategory: ${category}\n\nWrite the article now.`,
+          content: `Write a comprehensive article about: "${topic}"\n\nCategory: ${category}${brief ? `\n\nBrief: ${brief}` : ""}${keywords?.length ? `\n\nTarget keywords: ${keywords.join(", ")}` : ""}\n\nWrite the article now.`,
         },
       ],
     });
@@ -299,37 +299,93 @@ Return a JSON object with:
 }
 
 /**
- * Main function: research, write, and save a draft article.
+ * Main function: write articles from the content calendar (2-3 per day).
+ * Falls back to picking from the predefined topic list if no calendar entries exist.
  */
 export async function createArticleDraft(): Promise<boolean> {
   const enabled = await isAgentEnabled("content_creator");
   if (!enabled) return false;
 
-  // Skip weekends (Saturday=6, Sunday=0)
+  // Skip weekends
   const day = new Date().getDay();
   if (day === 0 || day === 6) {
     console.log("Content Creator: skipping weekend");
     return false;
   }
 
-  // Pick a topic
-  const topicInfo = await pickTopic();
-  if (!topicInfo) {
-    console.log("Content Creator: all topics covered, no new topic to write");
-    return false;
+  // Try to get today's topics from the content calendar (planned by Content Planner)
+  let calendarTopics: Array<{ id: string; topic: string; category: string; brief: string; keywords: string[] }> = [];
+  try {
+    const { getTodaysTopics } = await import("./content-planner");
+    calendarTopics = await getTodaysTopics();
+  } catch {
+    // Content planner not available, use fallback
   }
 
-  console.log(`Content Creator: writing about "${topicInfo.topic}" (${topicInfo.category})`);
+  let articlesWritten = 0;
+
+  if (calendarTopics.length > 0) {
+    // Write articles from the calendar
+    console.log(`Content Creator: ${calendarTopics.length} topics from calendar for today`);
+    for (const calTopic of calendarTopics) {
+      const success = await writeOneArticle(
+        calTopic.topic,
+        calTopic.category,
+        calTopic.brief,
+        calTopic.keywords,
+        calTopic.id
+      );
+      if (success) articlesWritten++;
+    }
+  } else {
+    // Fallback: pick from predefined topics (write 2-3)
+    const targetCount = 2 + Math.floor(Math.random() * 2); // 2 or 3
+    console.log(`Content Creator: no calendar, writing ${targetCount} from topic pool`);
+    for (let i = 0; i < targetCount; i++) {
+      const topicInfo = await pickTopic();
+      if (!topicInfo) break;
+      const success = await writeOneArticle(topicInfo.topic, topicInfo.category);
+      if (success) articlesWritten++;
+    }
+  }
+
+  console.log(`Content Creator: wrote ${articlesWritten} articles today`);
+  return articlesWritten > 0;
+}
+
+/**
+ * Write a single article and save as draft.
+ */
+async function writeOneArticle(
+  topic: string,
+  category: string,
+  brief?: string,
+  keywords?: string[],
+  calendarId?: string,
+): Promise<boolean> {
+  console.log(`Content Creator: writing "${topic}" (${category})`);
 
   // Generate article with Claude
-  const article = await generateArticle(topicInfo.topic, topicInfo.category);
+  const article = await generateArticle(topic, category, brief, keywords);
   if (!article || !article.content) {
     console.error("Content Creator: article generation failed");
     return false;
   }
 
+  // Determine image search query based on category
+  const imageQueries: Record<string, string> = {
+    "addiction-types": "recovery wellness nature calm",
+    "treatment-types": "therapy wellness healing peaceful",
+    "mental-health": "mental health mindfulness peaceful",
+    "recovery-guides": "sunrise new beginning hope nature",
+    "practical-guides": "planning notebook organized calm",
+    "international-treatment": "travel wellness tropical healing",
+    "family-support": "family support together caring",
+  };
+  const imageQuery = imageQueries[category] || "wellness recovery nature";
+
   // Search for images (1 featured + up to 4 inline)
-  const images = await searchUnsplashImages(topicInfo.imageQuery, 5);
+  const images = await searchUnsplashImages(imageQuery, 5);
   const featuredImage = images[0] || null;
   const inlineImages = images.slice(1);
 
@@ -397,7 +453,7 @@ export async function createArticleDraft(): Promise<boolean> {
     checklist: {
       title: article.title,
       slug: finalSlug,
-      category: topicInfo.category,
+      category,
       word_count: wordCount,
       has_featured_image: !!featuredImage,
       image_url: featuredImage,
@@ -405,7 +461,7 @@ export async function createArticleDraft(): Promise<boolean> {
       meta_title: article.meta_title,
       meta_description: article.meta_description,
     },
-    ai_summary: `New article drafted: "${article.title}" (${wordCount} words, ${topicInfo.category})`,
+    ai_summary: `New article drafted: "${article.title}" (${wordCount} words, ${category})`,
     ai_recommendation: "approve",
     confidence: 0.85,
   });
@@ -417,12 +473,22 @@ export async function createArticleDraft(): Promise<boolean> {
       page_id: page.id,
       title: article.title,
       slug: finalSlug,
-      category: topicInfo.category,
+      category,
       word_count: wordCount,
       has_image: !!featuredImage,
       total_images: images.length,
     },
   });
+
+  // Mark calendar entry as written if it came from the planner
+  if (calendarId) {
+    try {
+      const { markCalendarWritten } = await import("./content-planner");
+      await markCalendarWritten(calendarId, page.id as string);
+    } catch {
+      // Planner module not available
+    }
+  }
 
   console.log(`Content Creator: drafted "${article.title}" (${wordCount} words)`);
   return true;
