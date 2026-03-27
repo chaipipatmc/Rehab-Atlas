@@ -11,8 +11,9 @@ import { toast } from "sonner";
 import {
   Send, Upload, X, Plus, Trash2, GripVertical,
   Building2, MapPin, Phone, Globe, DollarSign,
-  Stethoscope, Users, BedDouble, Heart,
+  Stethoscope, Users, BedDouble, Heart, ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 
 interface StaffMember {
   id?: string;
@@ -899,14 +900,28 @@ export default function PartnerEditPage() {
               {submitting ? "Saving..." : "Save Team Members"}
             </Button>
           ) : (
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="w-full rounded-full gradient-primary text-white hover:opacity-90 transition-opacity duration-300 h-11"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              {submitting ? "Submitting..." : "Submit Changes for Review"}
-            </Button>
+            <div className="flex gap-3">
+              {typeof center?.slug === "string" && center.slug && (
+                <Button
+                  variant="outline"
+                  asChild
+                  className="rounded-full ghost-border border-0 h-11"
+                >
+                  <Link href={`/centers/${center.slug}?preview=1`} target="_blank">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Preview
+                  </Link>
+                </Button>
+              )}
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex-1 rounded-full gradient-primary text-white hover:opacity-90 transition-opacity duration-300 h-11"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {submitting ? "Submitting..." : "Submit Changes for Review"}
+              </Button>
+            </div>
           )}
         </div>
       </div>

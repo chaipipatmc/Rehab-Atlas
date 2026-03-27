@@ -29,11 +29,19 @@ interface PageProps {
   searchParams: Promise<{ preview?: string }>;
 }
 
-async function isAdminUser(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
+async function canPreview(supabase: Awaited<ReturnType<typeof createClient>>, centerSlug: string): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  return profile?.role === "admin";
+  const { data: profile } = await supabase.from("profiles").select("role, center_id").eq("id", user.id).single();
+  if (!profile) return false;
+  // Admins can preview any center
+  if (profile.role === "admin") return true;
+  // Partners can preview their own center
+  if (profile.role === "partner" && profile.center_id) {
+    const { data: center } = await supabase.from("centers").select("slug").eq("id", profile.center_id).single();
+    return center?.slug === centerSlug;
+  }
+  return false;
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
@@ -41,7 +49,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const { preview } = await searchParams;
   const supabase = await createClient();
 
-  const isPreview = preview === "1" && await isAdminUser(supabase);
+  const isPreview = preview === "1" && await canPreview(supabase, slug);
 
   // Fetch center with its primary photo in one query
   let query = supabase
@@ -90,7 +98,7 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
   const { preview } = await searchParams;
   const supabase = await createClient();
 
-  const isPreview = preview === "1" && await isAdminUser(supabase);
+  const isPreview = preview === "1" && await canPreview(supabase, slug);
 
   let query = supabase
     .from("centers")
