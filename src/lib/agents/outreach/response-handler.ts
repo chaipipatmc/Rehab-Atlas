@@ -335,6 +335,20 @@ async function autoOnboardPartner(
 
   const tempPassword = "Welcome2RehabAtlas!";
 
+  // Verify center exists before creating account
+  const { data: centerCheck } = await admin
+    .from("centers")
+    .select("id, name")
+    .eq("id", pipeline.center_id)
+    .single();
+
+  if (!centerCheck) {
+    console.error("Auto-onboard: center not found:", pipeline.center_id);
+    return;
+  }
+
+  console.log(`Auto-onboard: creating account for ${contactName} → center "${centerCheck.name}" (${pipeline.center_id})`);
+
   // Check if user already exists
   const { data: { users } } = await admin.auth.admin.listUsers();
   const existing = users?.find((u) => u.email === contactEmail);
