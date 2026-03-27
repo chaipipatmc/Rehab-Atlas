@@ -233,11 +233,12 @@ async function generateArticle(topic: string, category: string, brief?: string, 
 
 VOICE & TONE — THIS IS CRITICAL:
 - Write like a seasoned journalist, NOT like an AI. Your writing must feel like it was crafted by a real person with genuine expertise.
-- Open with a compelling hook — a real scenario, a surprising statistic, or a thought-provoking question. NEVER start with a generic definition.
+- Open with a compelling hook — a surprising statistic, an expert quote, or a thought-provoking question. NEVER start with a fictional character scenario (no "Sarah stared at her phone", no "John walked into the clinic"). NEVER start with a generic definition.
 - Use varied sentence structure. Mix short punchy sentences with longer flowing ones. Avoid repetitive patterns.
-- Include personal-sounding observations like "In my experience covering recovery stories..." or "What often surprises people is..."
-- Use specific, concrete examples instead of vague generalizations. Say "a 35-year-old teacher in Bangkok" not "someone struggling with addiction"
-- Avoid AI-giveaway phrases: "In today's world", "It's important to note", "This comprehensive guide", "Let's dive in", "In this article we will explore", "It's worth noting", "journey", "landscape", "navigate", "crucial", "empower"
+- Write in third-person professional voice. Do NOT use first-person ("I", "my experience", "In my years"). Write like a medical journal article made accessible, not like a personal blog.
+- Use specific data and research instead of fictional anecdotes. Reference real studies, real statistics, real treatment approaches.
+- Avoid AI-giveaway phrases: "In today's world", "It's important to note", "This comprehensive guide", "Let's dive in", "In this article we will explore", "It's worth noting", "journey", "landscape", "navigate", "crucial", "empower", "game-changer", "holistic approach"
+- NEVER use fictional character names or scenarios to open an article
 - Write with quiet confidence. Don't over-explain or hedge everything.
 - Vary paragraph lengths — some can be just one sentence for impact
 - Include real-world context: mention specific research studies by name, reference actual treatment approaches used at real facilities
