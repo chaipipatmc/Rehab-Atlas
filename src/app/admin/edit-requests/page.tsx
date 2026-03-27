@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { EditRequestActions } from "@/components/admin/edit-request-actions";
+import Link from "next/link";
 import {
   Clock, CheckCircle, XCircle, Building2, ArrowRight,
-  Plus, Minus, RefreshCw,
+  Plus, Minus, RefreshCw, ExternalLink, Pencil,
 } from "lucide-react";
 
 // Friendly field labels
@@ -47,7 +48,7 @@ export default async function AdminEditRequestsPage() {
 
   const { data: requests } = await supabase
     .from("center_edit_requests")
-    .select("*, center:centers(name, short_description, phone, email, website_url, pricing_text, address, city, state_province, country, treatment_focus, conditions, services, treatment_methods, setting_type, program_length, languages, has_detox, clinical_director, medical_director, price_min, price_max, insurance, accreditation, occupancy, substance_use, description)")
+    .select("*, center:centers(name, slug, short_description, phone, email, website_url, pricing_text, address, city, state_province, country, treatment_focus, conditions, services, treatment_methods, setting_type, program_length, languages, has_detox, clinical_director, medical_director, price_min, price_max, insurance, accreditation, occupancy, substance_use, description)")
     .order("created_at", { ascending: false });
 
   const pendingCount = requests?.filter(r => r.status === "pending").length || 0;
@@ -79,6 +80,7 @@ export default async function AdminEditRequestsPage() {
         <div className="space-y-6">
           {requests.map((req) => {
             const centerName = (req.center as Record<string, unknown> | null)?.name as string || "Unknown Center";
+            const centerSlug = (req.center as Record<string, unknown> | null)?.slug as string || "";
             const centerData = req.center as Record<string, unknown> | null;
             const changes = req.changes as Record<string, unknown>;
             const changedFields = Object.keys(changes);
@@ -99,7 +101,31 @@ export default async function AdminEditRequestsPage() {
                       <Building2 className="h-4 w-4 text-emerald-700" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">{centerName}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-foreground">{centerName}</h3>
+                        {centerSlug && (
+                          <div className="flex items-center gap-1">
+                            <Link
+                              href={`/centers/${centerSlug}`}
+                              target="_blank"
+                              className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                              title="Preview public page"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Preview
+                            </Link>
+                            <span className="text-muted-foreground">·</span>
+                            <Link
+                              href={`/admin/centers/${req.center_id}`}
+                              className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
+                              title="Edit in admin"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Admin
+                            </Link>
+                          </div>
+                        )}
+                      </div>
                       <p className="text-[10px] text-muted-foreground">
                         Submitted {new Date(req.created_at).toLocaleDateString("en-US", {
                           month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
