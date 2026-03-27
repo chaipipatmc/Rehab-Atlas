@@ -143,7 +143,7 @@ export default function AdminCenterEditPage() {
         <div className="flex items-center gap-2">
           {typeof center.slug === "string" && center.slug && (
             <Button variant="outline" asChild className="rounded-full ghost-border border-0">
-              <Link href={`/centers/${center.slug}`} target="_blank">
+              <Link href={`/centers/${center.slug}?preview=1`} target="_blank">
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Preview
               </Link>

@@ -26,18 +26,30 @@ import { ViewTracker } from "@/components/shared/view-tracker";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function isAdminUser(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  return profile?.role === "admin";
+}
+
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { preview } = await searchParams;
   const supabase = await createClient();
 
+  const isPreview = preview === "1" && await isAdminUser(supabase);
+
   // Fetch center with its primary photo in one query
-  const { data: center } = await supabase
+  let query = supabase
     .from("centers")
     .select("id, name, short_description, city, country, photos:center_photos(url, alt_text)")
-    .eq("slug", slug)
-    .eq("status", "published")
+    .eq("slug", slug);
+  if (!isPreview) query = query.eq("status", "published");
+  const { data: center } = await query
     .order("sort_order", { referencedTable: "center_photos" })
     .limit(1, { referencedTable: "center_photos" })
     .single();
@@ -73,16 +85,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function CenterProfilePage({ params }: PageProps) {
+export default async function CenterProfilePage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { preview } = await searchParams;
   const supabase = await createClient();
 
-  const { data: center } = await supabase
+  const isPreview = preview === "1" && await isAdminUser(supabase);
+
+  let query = supabase
     .from("centers")
     .select("*")
-    .eq("slug", slug)
-    .eq("status", "published")
-    .single();
+    .eq("slug", slug);
+  if (!isPreview) query = query.eq("status", "published");
+  const { data: center } = await query.single();
 
   if (!center) notFound();
 
@@ -156,6 +171,11 @@ export default async function CenterProfilePage({ params }: PageProps) {
 
   return (
     <div className="bg-surface min-h-screen">
+      {isPreview && (
+        <div className="bg-amber-500 text-white text-center py-2 text-xs font-medium tracking-wide">
+          ADMIN PREVIEW — This center is not published yet. This is how it will look to users.
+        </div>
+      )}
       <ViewTracker centerId={typedCenter.id} event="profile_view" />
       <BreadcrumbJsonLd
         items={[

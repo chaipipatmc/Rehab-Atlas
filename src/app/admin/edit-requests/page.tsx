@@ -106,7 +106,7 @@ export default async function AdminEditRequestsPage() {
                         {centerSlug && (
                           <div className="flex items-center gap-1">
                             <Link
-                              href={`/centers/${centerSlug}`}
+                              href={`/centers/${centerSlug}?preview=1`}
                               target="_blank"
                               className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
                               title="Preview public page"
