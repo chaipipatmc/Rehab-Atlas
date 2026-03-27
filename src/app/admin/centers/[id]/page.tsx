@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, BookOpen } from "lucide-react";
+import { Save, BookOpen, ExternalLink, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { MultiImageUpload } from "@/components/admin/image-upload";
 
 interface PhotoItem {
@@ -125,11 +126,34 @@ export default function AdminCenterEditPage() {
   return (
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Edit Center</h1>
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="mr-2 h-4 w-4" />
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/admin/centers"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-surface-container transition-colors duration-300"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Edit Center</h1>
+            {typeof center.name === "string" && center.name && (
+              <p className="text-sm text-muted-foreground">{center.name}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {typeof center.slug === "string" && center.slug && (
+            <Button variant="outline" asChild className="rounded-full ghost-border border-0">
+              <Link href={`/centers/${center.slug}`} target="_blank">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Preview
+              </Link>
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={saving} className="rounded-full gradient-primary text-white">
+            <Save className="mr-2 h-4 w-4" />
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
