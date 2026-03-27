@@ -153,9 +153,13 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
   }>;
 
   try {
-    calendarDays = JSON.parse(jsonMatch[0]);
-  } catch {
-    return { success: false, reason: "invalid JSON from Claude" };
+    // Clean up common JSON issues: trailing commas, comments
+    const cleaned = jsonMatch[0]
+      .replace(/,\s*([}\]])/g, "$1")  // Remove trailing commas
+      .replace(/\/\/.*$/gm, "");       // Remove line comments
+    calendarDays = JSON.parse(cleaned);
+  } catch (parseErr) {
+    return { success: false, reason: `invalid JSON: ${String(parseErr).slice(0, 100)}`, count: jsonMatch[0].length };
   }
 
   // Insert all calendar entries
