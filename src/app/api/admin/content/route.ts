@@ -47,6 +47,7 @@ export async function POST(request: Request) {
         published_at: body.published_at || null,
         author_type: "rehabatlas",
         created_by: user.id,
+        ...(body.tags?.length ? { tags: body.tags } : {}),
       })
       .select("id")
       .single();

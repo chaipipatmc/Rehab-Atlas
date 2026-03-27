@@ -224,6 +224,21 @@ export default async function BlogPostPage({ params }: PageProps) {
               <span>Rehab-Atlas Editorial Team</span>
             )}
           </div>
+
+          {/* Tags */}
+          {(post.tags as string[] | null)?.length ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(post.tags as string[]).map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/blog?tag=${encodeURIComponent(tag)}`}
+                  className="text-[10px] font-medium rounded-full px-3 py-1 bg-primary/8 text-primary/80 hover:bg-primary/15 transition-colors duration-200"
+                >
+                  {tag}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 

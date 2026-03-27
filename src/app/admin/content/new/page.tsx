@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Eye } from "lucide-react";
+import { Save, ArrowLeft, Eye, X, Plus } from "lucide-react";
 import Link from "next/link";
 import { ImageUpload } from "@/components/admin/image-upload";
 
@@ -35,9 +35,30 @@ const CATEGORIES = [
   "News & Updates",
 ];
 
+const CATEGORY_TAG_MAP: Record<string, string[]> = {
+  "Addiction & Recovery": ["Addiction", "Recovery"],
+  "Treatment Methods": ["Treatment", "Rehabilitation"],
+  "Recovery Stories": ["Recovery", "Sobriety"],
+  "Mental Health": ["Mental Health", "Wellness"],
+  "Family Support": ["Family Support", "Relationships"],
+  "Relapse Prevention": ["Recovery", "Relapse Prevention"],
+  "Substance Guides": ["Addiction", "Substance Use"],
+  "Insurance & Costs": ["Insurance", "Resources"],
+  "News & Updates": ["Resources"],
+};
+
+const SUGGESTED_TAGS = [
+  "Addiction", "Substance Use", "Treatment", "Rehabilitation",
+  "Mental Health", "Wellness", "Recovery", "Sobriety",
+  "Guides", "Resources", "International", "Medical Tourism",
+  "Family Support", "Relationships", "Relapse Prevention",
+  "Detox", "Therapy", "Insurance", "Dual Diagnosis",
+];
+
 export default function AdminContentNewPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [newTag, setNewTag] = useState("");
   const [page, setPage] = useState({
     title: "",
     slug: "",
@@ -48,12 +69,17 @@ export default function AdminContentNewPage() {
     meta_description: "",
     featured_image: "",
     category: "",
+    tags: [] as string[],
   });
 
-  function update(key: string, value: string) {
+  function update(key: string, value: unknown) {
     setPage((prev) => ({ ...prev, [key]: value }));
     if (key === "title") {
-      setPage((prev) => ({ ...prev, title: value, slug: slugify(value) }));
+      setPage((prev) => ({ ...prev, title: value as string, slug: slugify(value as string) }));
+    }
+    if (key === "category") {
+      const autoTags = CATEGORY_TAG_MAP[value as string] || [];
+      setPage((prev) => ({ ...prev, category: value as string, tags: autoTags }));
     }
   }
 
@@ -80,6 +106,7 @@ export default function AdminContentNewPage() {
           meta_title: page.meta_title || page.title,
           meta_description: page.meta_description,
           published_at,
+          tags: page.tags,
         }),
       });
       const data = await res.json();
@@ -250,6 +277,76 @@ Use the toolbar to format text. Click the Upload button or paste/drag images dir
             </div>
           </div>
         </div>
+
+        {/* Tags */}
+        {page.page_type === "blog" && (
+          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient space-y-4">
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Tags</h2>
+            <div className="flex flex-wrap gap-2">
+              {page.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 text-xs font-medium rounded-full px-3 py-1 bg-primary/10 text-primary"
+                >
+                  {tag}
+                  <button
+                    onClick={() => update("tags", page.tags.filter((t) => t !== tag))}
+                    className="hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Add a tag..."
+                className="bg-surface-container-low border-0 rounded-xl ghost-border max-w-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newTag.trim()) {
+                    e.preventDefault();
+                    if (!page.tags.includes(newTag.trim())) {
+                      update("tags", [...page.tags, newTag.trim()]);
+                    }
+                    setNewTag("");
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full ghost-border border-0"
+                onClick={() => {
+                  if (newTag.trim()) {
+                    if (!page.tags.includes(newTag.trim())) {
+                      update("tags", [...page.tags, newTag.trim()]);
+                    }
+                    setNewTag("");
+                  }
+                }}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add
+              </Button>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-2">Suggested tags:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_TAGS.filter((t) => !page.tags.includes(t)).map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => update("tags", [...page.tags, tag])}
+                    className="text-[10px] font-medium rounded-full px-2.5 py-1 bg-surface-container-low text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors duration-200"
+                  >
+                    + {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

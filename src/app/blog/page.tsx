@@ -22,18 +22,48 @@ function estimateReadTime(content: string | null): string {
   return `${mins} min read`;
 }
 
-export default async function BlogPage() {
+export default async function BlogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tag?: string }>;
+}) {
+  const params = await searchParams;
+  const activeTag = params.tag || null;
   const supabase = await createClient();
 
-  const { data: posts } = await supabase
+  let query = supabase
     .from("pages")
-    .select("slug, title, meta_description, published_at, content")
+    .select("slug, title, meta_description, published_at, content, tags")
     .eq("page_type", "blog")
     .eq("status", "published")
     .order("published_at", { ascending: false });
 
-  const featured = posts?.[0];
-  const rest = posts?.slice(1) || [];
+  if (activeTag) {
+    query = query.contains("tags", [activeTag]);
+  }
+
+  const { data: posts } = await query;
+
+  // Get all unique tags from published posts for the filter
+  const { data: allPosts } = await supabase
+    .from("pages")
+    .select("tags")
+    .eq("page_type", "blog")
+    .eq("status", "published")
+    .not("tags", "is", null);
+
+  const allTags = new Map<string, number>();
+  (allPosts || []).forEach((p) => {
+    const tags = p.tags as string[] | null;
+    if (tags) {
+      tags.forEach((t) => allTags.set(t, (allTags.get(t) || 0) + 1));
+    }
+  });
+  const sortedTags = Array.from(allTags.entries())
+    .sort((a, b) => b[1] - a[1]);
+
+  const featured = !activeTag ? posts?.[0] : null;
+  const rest = !activeTag ? (posts?.slice(1) || []) : (posts || []);
   const featuredImage = featured ? extractFeaturedImage(featured.content) : null;
 
   return (
@@ -63,7 +93,53 @@ export default async function BlogPage() {
       </section>
 
       <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12 max-w-4xl">
-        {/* Featured Article */}
+        {/* Tag Filters */}
+        {sortedTags.length > 0 && (
+          <div className="mb-8">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/blog"
+                className={`text-xs font-medium rounded-full px-3.5 py-1.5 transition-colors duration-200 ${
+                  !activeTag
+                    ? "bg-primary text-white"
+                    : "bg-surface-container-lowest text-muted-foreground hover:bg-primary/10 hover:text-primary shadow-ambient"
+                }`}
+              >
+                All Articles
+              </Link>
+              {sortedTags.map(([tag, count]) => (
+                <Link
+                  key={tag}
+                  href={`/blog?tag=${encodeURIComponent(tag)}`}
+                  className={`text-xs font-medium rounded-full px-3.5 py-1.5 transition-colors duration-200 ${
+                    activeTag === tag
+                      ? "bg-primary text-white"
+                      : "bg-surface-container-lowest text-muted-foreground hover:bg-primary/10 hover:text-primary shadow-ambient"
+                  }`}
+                >
+                  {tag} <span className="opacity-60">({count})</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Active filter indicator */}
+        {activeTag && (
+          <div className="mb-6 flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              Showing articles tagged <span className="font-medium text-foreground">&ldquo;{activeTag}&rdquo;</span>
+            </p>
+            <Link
+              href="/blog"
+              className="text-xs text-primary hover:underline"
+            >
+              Clear filter
+            </Link>
+          </div>
+        )}
+
+        {/* Featured Article (only on "All" view) */}
         {featured && (
           <Link href={`/blog/${featured.slug}`} className="block mb-8 md:mb-12 group">
             <div className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-ambient hover:shadow-ambient-lg transition-all duration-300">
@@ -93,6 +169,16 @@ export default async function BlogPage() {
                     {featured.meta_description}
                   </p>
                 )}
+                {/* Tags */}
+                {(featured.tags as string[] | null)?.length ? (
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {(featured.tags as string[]).map((tag) => (
+                      <span key={tag} className="text-[10px] font-medium rounded-full px-2.5 py-0.5 bg-primary/8 text-primary/80">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap items-center justify-between mt-5 gap-2">
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     {featured.published_at && (
@@ -119,6 +205,7 @@ export default async function BlogPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
             {rest.map((post) => {
               const postImage = extractFeaturedImage(post.content);
+              const postTags = post.tags as string[] | null;
               return (
                 <Link
                   key={post.slug}
@@ -144,6 +231,16 @@ export default async function BlogPage() {
                         {post.meta_description}
                       </p>
                     )}
+                    {/* Tags */}
+                    {postTags?.length ? (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {postTags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="text-[10px] font-medium rounded-full px-2 py-0.5 bg-primary/8 text-primary/80">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                     <div className="flex items-center justify-between mt-4 pt-3">
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                         {post.published_at && (
@@ -165,10 +262,24 @@ export default async function BlogPage() {
           </div>
         ) : !featured ? (
           <div className="text-center py-16 md:py-20">
-            <p className="text-headline-md text-foreground">Coming Soon</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Our clinical team is preparing new articles. Check back soon.
-            </p>
+            {activeTag ? (
+              <>
+                <p className="text-headline-md text-foreground">No articles found</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  No articles with the tag &ldquo;{activeTag}&rdquo; yet.
+                </p>
+                <Link href="/blog" className="text-sm text-primary hover:underline mt-4 inline-block">
+                  View all articles
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-headline-md text-foreground">Coming Soon</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Our clinical team is preparing new articles. Check back soon.
+                </p>
+              </>
+            )}
           </div>
         ) : null}
 

@@ -421,6 +421,18 @@ async function writeOneArticle(
     ? `${article.slug}-${Date.now().toString(36)}`
     : article.slug;
 
+  // Map category to user-friendly tags
+  const CATEGORY_TAG_MAP: Record<string, string[]> = {
+    "addiction-types": ["Addiction", "Substance Use"],
+    "treatment-types": ["Treatment", "Rehabilitation"],
+    "mental-health": ["Mental Health", "Wellness"],
+    "recovery-guides": ["Recovery", "Sobriety"],
+    "practical-guides": ["Guides", "Resources"],
+    "international-treatment": ["International", "Medical Tourism"],
+    "family-support": ["Family Support", "Relationships"],
+  };
+  const tags = CATEGORY_TAG_MAP[category] || [category.replace(/-/g, " ")];
+
   // Save as draft
   const { data: page, error } = await admin
     .from("pages")
@@ -434,6 +446,7 @@ async function writeOneArticle(
       author_name: "Rehab-Atlas Editorial",
       meta_title: article.meta_title,
       meta_description: article.meta_description,
+      tags,
     })
     .select("id")
     .single();

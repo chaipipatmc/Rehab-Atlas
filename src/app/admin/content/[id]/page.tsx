@@ -16,8 +16,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Eye, Trash2, ExternalLink, CheckCircle } from "lucide-react";
+import { Save, ArrowLeft, Eye, Trash2, ExternalLink, CheckCircle, X, Plus } from "lucide-react";
 import Link from "next/link";
+
+const SUGGESTED_TAGS = [
+  "Addiction", "Substance Use", "Treatment", "Rehabilitation",
+  "Mental Health", "Wellness", "Recovery", "Sobriety",
+  "Guides", "Resources", "International", "Medical Tourism",
+  "Family Support", "Relationships", "Relapse Prevention",
+  "Detox", "Therapy", "Insurance", "Dual Diagnosis",
+];
 
 
 export default function AdminContentEditPage() {
@@ -26,6 +34,7 @@ export default function AdminContentEditPage() {
   const [page, setPage] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [newTag, setNewTag] = useState("");
 
 
   useEffect(() => {
@@ -60,6 +69,7 @@ export default function AdminContentEditPage() {
         status: page.status,
         meta_title: page.meta_title,
         meta_description: page.meta_description,
+        tags: page.tags || [],
         published_at: page.status === "published" && !page.published_at
           ? new Date().toISOString()
           : page.published_at,
@@ -286,6 +296,78 @@ Use the toolbar to format text. Click the Upload button or paste/drag images dir
             />
           </div>
         </div>
+
+        {/* Tags */}
+        {(page.page_type === "blog") && (
+          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient space-y-4">
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Tags</h2>
+            <div className="flex flex-wrap gap-2">
+              {((page.tags as string[]) || []).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 text-xs font-medium rounded-full px-3 py-1 bg-primary/10 text-primary"
+                >
+                  {tag}
+                  <button
+                    onClick={() => update("tags", ((page.tags as string[]) || []).filter((t) => t !== tag))}
+                    className="hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Add a tag..."
+                className="bg-surface-container-low border-0 rounded-xl ghost-border max-w-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newTag.trim()) {
+                    e.preventDefault();
+                    const tags = (page.tags as string[]) || [];
+                    if (!tags.includes(newTag.trim())) {
+                      update("tags", [...tags, newTag.trim()]);
+                    }
+                    setNewTag("");
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full ghost-border border-0"
+                onClick={() => {
+                  if (newTag.trim()) {
+                    const tags = (page.tags as string[]) || [];
+                    if (!tags.includes(newTag.trim())) {
+                      update("tags", [...tags, newTag.trim()]);
+                    }
+                    setNewTag("");
+                  }
+                }}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add
+              </Button>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-2">Suggested tags:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_TAGS.filter((t) => !((page.tags as string[]) || []).includes(t)).map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => update("tags", [...((page.tags as string[]) || []), tag])}
+                    className="text-[10px] font-medium rounded-full px-2.5 py-1 bg-surface-container-low text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors duration-200"
+                  >
+                    + {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Danger Zone */}
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
