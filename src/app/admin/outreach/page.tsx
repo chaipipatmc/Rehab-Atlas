@@ -66,6 +66,19 @@ const STAGE_CONFIG: Record<string, { label: string; color: string; icon: typeof 
   declined: { label: "Declined", color: "bg-red-100 text-red-700", icon: XCircle },
 };
 
+interface AgentTask {
+  id: string;
+  entity_id: string;
+  status: string;
+  checklist: {
+    center_name?: string;
+    to_email?: string;
+    from_email?: string;
+    subject?: string;
+    body_text?: string;
+  } | null;
+}
+
 const STAGE_FILTERS = [
   { value: "all", label: "All Stages" },
   { value: "new", label: "New" },
@@ -91,6 +104,9 @@ export default function OutreachDashboard() {
   const [total, setTotal] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [researching, setResearching] = useState(false);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [draftTasks, setDraftTasks] = useState<Record<string, AgentTask>>({});
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const params = new URLSearchParams();
@@ -98,11 +114,13 @@ export default function OutreachDashboard() {
     if (search) params.set("search", search);
     params.set("page", String(page));
 
+    let pipelineData: PipelineEntry[] = [];
     const res = await fetch(`/api/agents/outreach/pipeline?${params}`);
     if (res.ok) {
-      const data = await res.json();
-      setPipelines(data.data || []);
-      setTotal(data.total || 0);
+      const json = await res.json();
+      pipelineData = json.data || [];
+      setPipelines(pipelineData);
+      setTotal(json.total || 0);
     }
 
     // Load metrics from all pipelines
@@ -125,6 +143,22 @@ export default function OutreachDashboard() {
         signed: allPipelines.filter((p) => signedStages.includes(p.stage as string)).length,
         active: allPipelines.filter((p) => p.stage === "active").length,
       });
+    }
+
+    // Load draft tasks for outreach_drafted pipelines
+    const draftedPipelines = pipelineData.filter((p: PipelineEntry) => p.stage === "outreach_drafted");
+    if (draftedPipelines.length > 0) {
+      const pipelineIds = draftedPipelines.map((p: PipelineEntry) => p.id);
+      const { data: tasks } = await supabase
+        .from("agent_tasks")
+        .select("id, entity_id, status, checklist")
+        .eq("agent_type", "outreach_research")
+        .eq("status", "awaiting_owner")
+        .in("entity_id", pipelineIds);
+
+      const taskMap: Record<string, AgentTask> = {};
+      (tasks || []).forEach((t: AgentTask) => { taskMap[t.entity_id] = t; });
+      setDraftTasks(taskMap);
     }
 
     setLoading(false);
@@ -166,6 +200,48 @@ export default function OutreachDashboard() {
 
   function daysInStage(updatedAt: string): number {
     return Math.floor((Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  async function handleApproveEmail(taskId: string) {
+    setApprovingId(taskId);
+    try {
+      const res = await fetch("/api/agents/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task_id: taskId, decision: "approve" }),
+      });
+      if (res.ok) {
+        toast.success("Email approved and sending...");
+        setExpandedRow(null);
+        setTimeout(() => loadData(), 2000);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to approve");
+      }
+    } catch {
+      toast.error("Failed to approve email");
+    }
+    setApprovingId(null);
+  }
+
+  async function handleRejectEmail(taskId: string) {
+    const reason = prompt("Reason for rejection (optional):");
+    try {
+      const res = await fetch("/api/agents/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task_id: taskId, decision: "reject", reason }),
+      });
+      if (res.ok) {
+        toast.success("Email rejected");
+        setExpandedRow(null);
+        loadData();
+      } else {
+        toast.error("Failed to reject");
+      }
+    } catch {
+      toast.error("Failed to reject");
+    }
   }
 
   if (loading) return <div className="animate-pulse h-96 bg-surface-container rounded-2xl" />;
@@ -327,49 +403,131 @@ export default function OutreachDashboard() {
               const stageInfo = STAGE_CONFIG[p.stage] || STAGE_CONFIG.new;
               const StageIcon = stageInfo.icon;
               const days = daysInStage(p.updated_at);
+              const hasDraft = p.stage === "outreach_drafted" && draftTasks[p.id];
+              const isExpanded = expandedRow === p.id;
+              const task = draftTasks[p.id];
 
               return (
-                <tr key={p.id} className="border-t border-surface-container-low hover:bg-surface-container-low/50 transition-colors duration-200">
-                  <td className="px-6 py-4">
-                    <Link href={`/admin/outreach/${p.id}`} className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-                      {p.centers?.name || "Unknown"}
-                    </Link>
-                    {p.centers?.website_url && (
-                      <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{p.centers.website_url}</p>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {[p.centers?.city, p.centers?.country].filter(Boolean).join(", ") || "—"}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 ${stageInfo.color}`}>
-                      <StageIcon className="h-3 w-3" />
-                      {stageInfo.label}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    {p.agreed_commission_rate ? (
-                      <span className="text-emerald-700 font-medium">{p.agreed_commission_rate}%</span>
+                <tr key={p.id} className="border-t border-surface-container-low hover:bg-surface-container-low/50 transition-colors duration-200 group">
+                  <td className="px-6 py-4" colSpan={isExpanded ? 7 : 1}>
+                    {isExpanded && task?.checklist ? (
+                      /* Expanded email preview */
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-sm font-semibold text-foreground">{p.centers?.name || "Unknown"}</h3>
+                            <p className="text-[10px] text-muted-foreground">{[p.centers?.city, p.centers?.country].filter(Boolean).join(", ")}</p>
+                          </div>
+                          <button onClick={() => setExpandedRow(null)} className="text-xs text-muted-foreground hover:text-foreground">
+                            Close
+                          </button>
+                        </div>
+
+                        <div className="bg-surface-container-low rounded-xl p-4 space-y-3">
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span><strong className="text-foreground">To:</strong> {task.checklist.to_email}</span>
+                            <span><strong className="text-foreground">From:</strong> {task.checklist.from_email || "info@rehab-atlas.com"}</span>
+                          </div>
+                          <div className="text-xs">
+                            <strong className="text-foreground">Subject:</strong>{" "}
+                            <span className="text-foreground">{task.checklist.subject}</span>
+                          </div>
+                          <div className="border-t border-surface-container pt-3">
+                            <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">
+                              {task.checklist.body_text}
+                            </pre>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            className="rounded-full gradient-primary text-white text-xs"
+                            onClick={() => handleApproveEmail(task.id)}
+                            disabled={approvingId === task.id}
+                          >
+                            {approvingId === task.id ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Send className="h-3 w-3 mr-1" />
+                            )}
+                            Approve & Send
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full text-xs"
+                            onClick={() => handleRejectEmail(task.id)}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Reject
+                          </Button>
+                          <Link
+                            href={`/admin/outreach/${p.id}`}
+                            className="text-xs text-primary hover:underline ml-2"
+                          >
+                            Full Details
+                          </Link>
+                        </div>
+                      </div>
                     ) : (
-                      <span className="text-muted-foreground">{p.proposed_commission_rate}%</span>
+                      /* Normal row - center name */
+                      <>
+                        <Link href={`/admin/outreach/${p.id}`} className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+                          {p.centers?.name || "Unknown"}
+                        </Link>
+                        {p.centers?.website_url && (
+                          <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{p.centers.website_url}</p>
+                        )}
+                      </>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-xs text-muted-foreground">
-                    {new Date(p.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs font-medium ${days > 14 ? "text-red-600" : days > 7 ? "text-amber-600" : "text-muted-foreground"}`}>
-                      {days}d
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Link
-                      href={`/admin/outreach/${p.id}`}
-                      className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-                    >
-                      View
-                    </Link>
-                  </td>
+                  {!isExpanded && (
+                    <>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {[p.centers?.city, p.centers?.country].filter(Boolean).join(", ") || "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 ${stageInfo.color}`}>
+                          <StageIcon className="h-3 w-3" />
+                          {stageInfo.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {p.agreed_commission_rate ? (
+                          <span className="text-emerald-700 font-medium">{p.agreed_commission_rate}%</span>
+                        ) : (
+                          <span className="text-muted-foreground">{p.proposed_commission_rate}%</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                        {new Date(p.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-xs font-medium ${days > 14 ? "text-red-600" : days > 7 ? "text-amber-600" : "text-muted-foreground"}`}>
+                          {days}d
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          {hasDraft && (
+                            <button
+                              onClick={() => setExpandedRow(p.id)}
+                              className="text-xs font-medium text-amber-600 hover:text-amber-700 transition-colors"
+                            >
+                              Preview Email
+                            </button>
+                          )}
+                          <Link
+                            href={`/admin/outreach/${p.id}`}
+                            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                          >
+                            View
+                          </Link>
+                        </div>
+                      </td>
+                    </>
+                  )}
                 </tr>
               );
             })}
