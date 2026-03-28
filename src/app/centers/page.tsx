@@ -212,7 +212,7 @@ export default async function CentersPage({ searchParams }: PageProps) {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1551190822-a9ce113ac100?w=1600&q=80&auto=format&fit=crop"
+            src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80&auto=format&fit=crop"
             alt="Peaceful rehabilitation center surrounded by nature"
             className="w-full h-full object-cover object-center"
           />
