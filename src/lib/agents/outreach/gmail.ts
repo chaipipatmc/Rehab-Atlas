@@ -82,7 +82,7 @@ function buildRawEmail(params: {
     `To: ${params.to}`,
     // Always CC info@rehab-atlas.com so admin can track all outreach
     ...(params.to.toLowerCase() !== ccEmail.toLowerCase() ? [`Cc: ${ccEmail}`] : []),
-    `Subject: ${params.subject}`,
+    `Subject: =?UTF-8?B?${Buffer.from(params.subject, "utf-8").toString("base64")}?=`,
     `MIME-Version: 1.0`,
   ];
 
