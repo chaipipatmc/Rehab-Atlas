@@ -112,14 +112,15 @@ async function processReply(
 
   // Analyze with Claude
   const analysis = await analyzeWithClaude<ResponseAnalysis>({
-    systemPrompt: `You analyze inbound email replies from rehabilitation centers being invited to join Rehab-Atlas.
-Determine the sender's intent and sentiment. Our standard commission is 12% (10% with 3 blogs/month, 8% with 5 blogs/month). We also have a launch campaign: 0% commission for first 2 months with 3 blogs/month for 3 months.
-Return JSON with: sentiment, summary, key_points, agreed_to_partner, has_questions, counter_offer_rate (null if none), suggested_reply (null if no reply needed).`,
+    systemPrompt: `You analyze inbound email replies from rehabilitation centers being invited to join Rehab-Atlas, a free platform that helps people find rehab centers.
+Determine the sender's intent and sentiment. We invited them to join our platform for free — create a profile, share their programs, and optionally publish educational blog articles.
+There is NO commission or fee discussed yet. This is purely about onboarding their center profile.
+Return JSON with: sentiment, summary, key_points, agreed_to_partner, has_questions, counter_offer_rate (always null), suggested_reply (null if no reply needed).`,
     userPrompt: `Center: ${center?.name || "Unknown"}
 Their reply:
 ${reply.body}
 
-Previous context: We offered a partnership with ${pipeline.proposed_commission_rate}% commission rate.`,
+Previous context: We invited them to join Rehab-Atlas for free — set up their center profile and publish blog articles for SEO backlinks.`,
     responseSchema: responseAnalysisSchema,
     maxTokens: 600,
     agentType: "outreach_response",
@@ -166,17 +167,18 @@ Previous context: We offered a partnership with ${pipeline.proposed_commission_r
   if (sentiment === "negative" && !analysis?.has_questions) {
     try {
       const winBackReply = await analyzeWithClaude<{ body_text: string }>({
-        systemPrompt: `You are ${PERSONA} from Rehab-Atlas Partnerships. A rehab center has declined or expressed disinterest in partnering. Write a short, respectful reply that:
+        systemPrompt: `You are ${PERSONA} from Rehab-Atlas Partnerships. A rehab center has declined or expressed disinterest in joining our free platform. Write a short, respectful reply that:
 1. Thanks them for their honesty
-2. Asks politely what their concern is — is it the commission, timing, or something else?
-3. Mentions the launch offer (0% commission for 2 months with 3 blogs/month) in case they missed it
-4. Keeps the door open without being pushy
-5. Max 4-5 sentences. Sound human, not desperate.
-6. NO phone calls — email only
+2. Asks politely what their concern is — is it the timing, relevance, or something else?
+3. Reminds them joining is completely free — no fees, no commission, no strings attached
+4. Mentions the benefit: their center gets visibility + blog articles with SEO backlinks
+5. Keeps the door open without being pushy
+6. Max 4-5 sentences. Sound human, not desperate.
+7. NO phone calls — email only
 Return JSON: { "body_text": "..." }`,
         userPrompt: `Center: ${center?.name || "Unknown"}
 Their reply: ${reply.body}
-Our previous offer: ${pipeline.proposed_commission_rate}% commission`,
+Context: We invited them to join Rehab-Atlas for free to set up their center profile and publish educational articles.`,
         responseSchema: z.object({ body_text: z.string() }),
         maxTokens: 400,
         agentType: "outreach_response",
@@ -187,9 +189,9 @@ Our previous offer: ${pipeline.proposed_commission_rate}% commission`,
 
 Thanks for getting back to me — I appreciate you taking the time.
 
-If you don't mind me asking, was there something specific that didn't feel right? I'd genuinely like to understand, whether it's the timing, the commission structure, or something else entirely.
+If you don't mind me asking, was there something specific that didn't feel right? I'd genuinely like to understand, whether it's the timing, relevance, or something else.
 
-Just in case it wasn't clear in my initial message, we're currently offering 0% commission for the first 2 months for early partners — the only ask is 3 blog articles per month, which come with backlinks to your website for SEO.
+Just to clarify — joining Rehab-Atlas is completely free. There are no fees or commitments. We simply want to help more people find quality care, and having your center on our platform would be a great addition. You'd also have the option to publish educational articles with backlinks to your website, which helps with your SEO.
 
 Either way, no hard feelings. If anything changes down the road, we'd love to hear from you.
 
@@ -268,11 +270,10 @@ rehab-atlas.com`;
       checklist: {
         center_name: center?.name,
         agreed: true,
-        commission_rate: analysis.counter_offer_rate || pipeline.proposed_commission_rate,
         summary,
         auto_onboarded: true,
       },
-      ai_summary: `${center?.name} agreed to partner! Account created and credentials sent. Moving to agreement.`,
+      ai_summary: `${center?.name} agreed to join! Account created and credentials sent. Ready to set up their profile.`,
       ai_recommendation: "approve",
       confidence: 0.95,
     });
@@ -405,10 +406,10 @@ Temporary password: ${tempPassword}
 Please log in and change your password right away. Once you're in, you'll find your partner dashboard where you can:
 
 - Set up your center profile (description, photos, services, pricing)
-- Start writing and submitting blog articles
-- Track referrals and performance
+- Start writing and submitting blog articles (each one gets a backlink to your website)
+- Share your programs and specialties with people searching for help
 
-Feel free to start building out your profile and drafting your first articles whenever you're ready. I'll send over our partnership agreement separately via PandaDoc for you to review and e-sign.
+Our goal is to get your profile to 100% completeness so people can find everything they need to know about your center. Feel free to start building it out whenever you're ready — I'm here to help if you need anything.
 
 If you have any questions along the way, just reply to this email.
 
