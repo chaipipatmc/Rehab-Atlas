@@ -112,6 +112,8 @@ Reason: ${item.reason}
 Return JSON: { "subject": "email subject", "body": "email body text" }`,
     responseSchema: FOLLOW_UP_MESSAGE_SCHEMA,
     maxTokens: 300,
+    agentType: "follow_up",
+    operation: "followup_message",
   });
 
   if (aiResult) return aiResult;

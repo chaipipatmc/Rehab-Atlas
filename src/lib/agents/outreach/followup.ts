@@ -157,6 +157,8 @@ async function sendFollowUp(pipeline: OutreachPipeline): Promise<boolean> {
     userPrompt: `Write follow-up #${attemptNumber} for ${center.name}. Contact: ${contactPerson || "unknown"}. Their specialties: ${research?.specialties?.join(", ") || "rehabilitation"}.`,
     responseSchema: followUpEmailSchema,
     maxTokens: 500,
+    agentType: "outreach_followup",
+    operation: "followup_email",
   });
 
   // Fallback to template

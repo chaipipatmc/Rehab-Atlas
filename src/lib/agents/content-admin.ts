@@ -103,6 +103,8 @@ Return JSON: {
 }`,
     responseSchema: AI_RESPONSE_SCHEMA,
     maxTokens: 400,
+    agentType: "content_admin",
+    operation: "content_review",
   });
 }
 

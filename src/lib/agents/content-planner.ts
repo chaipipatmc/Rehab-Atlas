@@ -10,6 +10,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
+import { logClaudeUsage } from "@/lib/api-usage";
 
 /**
  * Generate a monthly editorial calendar using Claude AI.
@@ -117,6 +118,9 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
       },
     ],
   });
+
+  // Log usage
+  await logClaudeUsage(response, "content_planner", "calendar_planning", "claude-sonnet-4-20250514", { month: monthName });
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
 

@@ -104,6 +104,8 @@ ${websiteContent || "Could not fetch website content"}
 Return a JSON object with: programs, specialties, target_audience, website_summary, unique_selling_points, contact_person_name (null if not found), tone_analysis`,
     responseSchema: researchSchema,
     maxTokens: 800,
+    agentType: "outreach_research",
+    operation: "center_research",
   });
 
   // Fallback if Claude is unavailable
@@ -182,6 +184,8 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
     }),
     responseSchema: emailDraftSchema,
     maxTokens: 1000,
+    agentType: "outreach_research",
+    operation: "email_draft",
   });
 
   // Fallback to template

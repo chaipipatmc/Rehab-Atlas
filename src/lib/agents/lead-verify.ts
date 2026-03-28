@@ -173,6 +173,8 @@ Return JSON: {
 }`,
     responseSchema: AI_RESPONSE_SCHEMA,
     maxTokens: 400,
+    agentType: "lead_verify",
+    operation: "lead_analysis",
   });
 }
 

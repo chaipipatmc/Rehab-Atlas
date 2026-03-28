@@ -9,6 +9,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
+import { logClaudeUsage } from "@/lib/api-usage";
 
 // --- Topic Categories ---
 
@@ -327,6 +328,9 @@ Return a JSON object with:
         },
       ],
     });
+
+    // Log usage
+    await logClaudeUsage(response, "content_creator", "article_generation", "claude-sonnet-4-20250514", { topic, category });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);

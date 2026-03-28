@@ -122,6 +122,8 @@ ${reply.body}
 Previous context: We offered a partnership with ${pipeline.proposed_commission_rate}% commission rate.`,
     responseSchema: responseAnalysisSchema,
     maxTokens: 600,
+    agentType: "outreach_response",
+    operation: "sentiment_analysis",
   });
 
   // Fallback analysis
@@ -177,6 +179,8 @@ Their reply: ${reply.body}
 Our previous offer: ${pipeline.proposed_commission_rate}% commission`,
         responseSchema: z.object({ body_text: z.string() }),
         maxTokens: 400,
+        agentType: "outreach_response",
+        operation: "win_back_reply",
       });
 
       const fallbackBody = `Hi,

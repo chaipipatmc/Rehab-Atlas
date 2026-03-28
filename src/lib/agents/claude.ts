@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { logClaudeUsage } from "@/lib/api-usage";
 
 /**
  * Call Claude API for agent analysis.
@@ -14,6 +15,8 @@ export async function analyzeWithClaude<T>(params: {
   userPrompt: string;
   responseSchema: z.ZodType<T>;
   maxTokens?: number;
+  agentType?: string;
+  operation?: string;
 }): Promise<T | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null;
 
@@ -21,12 +24,21 @@ export async function analyzeWithClaude<T>(params: {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+    const model = "claude-sonnet-4-20250514";
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model,
       max_tokens: params.maxTokens || 500,
       system: params.systemPrompt,
       messages: [{ role: "user", content: params.userPrompt }],
     });
+
+    // Log usage
+    await logClaudeUsage(
+      response,
+      params.agentType || "unknown",
+      params.operation || "analysis",
+      model,
+    );
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
 

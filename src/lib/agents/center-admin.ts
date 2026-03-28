@@ -116,6 +116,8 @@ Conditions: ${JSON.stringify(center.conditions || [])}
 
 Return JSON: { "quality_score": 1-10, "issues": ["..."], "suggestions": ["..."] }`,
     responseSchema: AI_RESPONSE_SCHEMA,
+    agentType: "center_admin",
+    operation: "profile_review",
   });
 }
 

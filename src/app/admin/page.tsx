@@ -3,7 +3,7 @@ import Link from "next/link";
 import {
   Building2, Users, Brain, Eye, Target, FileText,
   Clock, CheckCircle, AlertTriangle, Send, Layers,
-  CalendarDays, BookOpen, Receipt,
+  CalendarDays, BookOpen, Receipt, DollarSign,
 } from "lucide-react";
 
 export default async function AdminDashboard() {
@@ -56,6 +56,36 @@ export default async function AdminDashboard() {
     .eq("status", "awaiting_owner")
     .order("created_at", { ascending: false })
     .limit(5);
+
+  // API costs — this month and last month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
+
+  const { data: thisMonthUsage } = await supabase
+    .from("api_usage")
+    .select("service, agent_type, operation, cost_usd, input_tokens, output_tokens")
+    .gte("created_at", startOfMonth);
+
+  const { data: lastMonthUsage } = await supabase
+    .from("api_usage")
+    .select("cost_usd")
+    .gte("created_at", startOfLastMonth)
+    .lte("created_at", endOfLastMonth);
+
+  const thisMonthCost = (thisMonthUsage || []).reduce((sum, r) => sum + Number(r.cost_usd || 0), 0);
+  const lastMonthCost = (lastMonthUsage || []).reduce((sum, r) => sum + Number(r.cost_usd || 0), 0);
+  const thisMonthCalls = (thisMonthUsage || []).length;
+  const thisMonthTokens = (thisMonthUsage || []).reduce((sum, r) => sum + (r.input_tokens || 0) + (r.output_tokens || 0), 0);
+
+  // Cost breakdown by agent
+  const costByAgent = new Map<string, number>();
+  (thisMonthUsage || []).forEach((r) => {
+    const key = r.agent_type || "other";
+    costByAgent.set(key, (costByAgent.get(key) || 0) + Number(r.cost_usd || 0));
+  });
+  const sortedAgentCosts = Array.from(costByAgent.entries()).sort((a, b) => b[1] - a[1]);
 
   // Items needing attention
   const actionItems = [
@@ -149,6 +179,62 @@ export default async function AdminDashboard() {
             <PipelineStat label="Awaiting your action" value={pendingAgentTasks || 0} highlight />
           </div>
         </div>
+      </div>
+
+      {/* API Costs */}
+      <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <DollarSign className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Platform Costs</h2>
+          <span className="text-[10px] text-muted-foreground ml-auto">Claude API (Sonnet)</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="text-center p-3 bg-primary/5 rounded-xl">
+            <p className="text-xl font-semibold text-primary">${thisMonthCost.toFixed(2)}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">This Month</p>
+          </div>
+          <div className="text-center p-3 bg-surface-container-low rounded-xl">
+            <p className="text-xl font-semibold text-foreground">${lastMonthCost.toFixed(2)}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">Last Month</p>
+          </div>
+          <div className="text-center p-3 bg-surface-container-low rounded-xl">
+            <p className="text-xl font-semibold text-foreground">{thisMonthCalls}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">API Calls</p>
+          </div>
+          <div className="text-center p-3 bg-surface-container-low rounded-xl">
+            <p className="text-xl font-semibold text-foreground">{thisMonthTokens > 1000000 ? `${(thisMonthTokens / 1000000).toFixed(1)}M` : thisMonthTokens > 1000 ? `${(thisMonthTokens / 1000).toFixed(0)}K` : thisMonthTokens}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">Tokens Used</p>
+          </div>
+        </div>
+        {sortedAgentCosts.length > 0 && (
+          <div>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Cost by Agent (this month)</p>
+            <div className="space-y-1.5">
+              {sortedAgentCosts.map(([agent, cost]) => {
+                const agentLabels: Record<string, string> = {
+                  content_creator: "Content Creator", content_planner: "Content Planner",
+                  outreach_research: "Outreach Research", outreach_response: "Response Handler",
+                  outreach_followup: "Outreach Follow-up", content_admin: "Content Review",
+                  center_admin: "Center Review", lead_verify: "Lead Verify",
+                  follow_up: "Follow-up", content_scheduler: "Scheduler", other: "Other",
+                };
+                const pct = thisMonthCost > 0 ? (cost / thisMonthCost) * 100 : 0;
+                return (
+                  <div key={agent} className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-32 shrink-0">{agentLabels[agent] || agent}</span>
+                    <div className="flex-1 h-2 bg-surface-container-low rounded-full overflow-hidden">
+                      <div className="h-full bg-primary/60 rounded-full" style={{ width: `${Math.max(pct, 2)}%` }} />
+                    </div>
+                    <span className="text-xs font-medium text-foreground w-16 text-right">${cost.toFixed(3)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {thisMonthCalls === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-2">No API usage tracked yet. Costs will appear here as agents run.</p>
+        )}
       </div>
 
       {/* Recent Activity — Two columns */}
