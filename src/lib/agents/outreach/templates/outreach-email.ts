@@ -31,25 +31,21 @@ export function generateInitialOutreach(params: TemplateParams): {
   const specialty = params.research.specialties[0] || "rehabilitation services";
   const usp = params.research.unique_selling_points[0] || "your approach to recovery";
 
-  const subject = `Partnership opportunity for ${params.centerName}`;
+  const subject = `Helping more people find ${params.centerName}`;
 
   const bodyText = `${greeting}
 
-I came across ${params.centerName} while researching ${specialty} providers, and I was impressed by ${usp}.
+I came across ${params.centerName} while researching ${specialty} providers, and I was genuinely impressed by ${usp}.
 
-My name is ${persona}, and I'm reaching out from Rehab-Atlas. We're building a global platform that helps people find the right rehabilitation center for their needs, and we're currently in the early stages of growing our network of partner centers.
+My name is ${persona}, and I'm reaching out from Rehab-Atlas. We're building a new platform with a simple goal — making it easier for people looking for rehabilitation to find the right center for themselves or their loved ones.
 
-We'd love to invite ${params.centerName} to join us as one of our early partners. Being part of our platform from the start means your center gets visibility from day one as we grow, and you'd be helping shape how we connect people with quality care.
+We believe that many people who need help simply don't know where to look, and great centers like yours don't always get the visibility they deserve. That's the problem we're trying to solve.
 
-The way it works is straightforward — we list your center on our platform and refer clients who match your programs. When a client we refer is admitted, a 12% commission applies. Centers that contribute articles to our platform enjoy lower rates: 10% with 3 articles per month, or 8% with 5 articles. Each article includes a backlink to your website with you credited as the author, which helps with your search engine rankings.
+We'd love to invite ${params.centerName} to be part of Rehab-Atlas. Joining is free and straightforward — you'd set up your center profile on our platform, share details about your programs and approach, and optionally contribute educational articles that help people understand treatment options. Every article you publish includes a backlink to your website and credits you as the author, which is great for your online visibility and SEO.
 
-Since we're just getting started, we're running a launch offer for early partners: 0% commission for the first 2 months — completely free referrals. The only ask is that you publish 3 articles per month on our platform for 3 months. After the free period, the standard commission structure applies.
+There's no cost and no strings attached. We're focused on building a trusted directory where people in need can find quality care, and your center would be a valuable addition.
 
-There's no upfront cost, and honestly the timing couldn't be better to join as an early partner.
-
-If this sounds interesting, feel free to reply to this email and we can go from there. I'm happy to answer any questions you might have.
-
-Looking forward to hearing from you.
+If you're interested in being part of this journey, just reply to this email and let me know. I'll send you your login credentials and walk you through getting your center profile set up with 100% completeness — so people searching for help can find everything they need to know about ${params.centerName}.
 
 Best,
 ${persona}
@@ -64,13 +60,22 @@ rehab-atlas.com`;
  * Claude AI system prompt for generating personalized outreach emails.
  */
 export function getOutreachSystemPrompt(persona: string = PERSONA): string {
-  return `You are ${persona} from the Partnerships team at Rehab-Atlas, a new global platform that helps people find rehabilitation centers worldwide. Rehab-Atlas is in its early stages and actively building its network of partner centers.
+  return `You are ${persona} from the Partnerships team at Rehab-Atlas, a new platform that helps people find the right rehabilitation center for themselves or their loved ones.
 
-CRITICAL RULES — get these right:
-1. Commission is paid BY THE CENTER TO US (Rehab-Atlas), NOT the other way around. We refer clients to them, and they pay us a commission when a referred client is admitted. NEVER say "we pay you" — it's "a 12% commission applies" or "the commission is 12%".
+WHAT REHAB-ATLAS IS:
+- A new platform focused on making rehabilitation accessible and discoverable
+- We help people who are searching for rehab centers to find the right match for their conditions
+- We list center profiles with programs, specialties, photos, and details
+- Centers can also publish educational blog articles on our platform
+- Each article includes a backlink to the center's website + author credit (SEO benefit)
+- We are in early stages, actively building our network of partner centers
+
+CRITICAL RULES:
+1. DO NOT mention any commission, fees, or payment structure. There is NO commission discussion in this email. We are focused on onboarding centers first.
 2. NEVER suggest a phone call, video call, or brief call. All communication is via email only. Ask them to reply to this email.
-3. Emphasize that Rehab-Atlas is a new/early-stage platform. We're inviting them to join as an early partner. Being early means they get visibility from the start as we grow.
-4. There is NO upfront cost to join.
+3. Emphasize that joining is completely FREE. No cost, no strings attached.
+4. Frame this as a community mission — helping people find the care they need.
+5. Mention the blog/article opportunity naturally — it's good for their SEO (backlinks + author credit).
 
 You write emails that sound natural and human — like a real person typing at their desk. Never use:
 - Corporate jargon ("leverage", "synergize", "maximize", "optimize", "empower")
@@ -83,29 +88,10 @@ Your emails should:
 - Be conversational and warm, but professional
 - Have short paragraphs (2-3 sentences max)
 - Reference something specific about their center from the research
-- Mention the commission structure naturally, not as a sales pitch
-- End by asking them to reply to this email if interested
+- Frame the invitation around helping more people find quality care
+- Keep it concise — 4-5 short paragraphs max
+- End with: if they're interested in being part of this journey, reply and we'll send them login credentials and walk them through getting their center profile to 100% completeness
 - Use the signature: "${persona}\\nPartnerships, Rehab-Atlas\\ninfo@rehab-atlas.com\\nrehab-atlas.com"
-
-Commission structure (the center pays us):
-- 12% commission on admitted clients referred through our platform (standard rate)
-- 10% if the center publishes 3 approved articles per month on our platform
-- 8% if they publish 5 approved articles per month
-- Articles are counted monthly (1st to 31st), only approved articles count
-- No upfront cost — commission only applies when a referred client is admitted
-
-LAUNCH CAMPAIGN (very important — mention this prominently):
-- Since Rehab-Atlas is new, we're offering an early partner deal
-- 0% commission for the first 2 months — completely free referrals
-- The only condition: publish 3 blog articles per month on our platform for 3 months
-- After the 2-month free period, the normal commission structure kicks in (12%/10%/8%)
-- This is a limited-time offer for early partners who join now
-
-Blog benefit to mention naturally:
-- Publishing articles on Rehab-Atlas reduces their commission rate
-- Each article includes a backlink to the center's website — this helps their SEO rankings
-- The center is credited as the author, building their authority and online visibility
-- It's a win-win: lower commission costs + better search engine presence for the center
 
 Return a JSON object with:
 {
@@ -120,7 +106,7 @@ Return a JSON object with:
  */
 export function getOutreachUserPrompt(params: TemplateParams): string {
   const research = params.research;
-  return `Write a personalized introduction email to ${params.centerName}, inviting them to join Rehab-Atlas as an early partner.
+  return `Write a personalized introduction email to ${params.centerName}, inviting them to join Rehab-Atlas.
 
 Contact person: ${params.contactPerson || "Unknown (use generic greeting)"}
 
@@ -133,13 +119,14 @@ Research findings:
 - Tone of their website: ${research.tone_analysis}
 
 REMINDERS:
-- Commission is paid by THEM to US (not us to them) — 12% on admitted referrals
+- DO NOT mention any commission, fees, or costs. This is purely an invitation to join a free platform.
 - NO phone calls — ask them to reply via email
-- We are a NEW platform in early stages, inviting early partners
-- No upfront cost
-- LAUNCH CAMPAIGN: 0% commission for first 2 months if they publish 3 blogs/month for 3 months. Mention this prominently — it's our main hook.
-- Blog SEO benefit: each article includes a backlink to their website, credited as author
-- Commission tiers: 12% base, 10% with 3 blogs/month, 8% with 5 blogs/month
+- We are a NEW platform, building a trusted directory of rehab centers
+- Joining is FREE — no cost, no strings attached
+- Frame it as: we want to help more people find the right care, and their center would be a great fit
+- Mention blog opportunity: they can publish articles on our platform, each with a backlink to their website + author credit (good for SEO)
+- End with: if interested in being part of this journey, reply and we'll send login credentials + walk them through getting their profile to 100% completeness
+- Keep it short and genuine — 4-5 paragraphs max
 
 Write the email now. Make it feel like a real human wrote it.`;
 }
