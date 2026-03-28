@@ -241,13 +241,25 @@ export async function getTodaysTopics(): Promise<Array<{
   brief: string;
   keywords: string[];
 }>> {
+  return getTopicsForDate(new Date().toISOString().split("T")[0]);
+}
+
+/**
+ * Get approved topics for a specific date.
+ */
+export async function getTopicsForDate(date: string): Promise<Array<{
+  id: string;
+  topic: string;
+  category: string;
+  brief: string;
+  keywords: string[];
+}>> {
   const admin = createAdminClient();
-  const today = new Date().toISOString().split("T")[0];
 
   const { data } = await admin
     .from("content_calendar")
     .select("id, topic, category, brief, keywords")
-    .eq("planned_date", today)
+    .eq("planned_date", date)
     .eq("status", "approved")
     .order("created_at", { ascending: true });
 
@@ -257,6 +269,38 @@ export async function getTodaysTopics(): Promise<Array<{
     category: d.category as string,
     brief: (d.brief as string) || "",
     keywords: (d.keywords as string[]) || [],
+  }));
+}
+
+/**
+ * Get approved topics for a date range (used for buffer building).
+ */
+export async function getTopicsForRange(startDate: string, endDate: string): Promise<Array<{
+  id: string;
+  topic: string;
+  category: string;
+  brief: string;
+  keywords: string[];
+  planned_date: string;
+}>> {
+  const admin = createAdminClient();
+
+  const { data } = await admin
+    .from("content_calendar")
+    .select("id, topic, category, brief, keywords, planned_date")
+    .gte("planned_date", startDate)
+    .lte("planned_date", endDate)
+    .eq("status", "approved")
+    .order("planned_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  return (data || []).map((d) => ({
+    id: d.id as string,
+    topic: d.topic as string,
+    category: d.category as string,
+    brief: (d.brief as string) || "",
+    keywords: (d.keywords as string[]) || [],
+    planned_date: d.planned_date as string,
   }));
 }
 

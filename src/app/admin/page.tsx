@@ -157,11 +157,15 @@ export default async function AdminDashboard() {
               <p className="text-[10px] text-emerald-600 font-medium">Published</p>
             </div>
           </div>
-          {(approvedArticles || 0) > 0 && (
-            <p className="text-xs text-muted-foreground mt-3">
-              ~{approvedArticles} day{(approvedArticles || 0) !== 1 ? "s" : ""} of content queued. Scheduler publishes 1/day.
-            </p>
-          )}
+          {((draftArticles || 0) + (approvedArticles || 0)) > 0 && (() => {
+            const totalPool = (draftArticles || 0) + (approvedArticles || 0);
+            const daysOfContent = Math.floor(totalPool / 3);
+            return (
+              <p className="text-xs text-muted-foreground mt-3">
+                ~{daysOfContent} day{daysOfContent !== 1 ? "s" : ""} of content ({totalPool} articles). Scheduler publishes 3/day.
+              </p>
+            );
+          })()}
         </div>
 
         {/* Outreach Summary */}

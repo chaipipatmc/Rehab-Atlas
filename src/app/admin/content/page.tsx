@@ -64,7 +64,7 @@ export default async function AdminContentPage() {
               Publishing Pool ({approved.length})
             </h2>
             <span className="text-[10px] text-muted-foreground ml-2">
-              ~{approved.length} day{approved.length !== 1 ? "s" : ""} of content &middot; Scheduler publishes 1/day
+              ~{Math.floor(approved.length / 3)} day{Math.floor(approved.length / 3) !== 1 ? "s" : ""} of content ({approved.length} articles) &middot; Scheduler publishes 3/day
             </span>
           </div>
 
@@ -339,16 +339,11 @@ export default async function AdminContentPage() {
 
 /**
  * Estimate the publish date for an article in the pool.
- * The scheduler publishes 1 article per day, so position in queue = days from now.
+ * The scheduler publishes 3 articles per day. Position / 3 = days from now.
  */
 function getEstimatedPublishDate(position: number): string {
   const date = new Date();
-  let daysAdded = 0;
-  while (daysAdded <= position) {
-    date.setDate(date.getDate() + 1);
-    const day = date.getDay();
-    // Scheduler runs daily including weekends, but skip if you want weekday-only
-    daysAdded++;
-  }
+  const daysFromNow = Math.floor(position / 3) + 1;
+  date.setDate(date.getDate() + daysFromNow);
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }

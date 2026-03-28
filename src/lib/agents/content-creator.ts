@@ -350,9 +350,19 @@ Return a JSON object with:
   }
 }
 
+// How many days of content buffer to maintain in the pool (drafts)
+const BUFFER_DAYS = 5;
+// How many articles per day (matching the content calendar plan)
+const ARTICLES_PER_DAY = 3;
+
 /**
- * Main function: write articles from the content calendar (2-3 per day).
- * Falls back to picking from the predefined topic list if no calendar entries exist.
+ * Main function: write articles from the content calendar.
+ *
+ * Buffer strategy:
+ * - Check how many days of drafts are in the pool
+ * - If < BUFFER_DAYS, draft multiple days to fill the buffer
+ * - If >= BUFFER_DAYS, draft only the next day's content
+ * - This ensures there are always ~5 days of content ready for approval
  */
 export async function createArticleDraft(): Promise<boolean> {
   const enabled = await isAgentEnabled("content_creator");
@@ -365,38 +375,97 @@ export async function createArticleDraft(): Promise<boolean> {
     return false;
   }
 
-  // Try to get today's topics from the content calendar (planned by Content Planner)
-  let calendarTopics: Array<{ id: string; topic: string; category: string; brief: string; keywords: string[] }> = [];
-  try {
-    const { getTodaysTopics } = await import("./content-planner");
-    calendarTopics = await getTodaysTopics();
-  } catch {
-    // Content planner not available, use fallback
+  const admin = createAdminClient();
+
+  // Count drafts in pool (not yet approved or published)
+  const { count: draftsInPool } = await admin
+    .from("pages")
+    .select("id", { count: "exact", head: true })
+    .eq("page_type", "blog")
+    .eq("status", "draft");
+
+  // Count approved in pool (approved but not published)
+  const { count: approvedInPool } = await admin
+    .from("pages")
+    .select("id", { count: "exact", head: true })
+    .eq("page_type", "blog")
+    .eq("status", "approved");
+
+  const totalInPool = (draftsInPool || 0) + (approvedInPool || 0);
+  const daysOfContent = Math.floor(totalInPool / ARTICLES_PER_DAY);
+
+  console.log(`Content Creator: pool has ${totalInPool} articles (~${daysOfContent} days). Buffer target: ${BUFFER_DAYS} days.`);
+
+  // Determine how many days to draft
+  let daysToDraft: number;
+  if (daysOfContent >= BUFFER_DAYS) {
+    // Buffer is full — just draft 1 day to maintain it
+    daysToDraft = 1;
+  } else {
+    // Buffer is low — draft enough to fill it
+    daysToDraft = BUFFER_DAYS - daysOfContent + 1;
+    console.log(`Content Creator: buffer low, drafting ${daysToDraft} days to catch up`);
   }
 
   // Load all used images once — shared across all articles in this run
   const usedImages = await getUsedImageUrls();
   let articlesWritten = 0;
 
-  if (calendarTopics.length > 0) {
-    // Write articles from the calendar
-    console.log(`Content Creator: ${calendarTopics.length} topics from calendar for today`);
-    for (const calTopic of calendarTopics) {
-      const success = await writeOneArticle(
-        calTopic.topic,
-        calTopic.category,
-        calTopic.brief,
-        calTopic.keywords,
-        calTopic.id,
-        usedImages
-      );
-      if (success) articlesWritten++;
+  // Find the next dates to draft content for
+  // Look at the calendar for the next N weekdays that haven't been written yet
+  try {
+    const { getTopicsForRange } = await import("./content-planner");
+
+    // Find upcoming dates with approved calendar topics not yet written
+    const today = new Date();
+    const futureDate = new Date(today);
+    futureDate.setDate(futureDate.getDate() + daysToDraft + 7); // look ahead enough
+    const startStr = today.toISOString().split("T")[0];
+    const endStr = futureDate.toISOString().split("T")[0];
+
+    const allTopics = await getTopicsForRange(startStr, endStr);
+
+    if (allTopics.length > 0) {
+      // Group by date
+      const byDate = new Map<string, typeof allTopics>();
+      allTopics.forEach((t) => {
+        if (!byDate.has(t.planned_date)) byDate.set(t.planned_date, []);
+        byDate.get(t.planned_date)!.push(t);
+      });
+
+      // Draft up to daysToDraft worth of dates
+      let daysProcessed = 0;
+      for (const [date, topics] of byDate) {
+        if (daysProcessed >= daysToDraft) break;
+
+        console.log(`Content Creator: drafting ${topics.length} articles for ${date}`);
+        for (const topic of topics) {
+          const success = await writeOneArticle(
+            topic.topic,
+            topic.category,
+            topic.brief,
+            topic.keywords,
+            topic.id,
+            usedImages
+          );
+          if (success) articlesWritten++;
+        }
+        daysProcessed++;
+      }
+    } else {
+      // No calendar topics — fall back to topic pool for 1 day
+      console.log("Content Creator: no calendar topics, using topic pool");
+      for (let i = 0; i < ARTICLES_PER_DAY; i++) {
+        const topicInfo = await pickTopic();
+        if (!topicInfo) break;
+        const success = await writeOneArticle(topicInfo.topic, topicInfo.category, undefined, undefined, undefined, usedImages);
+        if (success) articlesWritten++;
+      }
     }
-  } else {
-    // Fallback: pick from predefined topics (write 2-3)
-    const targetCount = 2 + Math.floor(Math.random() * 2); // 2 or 3
-    console.log(`Content Creator: no calendar, writing ${targetCount} from topic pool`);
-    for (let i = 0; i < targetCount; i++) {
+  } catch {
+    // Content planner not available, use fallback
+    console.log("Content Creator: planner unavailable, using topic pool");
+    for (let i = 0; i < ARTICLES_PER_DAY; i++) {
       const topicInfo = await pickTopic();
       if (!topicInfo) break;
       const success = await writeOneArticle(topicInfo.topic, topicInfo.category, undefined, undefined, undefined, usedImages);
@@ -404,7 +473,7 @@ export async function createArticleDraft(): Promise<boolean> {
     }
   }
 
-  console.log(`Content Creator: wrote ${articlesWritten} articles today`);
+  console.log(`Content Creator: wrote ${articlesWritten} articles`);
   return articlesWritten > 0;
 }
 
