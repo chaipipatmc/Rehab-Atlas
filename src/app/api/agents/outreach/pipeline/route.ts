@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   let query = admin
     .from("outreach_pipeline")
-    .select("*, centers!inner(name, country, city, email, inquiry_email, website_url)", { count: "exact" })
+    .select("*, centers!inner(name, country, city, email, inquiry_email, website_url, description, short_description, phone, address, treatment_focus, conditions, services, treatment_methods, setting_type, program_length, languages, pricing_text, accreditation, status, updated_at)", { count: "exact" })
     .order("updated_at", { ascending: false })
     .range(offset, offset + limit - 1);
 

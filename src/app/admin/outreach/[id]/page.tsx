@@ -42,12 +42,64 @@ interface PipelineDetail {
 }
 
 interface CenterInfo {
+  id: string;
   name: string;
+  slug: string;
   country: string | null;
   city: string | null;
   email: string | null;
   inquiry_email: string | null;
   website_url: string | null;
+  description: string | null;
+  short_description: string | null;
+  phone: string | null;
+  address: string | null;
+  treatment_focus: string[] | null;
+  conditions: string[] | null;
+  services: string[] | null;
+  treatment_methods: string[] | null;
+  setting_type: string | null;
+  program_length: string | null;
+  languages: string[] | null;
+  pricing_text: string | null;
+  insurance: string | null;
+  accreditation: string | null;
+  has_detox: boolean | null;
+  status: string;
+  updated_at: string | null;
+}
+
+interface ProfileCompleteness {
+  score: number;
+  total: number;
+  fields: { label: string; done: boolean }[];
+}
+
+function calculateCompleteness(center: CenterInfo, photoCount: number, staffCount: number): ProfileCompleteness {
+  const fields = [
+    { label: "Name", done: !!center.name },
+    { label: "Description", done: !!center.description && center.description.length > 50 },
+    { label: "Short Description", done: !!center.short_description },
+    { label: "Country", done: !!center.country },
+    { label: "City", done: !!center.city },
+    { label: "Address", done: !!center.address },
+    { label: "Phone", done: !!center.phone },
+    { label: "Email", done: !!center.email },
+    { label: "Website", done: !!center.website_url },
+    { label: "Treatment Focus", done: !!(center.treatment_focus && center.treatment_focus.length > 0) },
+    { label: "Conditions Treated", done: !!(center.conditions && center.conditions.length > 0) },
+    { label: "Services", done: !!(center.services && center.services.length > 0) },
+    { label: "Treatment Methods", done: !!(center.treatment_methods && center.treatment_methods.length > 0) },
+    { label: "Setting Type", done: !!center.setting_type },
+    { label: "Program Length", done: !!center.program_length },
+    { label: "Languages", done: !!(center.languages && center.languages.length > 0) },
+    { label: "Pricing", done: !!center.pricing_text },
+    { label: "Photos (3+)", done: photoCount >= 3 },
+    { label: "Staff (1+)", done: staffCount >= 1 },
+    { label: "Accreditation", done: !!center.accreditation },
+  ];
+  const score = fields.filter(f => f.done).length;
+  return { score, total: fields.length, fields };
 }
 
 interface EmailRecord {
@@ -87,6 +139,7 @@ export default function OutreachDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState("");
+  const [completeness, setCompleteness] = useState<ProfileCompleteness | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -107,13 +160,22 @@ export default function OutreachDetailPage() {
       setPipeline(p as unknown as PipelineDetail);
       setNotes(p.notes as string || "");
 
-      // Load center
+      // Load center with all fields for completeness check
       const { data: c } = await supabase
         .from("centers")
-        .select("name, country, city, email, inquiry_email, website_url")
+        .select("id, name, slug, country, city, email, inquiry_email, website_url, description, short_description, phone, address, treatment_focus, conditions, services, treatment_methods, setting_type, program_length, languages, pricing_text, insurance, accreditation, has_detox, status, updated_at")
         .eq("id", p.center_id)
         .single();
-      setCenter(c as CenterInfo);
+      setCenter(c as unknown as CenterInfo);
+
+      // Load photo and staff counts for completeness
+      if (c) {
+        const [{ count: photoCount }, { count: staffCount }] = await Promise.all([
+          supabase.from("center_photos").select("id", { count: "exact", head: true }).eq("center_id", c.id),
+          supabase.from("center_staff").select("id", { count: "exact", head: true }).eq("center_id", c.id),
+        ]);
+        setCompleteness(calculateCompleteness(c as unknown as CenterInfo, photoCount || 0, staffCount || 0));
+      }
 
       // Load emails
       const { data: e } = await supabase
@@ -266,6 +328,53 @@ export default function OutreachDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Profile Completeness */}
+          {completeness && (
+            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" /> Profile Completeness
+              </h3>
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-2xl font-semibold ${completeness.score >= 16 ? "text-emerald-600" : completeness.score >= 10 ? "text-amber-600" : "text-red-600"}`}>
+                    {Math.round((completeness.score / completeness.total) * 100)}%
+                  </span>
+                  <span className="text-xs text-muted-foreground">{completeness.score}/{completeness.total} fields</span>
+                </div>
+                <div className="h-2 bg-surface-container-low rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${completeness.score >= 16 ? "bg-emerald-500" : completeness.score >= 10 ? "bg-amber-500" : "bg-red-500"}`}
+                    style={{ width: `${(completeness.score / completeness.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {completeness.fields.map((f) => (
+                  <div key={f.label} className="flex items-center gap-2 text-xs">
+                    <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${f.done ? "bg-emerald-100 text-emerald-600" : "bg-red-50 text-red-400"}`}>
+                      {f.done ? "✓" : "×"}
+                    </div>
+                    <span className={f.done ? "text-muted-foreground" : "text-foreground font-medium"}>{f.label}</span>
+                  </div>
+                ))}
+              </div>
+              {center?.status === "draft" && (
+                <p className="text-[10px] text-amber-600 mt-3 font-medium">Center is still in draft — not visible to public</p>
+              )}
+              {center?.updated_at && (
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Last updated: {new Date(center.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </p>
+              )}
+              <Link
+                href={`/admin/centers/${center?.id}`}
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+              >
+                View Center <Globe className="h-3 w-3" />
+              </Link>
+            </div>
+          )}
 
           {/* Research Data */}
           {research && (

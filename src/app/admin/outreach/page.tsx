@@ -34,6 +34,21 @@ interface PipelineEntry {
     city: string | null;
     email: string | null;
     website_url: string | null;
+    description: string | null;
+    short_description: string | null;
+    phone: string | null;
+    address: string | null;
+    treatment_focus: string[] | null;
+    conditions: string[] | null;
+    services: string[] | null;
+    treatment_methods: string[] | null;
+    setting_type: string | null;
+    program_length: string | null;
+    languages: string[] | null;
+    pricing_text: string | null;
+    accreditation: string | null;
+    status: string | null;
+    updated_at: string | null;
   };
 }
 
@@ -93,6 +108,22 @@ const STAGE_FILTERS = [
   { value: "stalled", label: "Stalled" },
   { value: "declined", label: "Declined" },
 ];
+
+function quickCompleteness(c: PipelineEntry["centers"]): number {
+  if (!c) return 0;
+  const checks = [
+    !!c.name, !!c.description, !!c.short_description, !!c.country, !!c.city,
+    !!c.address, !!c.phone, !!c.email, !!c.website_url,
+    !!(c.treatment_focus && c.treatment_focus.length > 0),
+    !!(c.conditions && c.conditions.length > 0),
+    !!(c.services && c.services.length > 0),
+    !!(c.treatment_methods && c.treatment_methods.length > 0),
+    !!c.setting_type, !!c.program_length,
+    !!(c.languages && c.languages.length > 0),
+    !!c.pricing_text, !!c.accreditation,
+  ];
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+}
 
 export default function OutreachDashboard() {
   const [pipelines, setPipelines] = useState<PipelineEntry[]>([]);
@@ -392,7 +423,7 @@ export default function OutreachDashboard() {
               <th className="text-left px-6 py-3 font-medium">Center</th>
               <th className="text-left px-6 py-3 font-medium">Location</th>
               <th className="text-left px-6 py-3 font-medium">Stage</th>
-              <th className="text-left px-6 py-3 font-medium">Commission</th>
+              <th className="text-left px-6 py-3 font-medium">Profile</th>
               <th className="text-left px-6 py-3 font-medium">Last Update</th>
               <th className="text-left px-6 py-3 font-medium">Days</th>
               <th className="text-left px-6 py-3 font-medium">Actions</th>
@@ -493,12 +524,18 @@ export default function OutreachDashboard() {
                           {stageInfo.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm">
-                        {p.agreed_commission_rate ? (
-                          <span className="text-emerald-700 font-medium">{p.agreed_commission_rate}%</span>
-                        ) : (
-                          <span className="text-muted-foreground">{p.proposed_commission_rate}%</span>
-                        )}
+                      <td className="px-6 py-4">
+                        {(() => {
+                          const pct = quickCompleteness(p.centers);
+                          return (
+                            <div className="flex items-center gap-2">
+                              <div className="w-12 h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${pct >= 80 ? "bg-emerald-500" : pct >= 40 ? "bg-amber-500" : "bg-red-400"}`} style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className={`text-xs font-medium ${pct >= 80 ? "text-emerald-600" : pct >= 40 ? "text-amber-600" : "text-red-500"}`}>{pct}%</span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 text-xs text-muted-foreground">
                         {new Date(p.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
