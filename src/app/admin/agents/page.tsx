@@ -10,7 +10,7 @@ import {
   CheckCircle, XCircle, AlertCircle, Loader2,
   Bot, Zap, Search, Send, MessageSquare, FileSignature,
   Activity, Target, PenTool, CalendarClock,
-  ChevronDown, ChevronUp, Settings2, ListTodo,
+  ChevronDown, ChevronUp, Settings2, ListTodo, RefreshCw,
 } from "lucide-react";
 
 interface AgentConfig {
@@ -415,7 +415,7 @@ export default function AdminAgentsPage() {
 /* ─── Task Card Component ─── */
 
 function TaskCard({
-  task, isExpanded, onToggle, isEditing, editedSubject, editedBody,
+  task: initialTask, isExpanded, onToggle, isEditing, editedSubject, editedBody,
   onEditStart, onEditCancel, onEditSubject, onEditBody, onEditSave,
   actioning, onAction,
 }: {
@@ -433,12 +433,51 @@ function TaskCard({
   actioning: boolean;
   onAction: (decision: string) => void;
 }) {
+  const [task, setTask] = useState(initialTask);
+  const [feedbackMode, setFeedbackMode] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [rewriting, setRewriting] = useState(false);
+
   const statusInfo = STATUS_CONFIG[task.status] || STATUS_CONFIG.pending;
   const StatusIcon = statusInfo.icon;
   const isAwaiting = task.status === "awaiting_owner";
   const checklist = task.checklist as Record<string, unknown> | null;
   const isOutreachEmail = task.agent_type === "outreach_research" && !!checklist?.body_text;
   const centerName = checklist?.center_name ? String(checklist.center_name) : null;
+  const feedbackHistory = (checklist?.feedback_history as string[]) || [];
+
+  async function handleRewrite() {
+    if (!feedback.trim()) return;
+    setRewriting(true);
+    try {
+      const res = await fetch("/api/agents/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: task.id, feedback: feedback.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Update local task state with rewritten content
+        setTask((prev) => ({
+          ...prev,
+          checklist: {
+            ...prev.checklist,
+            subject: data.subject,
+            body_text: data.body_text,
+            feedback_history: [...feedbackHistory, feedback.trim()],
+          },
+        }));
+        setFeedback("");
+        setFeedbackMode(false);
+        toast.success("Rewritten based on your feedback");
+      } else {
+        toast.error("Rewrite failed");
+      }
+    } catch {
+      toast.error("Rewrite failed");
+    }
+    setRewriting(false);
+  }
 
   return (
     <div className="rounded-xl bg-surface-container/30 overflow-hidden">
@@ -526,11 +565,40 @@ function TaskCard({
                       <button onClick={onEditSave} className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5">Save Changes</button>
                       <button onClick={onEditCancel} className="text-xs font-medium text-muted-foreground hover:text-foreground rounded-full px-4 py-1.5">Cancel</button>
                     </div>
+                  ) : feedbackMode ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground">Tell the AI what to change — it will rewrite the email based on your feedback.</p>
+                      <textarea
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        placeholder="e.g. Make the tone warmer, mention their detox program specifically, shorten the email..."
+                        className="w-full text-sm bg-white border rounded-lg p-3 ghost-border font-sans leading-relaxed min-h-[80px]"
+                      />
+                      {feedbackHistory.length > 0 && (
+                        <div className="text-[10px] text-muted-foreground">
+                          Previous feedback: {feedbackHistory.map((f, i) => <span key={i} className="inline-block bg-surface-container-low rounded px-1.5 py-0.5 mr-1">{f}</span>)}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <button onClick={handleRewrite} disabled={rewriting || !feedback.trim()}
+                          className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5 disabled:opacity-50 flex items-center gap-1">
+                          <RefreshCw className={`h-3 w-3 ${rewriting ? "animate-spin" : ""}`} />
+                          {rewriting ? "Rewriting..." : "Rewrite"}
+                        </button>
+                        <button onClick={() => { setFeedbackMode(false); setFeedback(""); }}
+                          className="text-xs font-medium text-muted-foreground hover:text-foreground rounded-full px-4 py-1.5">Cancel</button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-3">
                       <button onClick={() => onAction("approved")} disabled={actioning}
                         className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5 disabled:opacity-50">
                         {actioning ? "Sending..." : "Approve & Send"}
+                      </button>
+                      <button onClick={() => setFeedbackMode(true)}
+                        className="text-xs font-medium text-amber-700 hover:text-amber-800 rounded-full px-4 py-1.5 border border-amber-200 bg-amber-50 flex items-center gap-1">
+                        <RefreshCw className="h-3 w-3" />
+                        Request Rewrite
                       </button>
                       <button onClick={onEditStart}
                         className="text-xs font-medium text-primary hover:text-primary/80 rounded-full px-4 py-1.5 border border-primary/20">Edit Draft</button>
@@ -547,7 +615,7 @@ function TaskCard({
               {task.ai_summary && <p className="text-sm text-foreground leading-relaxed mb-3">{task.ai_summary}</p>}
               {checklist && (
                 <div className="space-y-1.5">
-                  {Object.entries(checklist).filter(([k]) => !["body_text", "subject", "from_email", "to_email", "persona"].includes(k)).map(([key, val]) => (
+                  {Object.entries(checklist).filter(([k]) => !["body_text", "subject", "from_email", "to_email", "persona", "feedback_history"].includes(k)).map(([key, val]) => (
                     <div key={key} className="flex gap-2 text-xs">
                       <span className="text-muted-foreground font-medium min-w-[100px]">{key.replace(/_/g, " ")}:</span>
                       <span className="text-foreground">{typeof val === "object" ? JSON.stringify(val) : String(val || "—")}</span>
