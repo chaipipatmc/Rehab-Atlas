@@ -339,7 +339,14 @@ async function autoOnboardPartner(
   const nameMatch = replyFromEmail.match(/^([^<]+)</);
   const contactName = nameMatch ? nameMatch[1].trim() : contactEmail.split("@")[0];
 
-  const tempPassword = crypto.randomBytes(12).toString("base64url");
+  // Generate password based on center name: PascalCase + year + !
+  const namePart = centerName
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join("")
+    .slice(0, 20);
+  const tempPassword = `${namePart}${new Date().getFullYear()}!`;
 
   // Verify center exists before creating account
   const { data: centerCheck } = await admin
@@ -402,9 +409,9 @@ I've set up your partner account. Here are your login details:
 
 Website: ${APP_URL}/auth/login
 Email: ${contactEmail}
-Temporary password: ${tempPassword}
+Password: ${tempPassword}
 
-Please log in and change your password right away. Once you're in, you'll find your partner dashboard where you can:
+Please change your password right after your first login. Once you're in, you'll find your Partner Dashboard where you can:
 
 - Set up your center profile (description, photos, services, pricing)
 - Start writing and submitting blog articles (each one gets a backlink to your website)
@@ -440,9 +447,9 @@ rehab-atlas.com`;
     email_type: "negotiation",
   });
 
-  // Update pipeline to terms_agreed
+  // Update pipeline to active (onboarded, agreement comes later)
   await admin.from("outreach_pipeline").update({
-    stage: "terms_agreed",
+    stage: "active",
   }).eq("id", pipeline.id);
 
   // Update research data with contact info
