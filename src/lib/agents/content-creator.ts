@@ -160,20 +160,48 @@ async function getUsedImageUrls(): Promise<Set<string>> {
 }
 
 /**
- * Search Unsplash for relevant images, excluding already-used ones.
- * Returns up to `count` unique image URLs.
+ * Search for images from Unsplash (primary) + Pexels (fallback).
+ * Excludes already-used images. Returns up to `count` unique URLs.
  */
-async function searchUnsplashImages(query: string, count: number = 5, usedImages?: Set<string>): Promise<string[]> {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY?.trim();
-  if (!accessKey) {
-    console.warn("UNSPLASH_ACCESS_KEY not set, skipping images");
-    return [];
+async function searchImages(query: string, count: number = 5, usedImages?: Set<string>): Promise<string[]> {
+  const used = usedImages || await getUsedImageUrls();
+  let results: string[] = [];
+
+  // 1. Try Unsplash first
+  results = await searchUnsplash(query, count, used);
+
+  // 2. If not enough, try Pexels as fallback
+  if (results.length < count) {
+    const pexelsResults = await searchPexels(query, count - results.length, used);
+    results.push(...pexelsResults);
   }
 
-  const used = usedImages || await getUsedImageUrls();
+  // 3. If still not enough, try alternate search terms
+  if (results.length < count) {
+    const altQueries = ["wellness recovery peaceful", "therapy healing calm", "nature meditation serene"];
+    for (const altQ of altQueries) {
+      if (results.length >= count) break;
+      const alt = await searchUnsplash(altQ, count - results.length, used);
+      results.push(...alt);
+      if (results.length < count) {
+        const altPexels = await searchPexels(altQ, count - results.length, used);
+        results.push(...altPexels);
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Search Unsplash for images.
+ */
+async function searchUnsplash(query: string, count: number, used: Set<string>): Promise<string[]> {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY?.trim();
+  if (!accessKey) return [];
+
   const results: string[] = [];
 
-  // Try multiple pages to find enough unused images
   for (let page = 1; page <= 4 && results.length < count; page++) {
     try {
       const response = await fetch(
@@ -193,17 +221,58 @@ async function searchUnsplashImages(query: string, count: number = 5, usedImages
         const url = urls?.regular || urls?.small;
         if (!url) continue;
 
-        // Check if this photo was already used (by photo ID)
         const idMatch = url.match(/images\.unsplash\.com\/photo-([^?/]+)/);
         const photoId = idMatch ? idMatch[1] : url;
         if (used.has(photoId)) continue;
 
         results.push(url);
-        used.add(photoId); // Prevent duplicates within this batch too
+        used.add(photoId);
       }
     } catch {
       break;
     }
+  }
+
+  return results;
+}
+
+/**
+ * Search Pexels for images (free fallback).
+ * Requires PEXELS_API_KEY env var. Free: 200 requests/hour.
+ */
+async function searchPexels(query: string, count: number, used: Set<string>): Promise<string[]> {
+  const apiKey = process.env.PEXELS_API_KEY?.trim();
+  if (!apiKey) return [];
+
+  const results: string[] = [];
+
+  try {
+    const response = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=landscape&per_page=${Math.min(count * 3, 30)}`,
+      { headers: { Authorization: apiKey } }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const photos = data.photos || [];
+
+    for (const p of photos) {
+      if (results.length >= count) break;
+      const src = (p as Record<string, unknown>).src as Record<string, string> | undefined;
+      const url = src?.large2x || src?.large || src?.medium;
+      if (!url) continue;
+
+      // Extract Pexels photo ID for dedup
+      const idMatch = url.match(/pexels\.com\/photo\/(\d+)/);
+      const photoId = idMatch ? `pexels-${idMatch[1]}` : url;
+      if (used.has(photoId)) continue;
+
+      results.push(url);
+      used.add(photoId);
+    }
+  } catch {
+    // Pexels not available
   }
 
   return results;
@@ -397,14 +466,16 @@ export async function createArticleDraft(): Promise<boolean> {
   console.log(`Content Creator: pool has ${totalInPool} articles (~${daysOfContent} days). Buffer target: ${BUFFER_DAYS} days.`);
 
   // Determine how many days to draft
+  // Always draft at least 1 day (2-3 articles from calendar).
+  // If buffer is low, draft multiple days to fill it up.
   let daysToDraft: number;
   if (daysOfContent >= BUFFER_DAYS) {
-    // Buffer is full — just draft 1 day to maintain it
+    // Buffer is full — draft 1 day to maintain it
     daysToDraft = 1;
   } else {
-    // Buffer is low — draft enough to fill it
+    // Buffer is low — draft enough to fill it + 1 extra day
     daysToDraft = BUFFER_DAYS - daysOfContent + 1;
-    console.log(`Content Creator: buffer low, drafting ${daysToDraft} days to catch up`);
+    console.log(`Content Creator: buffer low (${daysOfContent} days), drafting ${daysToDraft} days to catch up`);
   }
 
   // Load all used images once — shared across all articles in this run
@@ -510,7 +581,7 @@ async function writeOneArticle(
   const imageQuery = imageQueries[category] || "wellness recovery nature";
 
   // Search for images (1 featured + up to 4 inline), excluding already-used ones
-  const images = await searchUnsplashImages(imageQuery, 5, usedImages);
+  const images = await searchImages(imageQuery, 5, usedImages);
   const featuredImage = images[0] || null;
   const inlineImages = images.slice(1);
 
