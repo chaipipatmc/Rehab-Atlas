@@ -23,6 +23,7 @@ import type { Metadata } from "next";
 import type { Center, CenterFaq } from "@/types/center";
 import { BreadcrumbJsonLd, FAQJsonLd, LocalBusinessJsonLd } from "@/components/shared/json-ld";
 import { ViewTracker } from "@/components/shared/view-tracker";
+import { SaveButton } from "@/components/centers/save-button";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -127,6 +128,19 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
 
   const typedFaqs = (faqs || []) as unknown as CenterFaq[];
 
+  // Check if user has saved this center
+  let isSaved = false;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: savedRow } = await supabase
+      .from("saved_centers")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("center_id", center.id)
+      .single();
+    isSaved = !!savedRow;
+  }
+
   const location = [typedCenter.city, typedCenter.state_province, typedCenter.country]
     .filter(Boolean)
     .join(", ");
@@ -225,9 +239,12 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
         <div className="flex flex-col lg:flex-row gap-6 md:gap-8 items-start">
           {/* Title + Badges */}
           <div className="flex-1">
-            <h1 className="text-headline-lg md:text-display-md font-semibold text-foreground">
-              {typedCenter.name}
-            </h1>
+            <div className="flex items-start gap-3">
+              <h1 className="text-headline-lg md:text-display-md font-semibold text-foreground">
+                {typedCenter.name}
+              </h1>
+              <SaveButton centerId={typedCenter.id} initialSaved={isSaved} />
+            </div>
             <div className="flex flex-wrap items-center gap-3 mt-3">
               {location && (
                 <span className="flex items-center gap-1 text-sm text-muted-foreground">

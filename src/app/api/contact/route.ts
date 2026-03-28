@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { validateOrigin } from "@/lib/csrf";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -42,6 +43,21 @@ export async function POST(request: Request) {
     }
 
     const subjectLabel = SUBJECT_LABELS[subject as string] ?? subject ?? "General Inquiry";
+
+    // Persist submission to database (before email so it's always saved)
+    const supabase = createAdminClient();
+    const { error: dbError } = await supabase
+      .from("contact_submissions")
+      .insert({
+        name: String(name),
+        email: String(email),
+        phone: phone ? String(phone) : null,
+        message: String(message),
+      });
+
+    if (dbError) {
+      console.error("Failed to persist contact submission:", dbError);
+    }
 
     const safeName = escapeHtml(String(name));
     const safeEmail = escapeHtml(String(email));
