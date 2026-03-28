@@ -108,25 +108,32 @@ export function getOutreachUserPrompt(params: TemplateParams): string {
   const research = params.research;
   return `Write a personalized introduction email to ${params.centerName}, inviting them to join Rehab-Atlas.
 
-Contact person: ${params.contactPerson || "Unknown (use generic greeting)"}
+Contact person: ${params.contactPerson || "Unknown (use generic greeting like 'Hi there')"}
 
-Research findings:
-- Programs: ${research.programs.join(", ") || "General rehabilitation"}
-- Specialties: ${research.specialties.join(", ") || "Not specified"}
-- Target audience: ${research.target_audience || "General"}
-- Website summary: ${research.website_summary}
-- Unique selling points: ${research.unique_selling_points.join(", ")}
-- Tone of their website: ${research.tone_analysis}
+DEEP RESEARCH FINDINGS (from scraping their website — use these to make the email genuinely personal):
+- Programs they offer: ${research.programs.join(", ") || "General rehabilitation"}
+- Clinical specialties/modalities: ${research.specialties.join(", ") || "Not specified"}
+- Who they serve: ${research.target_audience || "General"}
+- What they're about: ${research.website_summary}
+- What makes them stand out: ${research.unique_selling_points.join("; ")}
+- Their brand voice/tone: ${research.tone_analysis}
 
-REMINDERS:
-- DO NOT mention any commission, fees, or costs. This is purely an invitation to join a free platform.
-- NO phone calls — ask them to reply via email
-- We are a NEW platform, building a trusted directory of rehab centers
+IMPORTANT — PERSONALIZATION:
+- Pick 1-2 SPECIFIC details from the research that show you actually looked at their website
+- Reference a specific program name, therapy modality, staff credential, or facility feature
+- Match the tone to their brand voice (e.g. if they're warm and holistic, be warm; if clinical and evidence-based, be more professional)
+- If a contact person name was found, use their first name in the greeting
+
+RULES:
+- DO NOT mention any commission, fees, or costs — this is a free invitation
+- NO phone calls — email only, ask them to reply
+- We are a NEW platform building a trusted directory of rehab centers
 - Joining is FREE — no cost, no strings attached
-- Frame it as: we want to help more people find the right care, and their center would be a great fit
-- Mention blog opportunity: they can publish articles on our platform, each with a backlink to their website + author credit (good for SEO)
-- End with: if interested in being part of this journey, reply and we'll send login credentials + walk them through getting their profile to 100% completeness
-- Keep it short and genuine — 4-5 paragraphs max
+- Frame it as: we want to help more people find quality care
+- Mention blog opportunity naturally: they can publish articles with backlinks to their site + author credit (SEO benefit)
+- End with: if interested, reply and we'll send login credentials + walk them through getting their profile to 100% completeness
+- Keep it short — 4-5 paragraphs max
+- Make it sound like a real person who genuinely spent time learning about their center
 
-Write the email now. Make it feel like a real human wrote it.`;
+Write the email now.`;
 }
