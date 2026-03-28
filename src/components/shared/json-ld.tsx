@@ -110,6 +110,93 @@ interface BreadcrumbJsonLdProps {
   items: BreadcrumbItem[];
 }
 
+/* ─── LocalBusiness Schema for Rehab Centers ─── */
+
+interface LocalBusinessJsonLdProps {
+  name: string;
+  description?: string;
+  url: string;
+  image?: string;
+  address?: { street?: string; city?: string; region?: string; country?: string };
+  phone?: string;
+  email?: string;
+  priceRange?: string;
+  rating?: { value: number; count?: number };
+}
+
+export function LocalBusinessJsonLd({
+  name, description, url, image, address, phone, email, priceRange, rating,
+}: LocalBusinessJsonLdProps) {
+  const data: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "MedicalBusiness",
+    name,
+    url,
+    ...(description ? { description } : {}),
+    ...(image ? { image } : {}),
+    ...(phone ? { telephone: phone } : {}),
+    ...(email ? { email } : {}),
+    ...(priceRange ? { priceRange } : {}),
+    ...(address ? {
+      address: {
+        "@type": "PostalAddress",
+        ...(address.street ? { streetAddress: address.street } : {}),
+        ...(address.city ? { addressLocality: address.city } : {}),
+        ...(address.region ? { addressRegion: address.region } : {}),
+        ...(address.country ? { addressCountry: address.country } : {}),
+      },
+    } : {}),
+    ...(rating ? {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: rating.value,
+        bestRating: 5,
+        ...(rating.count ? { ratingCount: rating.count } : {}),
+      },
+    } : {}),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+/* ─── MedicalWebPage Schema for Health Articles ─── */
+
+interface MedicalWebPageJsonLdProps {
+  title: string;
+  description?: string;
+  url: string;
+  datePublished?: string;
+  dateModified?: string;
+}
+
+export function MedicalWebPageJsonLd({
+  title, description, url, datePublished, dateModified,
+}: MedicalWebPageJsonLdProps) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    name: title,
+    ...(description ? { description } : {}),
+    url,
+    ...(datePublished ? { datePublished } : {}),
+    ...(dateModified ? { dateModified } : {}),
+    publisher: { "@type": "Organization", name: "Rehab-Atlas", url: BASE_URL },
+    about: { "@type": "MedicalCondition", name: "Substance Use Disorders" },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
 export function BreadcrumbJsonLd({ items }: BreadcrumbJsonLdProps) {
   const data = {
     "@context": "https://schema.org",

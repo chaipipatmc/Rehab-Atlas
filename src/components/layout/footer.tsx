@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NewsletterSignup } from "@/components/shared/newsletter-signup";
 
 export function Footer() {
   return (
@@ -38,10 +39,14 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Newsletter + Legal */}
           <div>
-            <h3 className="text-xs uppercase tracking-wider text-foreground font-medium mb-3">Legal</h3>
-            <ul className="space-y-2">
+            <h3 className="text-xs uppercase tracking-wider text-foreground font-medium mb-3">Stay Informed</h3>
+            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+              Recovery insights and resources, delivered to your inbox.
+            </p>
+            <NewsletterSignup />
+            <ul className="space-y-2 mt-5 pt-4 border-t border-surface-container">
               <li><Link href="/pages/privacy-policy" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">Privacy Policy</Link></li>
               <li><Link href="/pages/terms-of-use" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">Terms of Service</Link></li>
               <li><Link href="/pages/disclaimer" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">Medical Disclaimer</Link></li>

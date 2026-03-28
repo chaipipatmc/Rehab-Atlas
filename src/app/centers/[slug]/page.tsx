@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import type { Center, CenterFaq } from "@/types/center";
-import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/shared/json-ld";
+import { BreadcrumbJsonLd, FAQJsonLd, LocalBusinessJsonLd } from "@/components/shared/json-ld";
 import { ViewTracker } from "@/components/shared/view-tracker";
 
 interface PageProps {
@@ -193,6 +193,22 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
         ]}
       />
       <FAQJsonLd faqs={allFaqsForSchema} />
+      <LocalBusinessJsonLd
+        name={typedCenter.name}
+        description={typedCenter.short_description || undefined}
+        url={`${BASE_URL}/centers/${typedCenter.slug}`}
+        image={(photos as Array<{url: string}> | null)?.[0]?.url || undefined}
+        address={{
+          street: typedCenter.address || undefined,
+          city: typedCenter.city || undefined,
+          region: typedCenter.state_province || undefined,
+          country: typedCenter.country || undefined,
+        }}
+        phone={typedCenter.phone || undefined}
+        email={typedCenter.email || undefined}
+        priceRange={typedCenter.pricing_text || undefined}
+        rating={typedCenter.editorial_overall ? { value: typedCenter.editorial_overall } : undefined}
+      />
       {/* Breadcrumb */}
       <div className="container mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
         <nav className="flex items-center gap-2 text-xs text-muted-foreground">

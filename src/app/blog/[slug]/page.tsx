@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Metadata } from "next";
 import type { Components } from "react-markdown";
-import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/shared/json-ld";
+import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd } from "@/components/shared/json-ld";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -158,6 +158,13 @@ export default async function BlogPostPage({ params }: PageProps) {
             : "Rehab-Atlas Editorial Team"
         }
         url={`${BASE_URL}/blog/${post.slug}`}
+      />
+      <MedicalWebPageJsonLd
+        title={post.title}
+        description={post.meta_description ?? undefined}
+        url={`${BASE_URL}/blog/${post.slug}`}
+        datePublished={post.published_at ?? undefined}
+        dateModified={post.updated_at ?? undefined}
       />
       <BreadcrumbJsonLd
         items={[

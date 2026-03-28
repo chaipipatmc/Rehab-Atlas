@@ -17,6 +17,61 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/partner/join`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
   ];
 
+  // Rehab condition pages
+  const conditionSlugs = [
+    "alcohol-addiction",
+    "drug-addiction",
+    "opioid-addiction",
+    "dual-diagnosis",
+    "mental-health",
+    "gambling-addiction",
+    "prescription-drug-abuse",
+    "eating-disorders",
+    "trauma-ptsd",
+    "behavioral-addiction",
+  ];
+
+  const rehabPages: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/rehab`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    ...conditionSlugs.map((slug) => ({
+      url: `${BASE_URL}/rehab/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    })),
+  ];
+
+  // Country landing pages
+  const countrySlugs = [
+    "thailand",
+    "canada",
+    "india",
+    "bali",
+    "malaysia",
+    "australia",
+    "south-africa",
+    "japan",
+  ];
+  const countryPages: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/rehab-in`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    ...countrySlugs.map((slug) => ({
+      url: `${BASE_URL}/rehab-in/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    })),
+  ];
+
   // CMS pages
   const cmsPages: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/pages/privacy-policy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.4 },
@@ -69,5 +124,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Supabase not configured — return static pages only
   }
 
-  return [...staticPages, ...cmsPages, ...centerPages, ...blogPages];
+  return [...staticPages, ...rehabPages, ...countryPages, ...cmsPages, ...centerPages, ...blogPages];
 }
