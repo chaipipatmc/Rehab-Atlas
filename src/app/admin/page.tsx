@@ -3,7 +3,8 @@ import Link from "next/link";
 import {
   Building2, Users, Brain, Eye, Target, FileText,
   Clock, CheckCircle, AlertTriangle, Send, Layers,
-  CalendarDays, BookOpen, Receipt, DollarSign,
+  CalendarDays, BookOpen, Receipt, DollarSign, BarChart3,
+  TrendingUp, TrendingDown, Globe,
 } from "lucide-react";
 
 export default async function AdminDashboard() {
@@ -86,6 +87,37 @@ export default async function AdminDashboard() {
     costByAgent.set(key, (costByAgent.get(key) || 0) + Number(r.cost_usd || 0));
   });
   const sortedAgentCosts = Array.from(costByAgent.entries()).sort((a, b) => b[1] - a[1]);
+
+  // Traffic stats
+  const today = new Date().toISOString().split("T")[0];
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000).toISOString();
+
+  const [
+    { count: viewsThisWeek },
+    { count: viewsLastWeek },
+    { data: topPages },
+    { data: topCountries },
+  ] = await Promise.all([
+    supabase.from("page_views").select("id", { count: "exact", head: true }).gte("created_at", sevenDaysAgo),
+    supabase.from("page_views").select("id", { count: "exact", head: true }).gte("created_at", fourteenDaysAgo).lt("created_at", sevenDaysAgo),
+    supabase.from("page_views").select("path").gte("created_at", sevenDaysAgo),
+    supabase.from("page_views").select("country").gte("created_at", sevenDaysAgo).not("country", "is", null),
+  ]);
+
+  // Count top pages
+  const pageCount = new Map<string, number>();
+  (topPages || []).forEach((r) => { pageCount.set(r.path, (pageCount.get(r.path) || 0) + 1); });
+  const sortedPages = Array.from(pageCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  // Count top countries
+  const countryCount = new Map<string, number>();
+  (topCountries || []).forEach((r) => { if (r.country) countryCount.set(r.country, (countryCount.get(r.country) || 0) + 1); });
+  const sortedCountries = Array.from(countryCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  const weeklyGrowth = (viewsLastWeek || 0) > 0
+    ? Math.round(((viewsThisWeek || 0) - (viewsLastWeek || 0)) / (viewsLastWeek || 1) * 100)
+    : 0;
 
   // Items needing attention
   const actionItems = [
@@ -183,6 +215,63 @@ export default async function AdminDashboard() {
             <PipelineStat label="Awaiting your action" value={pendingAgentTasks || 0} highlight />
           </div>
         </div>
+      </div>
+
+      {/* Website Traffic */}
+      <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Website Traffic</h2>
+          <span className="text-[10px] text-muted-foreground ml-auto">Last 7 days</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+          <div className="text-center p-3 bg-primary/5 rounded-xl">
+            <p className="text-xl font-semibold text-primary">{(viewsThisWeek || 0).toLocaleString()}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">Page Views</p>
+          </div>
+          <div className="text-center p-3 bg-surface-container-low rounded-xl">
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-xl font-semibold text-foreground">{weeklyGrowth > 0 ? "+" : ""}{weeklyGrowth}%</p>
+              {weeklyGrowth > 0 ? <TrendingUp className="h-4 w-4 text-emerald-600" /> : weeklyGrowth < 0 ? <TrendingDown className="h-4 w-4 text-red-600" /> : null}
+            </div>
+            <p className="text-[10px] text-muted-foreground font-medium">vs Last Week</p>
+          </div>
+          <div className="text-center p-3 bg-surface-container-low rounded-xl">
+            <p className="text-xl font-semibold text-foreground">{sortedCountries.length}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">Countries</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {sortedPages.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Top Pages</p>
+              <div className="space-y-1.5">
+                {sortedPages.map(([path, count]) => (
+                  <div key={path} className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground truncate max-w-[200px]">{path}</span>
+                    <span className="font-medium text-foreground">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {sortedCountries.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Top Countries</p>
+              <div className="space-y-1.5">
+                {sortedCountries.map(([country, count]) => (
+                  <div key={country} className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground flex items-center gap-1"><Globe className="h-3 w-3" />{country}</span>
+                    <span className="font-medium text-foreground">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        {(viewsThisWeek || 0) === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-2">Traffic data will appear once visitors start browsing the site.</p>
+        )}
       </div>
 
       {/* API Costs */}

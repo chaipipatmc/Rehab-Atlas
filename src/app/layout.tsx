@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Analytics, CookieConsent } from "@/components/shared/analytics";
+import { PageTracker } from "@/components/shared/page-tracker";
 import "./globals.css";
 
 const inter = Inter({
@@ -64,6 +65,7 @@ export default function RootLayout({
         <Footer />
         <Toaster />
         <Analytics />
+        <PageTracker />
         <CookieConsent />
       </body>
     </html>

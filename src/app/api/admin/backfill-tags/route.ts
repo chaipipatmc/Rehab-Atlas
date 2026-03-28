@@ -62,8 +62,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // Limit to 3-4 most relevant tags (take first matches which are ordered by priority)
-    const tags = Array.from(matchedTags).slice(0, 4);
+    // Ensure at least 4 tags — pad with general tags if needed
+    const generalFallbacks = ["Recovery", "Treatment", "Wellness", "Resources"];
+    for (const fb of generalFallbacks) {
+      if (matchedTags.size >= 4) break;
+      matchedTags.add(fb);
+    }
+    const tags = Array.from(matchedTags).slice(0, 6);
 
     if (tags.length > 0) {
       await admin.from("pages").update({ tags }).eq("id", article.id);

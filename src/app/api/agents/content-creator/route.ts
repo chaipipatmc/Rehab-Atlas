@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { verifyWebhookSecret } from "@/lib/agents/base";
 import { createArticleDraft } from "@/lib/agents/content-creator";
+import { autoApproveContent } from "@/lib/agents/content-auto-approve";
 
 export const maxDuration = 300;
 
@@ -29,7 +30,11 @@ export async function POST(request: Request) {
 
   try {
     const success = await createArticleDraft();
-    return NextResponse.json({ success });
+
+    // After drafting, auto-approve if agent is enabled
+    const autoApproved = await autoApproveContent();
+
+    return NextResponse.json({ success, ...autoApproved });
   } catch (err) {
     console.error("Content Creator error:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });

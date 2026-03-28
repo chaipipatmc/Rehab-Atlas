@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Shield, Users, Compass, ArrowRight } from "lucide-react";
+import { Shield, Users, Compass, ArrowRight, BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { FeaturedCarousel } from "@/components/centers/featured-carousel";
 import { HeroSearch } from "@/components/centers/hero-search";
@@ -41,6 +41,22 @@ export default async function HomePage() {
       .limit(10);
     // Only show centers that have at least 1 photo
     if (data) featuredCenters = (data as typeof featuredCenters).filter(c => c.photos && c.photos.length > 0);
+  } catch {
+    // Supabase not configured yet
+  }
+
+  // Fetch latest blog articles
+  let latestArticles: Array<{ slug: string; title: string; meta_description: string | null; published_at: string; content: string | null; tags: string[] | null }> = [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("pages")
+      .select("slug, title, meta_description, published_at, content, tags")
+      .eq("page_type", "blog")
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(6);
+    if (data) latestArticles = data as typeof latestArticles;
   } catch {
     // Supabase not configured yet
   }
@@ -215,6 +231,78 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Latest Articles */}
+      {latestArticles.length > 0 && (
+        <section className="py-16 md:py-24 bg-surface">
+          <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  <span className="text-xs uppercase tracking-widest text-primary font-medium">Articles &amp; Resources</span>
+                </div>
+                <h2 className="text-headline-md md:text-headline-lg font-semibold text-foreground">
+                  Understanding Addiction &amp; Recovery
+                </h2>
+              </div>
+              <Button variant="outline" className="rounded-full ghost-border border-0 hidden sm:flex" asChild>
+                <Link href="/blog">
+                  View all <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {latestArticles.map((post) => {
+                const imageMatch = post.content?.match(/!\[featured\]\(([^)]+)\)/);
+                const image = imageMatch ? imageMatch[1] : null;
+                const words = post.content?.split(/\s+/).length || 0;
+                const readTime = Math.max(3, Math.ceil(words / 200));
+                return (
+                  <Link
+                    key={post.slug}
+                    href={`/blog/${post.slug}`}
+                    className="group bg-surface-container-lowest rounded-2xl overflow-hidden shadow-ambient hover:shadow-ambient-lg transition-all duration-300"
+                  >
+                    {image && (
+                      <div className="aspect-[16/9] relative overflow-hidden">
+                        <img src={image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2">
+                        {post.title}
+                      </h3>
+                      {post.meta_description && (
+                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-2">{post.meta_description}</p>
+                      )}
+                      {post.tags?.length ? (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {post.tags.slice(0, 2).map((tag) => (
+                            <span key={tag} className="text-[10px] font-medium rounded-full px-2 py-0.5 bg-primary/8 text-primary/80">{tag}</span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <div className="flex items-center justify-between mt-4 pt-3">
+                        <span className="text-[10px] text-muted-foreground">
+                          {post.published_at ? new Date(post.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                          {" · "}{readTime} min read
+                        </span>
+                        <span className="text-xs text-primary">Read &rarr;</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            <div className="mt-6 text-center sm:hidden">
+              <Button variant="outline" className="rounded-full ghost-border border-0" asChild>
+                <Link href="/blog">View all articles <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Bottom CTA — with full-width background image */}
       <section className="relative py-16 md:py-28 overflow-hidden">

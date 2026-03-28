@@ -618,15 +618,15 @@ async function writeOneArticle(
 
   // Map category to user-friendly tags
   const CATEGORY_TAG_MAP: Record<string, string[]> = {
-    "addiction-types": ["Addiction", "Substance Use"],
-    "treatment-types": ["Treatment", "Rehabilitation"],
-    "mental-health": ["Mental Health", "Wellness"],
-    "recovery-guides": ["Recovery", "Sobriety"],
-    "practical-guides": ["Guides", "Resources"],
-    "international-treatment": ["International", "Medical Tourism"],
-    "family-support": ["Family Support", "Relationships"],
+    "addiction-types": ["Addiction", "Substance Use", "Recovery", "Treatment"],
+    "treatment-types": ["Treatment", "Rehabilitation", "Recovery", "Therapy"],
+    "mental-health": ["Mental Health", "Wellness", "Therapy", "Recovery"],
+    "recovery-guides": ["Recovery", "Sobriety", "Relapse Prevention", "Wellness"],
+    "practical-guides": ["Guides", "Resources", "Treatment", "Recovery"],
+    "international-treatment": ["International", "Medical Tourism", "Treatment", "Rehabilitation"],
+    "family-support": ["Family Support", "Relationships", "Recovery", "Wellness"],
   };
-  const tags = CATEGORY_TAG_MAP[category] || [category.replace(/-/g, " ")];
+  const tags = CATEGORY_TAG_MAP[category] || [category.replace(/-/g, " "), "Recovery", "Treatment", "Wellness"];
 
   // Save as draft
   const { data: page, error } = await admin

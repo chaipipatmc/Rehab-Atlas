@@ -53,7 +53,7 @@ const AGENT_GROUPS = [
   },
   {
     title: "Content Agents",
-    agents: ["content_planner", "content_creator", "content_scheduler"],
+    agents: ["content_planner", "content_creator", "content_auto_approve", "content_scheduler"],
   },
 ];
 
@@ -71,6 +71,7 @@ const AGENT_INFO: Record<string, { label: string; description: string; icon: typ
   content_creator: { label: "Content Creator", description: "Writes SEO blog articles with Unsplash images. Runs weekdays.", icon: PenTool, color: "text-rose-600" },
   content_scheduler: { label: "Scheduler", description: "Publishes 1 approved article per day at optimal time.", icon: CalendarClock, color: "text-indigo-600" },
   content_planner: { label: "Planner", description: "Plans monthly editorial calendar with 2-3 topics per weekday.", icon: CalendarClock, color: "text-violet-600" },
+  content_auto_approve: { label: "Auto-Approve", description: "Automatically approves draft articles that pass quality checks (word count, images, SEO, tags). When OFF, you review manually.", icon: CheckCircle, color: "text-emerald-600" },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
