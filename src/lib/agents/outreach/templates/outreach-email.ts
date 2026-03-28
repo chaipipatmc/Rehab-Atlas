@@ -43,6 +43,8 @@ We believe that many people who need help simply don't know where to look, and g
 
 We'd love to invite ${params.centerName} to be part of Rehab-Atlas. Joining is free and straightforward — you'd set up your center profile on our platform, share details about your programs and approach, and optionally contribute educational articles that help people understand treatment options. Every article you publish includes a backlink to your website and credits you as the author, which is great for your online visibility and SEO.
 
+When someone is searching for rehab and their needs match what you offer, they can send an inquiry directly to your center through our platform. It's another channel for potential clients to find you.
+
 There's no cost and no strings attached. We're focused on building a trusted directory where people in need can find quality care, and your center would be a valuable addition.
 
 If you're interested in being part of this journey, just reply to this email and let me know. I'll send you your login credentials and walk you through getting your center profile set up with 100% completeness — so people searching for help can find everything they need to know about ${params.centerName}.
@@ -76,6 +78,7 @@ CRITICAL RULES:
 3. Emphasize that joining is completely FREE. No cost, no strings attached.
 4. Frame this as a community mission — helping people find the care they need.
 5. Mention the blog/article opportunity naturally — it's good for their SEO (backlinks + author credit).
+6. Mention the inquiry benefit: when someone searches for rehab and their conditions match the center's services, they can send an inquiry directly to the center through our platform. This brings potential clients to them.
 
 You write emails that sound natural and human — like a real person typing at their desk. Never use:
 - Corporate jargon ("leverage", "synergize", "maximize", "optimize", "empower")
@@ -131,6 +134,7 @@ RULES:
 - Joining is FREE — no cost, no strings attached
 - Frame it as: we want to help more people find quality care
 - Mention blog opportunity naturally: they can publish articles with backlinks to their site + author credit (SEO benefit)
+- Mention the inquiry benefit: people searching for rehab who match the center's services can send inquiries directly through our platform — potential clients coming to them
 - End with: if interested, reply and we'll send login credentials + walk them through getting their profile to 100% completeness
 - Keep it short — 4-5 paragraphs max
 - Make it sound like a real person who genuinely spent time learning about their center

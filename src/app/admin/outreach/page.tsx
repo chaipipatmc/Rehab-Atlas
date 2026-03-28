@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   Send, Users, MessageSquare, FileSignature, CheckCircle2, Target,
   Search, Filter, RefreshCw, Plus, ArrowRight, TrendingUp,
-  Clock, AlertTriangle, XCircle, Loader2,
+  Clock, AlertTriangle, XCircle, Loader2, MapPin,
 } from "lucide-react";
 
 // --- Types ---
@@ -135,6 +135,8 @@ export default function OutreachDashboard() {
   const [total, setTotal] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [researching, setResearching] = useState(false);
+  const [locationFilter, setLocationFilter] = useState("all");
+  const [countries, setCountries] = useState<string[]>([]);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [draftTasks, setDraftTasks] = useState<Record<string, AgentTask>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -159,6 +161,22 @@ export default function OutreachDashboard() {
     const { data: allPipelines } = await supabase
       .from("outreach_pipeline")
       .select("stage");
+
+    // Extract unique countries for filter
+    const countrySet = new Set<string>();
+    pipelineData.forEach((p: PipelineEntry) => {
+      if (p.centers?.country) countrySet.add(p.centers.country);
+    });
+    // Also get from all pipelines
+    const { data: allCountries } = await supabase
+      .from("outreach_pipeline")
+      .select("centers!inner(country)");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (allCountries || []).forEach((p: any) => {
+      const c = Array.isArray(p.centers) ? p.centers[0] : p.centers;
+      if (c?.country) countrySet.add(c.country);
+    });
+    setCountries(Array.from(countrySet).sort());
 
     if (allPipelines) {
       const contactedStages = ["outreach_sent", "followed_up", "responded", "negotiating", "terms_agreed", "agreement_drafted", "agreement_sent", "agreement_signed", "active", "stalled", "declined"];
@@ -401,17 +419,32 @@ export default function OutreachDashboard() {
             className="pl-9 rounded-xl ghost-border"
           />
         </div>
-        <div className="flex items-center gap-1.5">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <select
-            value={stageFilter}
-            onChange={(e) => { setStageFilter(e.target.value); setPage(1); }}
-            className="text-sm bg-surface-container-lowest rounded-lg px-2 py-1.5 ghost-border text-foreground"
-          >
-            {STAGE_FILTERS.map((f) => (
-              <option key={f.value} value={f.value}>{f.label}</option>
-            ))}
-          </select>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <select
+              value={stageFilter}
+              onChange={(e) => { setStageFilter(e.target.value); setPage(1); }}
+              className="text-sm bg-surface-container-lowest rounded-lg px-2 py-1.5 ghost-border text-foreground"
+            >
+              {STAGE_FILTERS.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <select
+              value={locationFilter}
+              onChange={(e) => { setLocationFilter(e.target.value); setPage(1); }}
+              className="text-sm bg-surface-container-lowest rounded-lg px-2 py-1.5 ghost-border text-foreground"
+            >
+              <option value="all">All Locations</option>
+              {countries.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -430,7 +463,7 @@ export default function OutreachDashboard() {
             </tr>
           </thead>
           <tbody>
-            {pipelines.map((p) => {
+            {pipelines.filter((p) => locationFilter === "all" || p.centers?.country === locationFilter).map((p) => {
               const stageInfo = STAGE_CONFIG[p.stage] || STAGE_CONFIG.new;
               const StageIcon = stageInfo.icon;
               const days = daysInStage(p.updated_at);
