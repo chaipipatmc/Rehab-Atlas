@@ -120,24 +120,45 @@ export async function POST(request: Request) {
   const originError = validateOrigin(request);
   if (originError) return originError;
 
-  const formData = await request.formData();
-  const token = formData.get("token") as string;
-  const decision = formData.get("decision") as string;
-  const centerId = (formData.get("center_id") as string) || null;
-  const note = (formData.get("note") as string) || "";
+  // Support both FormData (from email confirmation page) and JSON (from dashboard)
+  let token: string | null = null;
+  let decision: string | null = null;
+  let centerId: string | null = null;
+  let note = "";
+
+  const contentType = request.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    const json = await request.json();
+    token = json.task_id || json.token;
+    decision = json.decision === "approve" ? "approved" : json.decision === "reject" ? "rejected" : json.decision;
+    centerId = json.center_id || null;
+    note = json.note || json.reason || "";
+  } else {
+    const formData = await request.formData();
+    token = formData.get("token") as string;
+    decision = formData.get("decision") as string;
+    centerId = (formData.get("center_id") as string) || null;
+    note = (formData.get("note") as string) || "";
+  }
 
   if (!token || !decision || !["approved", "rejected", "needs_info"].includes(decision)) {
     return brandedPage("Invalid Request", "Missing or invalid parameters.", 400);
   }
 
-  // Look up task by short code or HMAC token
+  // Look up task by UUID, short code, or HMAC token
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let task: any = null;
   const admin = createAdminClient();
 
-  if (!token.includes(".")) {
+  // Check if token is a UUID (from dashboard JSON requests)
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token || "");
+
+  if (isUUID) {
+    const { data } = await admin.from("agent_tasks").select("*").eq("id", token).single();
+    task = data;
+  } else if (token && !token.includes(".")) {
     task = await findTaskByShortCode(token);
-  } else {
+  } else if (token) {
     const parsed = validateActionToken(token);
     if (parsed) {
       const { data } = await admin.from("agent_tasks").select("*").eq("id", parsed.taskId).single();
@@ -146,6 +167,9 @@ export async function POST(request: Request) {
   }
 
   if (!task) {
+    if (contentType.includes("application/json")) {
+      return NextResponse.json({ error: "Task not found or expired" }, { status: 410 });
+    }
     return brandedPage("Link Expired", "This action link has expired or is invalid.", 410);
   }
 
@@ -176,9 +200,15 @@ export async function POST(request: Request) {
 
     const label = decision === "approved" ? "Approved ✓" : decision === "rejected" ? "Rejected" : "Marked for Follow-up";
     const icon = decision === "approved" ? "✅" : decision === "rejected" ? "❌" : "📝";
+    if (contentType.includes("application/json")) {
+      return NextResponse.json({ success: true, decision, label });
+    }
     return brandedPage(`${icon} ${label}`, `The ${task.entity_type.replace(/_/g, " ")} has been ${label.toLowerCase()} successfully.`, 200);
   } catch (err) {
     console.error("Agent action failed:", err);
+    if (contentType.includes("application/json")) {
+      return NextResponse.json({ error: "Action failed" }, { status: 500 });
+    }
     return brandedPage("Action Failed", "Something went wrong. Please try again from the admin dashboard.", 500);
   }
 }
