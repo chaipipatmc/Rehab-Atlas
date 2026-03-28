@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
+const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com").trim();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
@@ -84,7 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let blogPages: MetadataRoute.Sitemap = [];
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Fetch all published center slugs
     const { data: centers } = await supabase
