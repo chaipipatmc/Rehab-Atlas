@@ -352,8 +352,9 @@ async function executePostAction(
   }
 
   if (decision === "rejected") {
-    // Mark outreach pipeline entries as declined when rejected
-    if (agentType.startsWith("outreach_")) {
+    // Only mark as declined when the initial outreach email is rejected
+    // Rejecting agreements or other tasks should NOT decline the whole pipeline
+    if (agentType === "outreach_research") {
       await admin
         .from("outreach_pipeline")
         .update({ stage: "declined" })
