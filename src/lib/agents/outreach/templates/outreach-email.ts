@@ -31,7 +31,7 @@ export function generateInitialOutreach(params: TemplateParams): {
   const specialty = params.research.specialties[0] || "rehabilitation services";
   const usp = params.research.unique_selling_points[0] || "your approach to recovery";
 
-  const subject = `Helping more people find ${params.centerName}`;
+  const subject = `Partnership with Rehab-Atlas — featuring ${params.centerName}`;
 
   const bodyText = `${greeting}
 
@@ -98,7 +98,7 @@ Your emails should:
 
 Return a JSON object with:
 {
-  "subject": "email subject line (short, personal, no caps lock)",
+  "subject": "email subject line — use one of these two styles, alternating randomly: (A) 'Partnership with Rehab-Atlas — featuring [Center Name]' or (E) 'Rehab-Atlas × [Center Name] — partnership invitation'. Keep it professional and concise.",
   "body_text": "the full email in plain text",
   "personalization_points": ["list of specific things referenced from research"]
 }`;
