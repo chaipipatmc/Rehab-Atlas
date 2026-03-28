@@ -10,6 +10,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendLeadForwardEmail } from "@/lib/email/send";
 import { sendApprovedOutreach } from "@/lib/agents/outreach/research";
 import { sendApprovedAgreement } from "@/lib/agents/outreach/agreement";
+import { validateOrigin } from "@/lib/csrf";
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 // GET: Show confirmation page (user clicks email link → sees branded page → clicks Confirm)
 export async function GET(request: Request) {
@@ -64,6 +74,11 @@ export async function GET(request: Request) {
   const decisionColor = decision === "approved" ? "#45636b" : decision === "rejected" ? "#dc2626" : "#f59e0b";
   const agentLabel = task.agent_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 
+  // Escape user-supplied values before injecting into HTML
+  const safeToken = escapeHtml(token);
+  const safeDecision = escapeHtml(decision);
+  const safeCenterId = centerId ? escapeHtml(centerId) : null;
+
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Confirm Action — Rehab-Atlas</title>
@@ -80,14 +95,14 @@ export async function GET(request: Request) {
 <body>
 <div class="card">
   <p class="brand">Rehab-Atlas</p>
-  <p class="agent">${agentLabel} Agent</p>
-  <h1>Confirm: ${decisionLabel}</h1>
-  <p>Are you sure you want to <strong>${decisionLabel.toLowerCase()}</strong> this ${task.entity_type.replace(/_/g, " ")}?</p>
+  <p class="agent">${escapeHtml(agentLabel)} Agent</p>
+  <h1>Confirm: ${escapeHtml(decisionLabel)}</h1>
+  <p>Are you sure you want to <strong>${escapeHtml(decisionLabel.toLowerCase())}</strong> this ${escapeHtml(task.entity_type.replace(/_/g, " "))}?</p>
   <form method="POST" action="/api/agents/action">
-    <input type="hidden" name="token" value="${token}" />
-    <input type="hidden" name="decision" value="${decision}" />
-    ${centerId ? `<input type="hidden" name="center_id" value="${centerId}" />` : ""}
-    <button type="submit" class="btn" style="background:${decisionColor};">Confirm ${decisionLabel}</button>
+    <input type="hidden" name="token" value="${safeToken}" />
+    <input type="hidden" name="decision" value="${safeDecision}" />
+    ${safeCenterId ? `<input type="hidden" name="center_id" value="${safeCenterId}" />` : ""}
+    <button type="submit" class="btn" style="background:${decisionColor};">Confirm ${escapeHtml(decisionLabel)}</button>
     <a href="/admin" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
@@ -101,6 +116,10 @@ export async function GET(request: Request) {
 
 // POST: Execute the action
 export async function POST(request: Request) {
+  // CSRF check
+  const originError = validateOrigin(request);
+  if (originError) return originError;
+
   const formData = await request.formData();
   const token = formData.get("token") as string;
   const decision = formData.get("decision") as string;
@@ -130,8 +149,13 @@ export async function POST(request: Request) {
     return brandedPage("Link Expired", "This action link has expired or is invalid.", 410);
   }
 
+  // Check token expiry
+  if (task.token_expires && new Date(task.token_expires as string) < new Date()) {
+    return brandedPage("Link Expired", "This action link has expired (24h). Please use the admin dashboard instead.", 410);
+  }
+
   if (task.owner_decision) {
-    return brandedPage("Already Decided", `This task was already <strong>${task.owner_decision}</strong>. No further action needed.`, 200);
+    return brandedPage("Already Decided", `This task was already <strong>${escapeHtml(String(task.owner_decision))}</strong>. No further action needed.`, 200);
   }
 
   try {

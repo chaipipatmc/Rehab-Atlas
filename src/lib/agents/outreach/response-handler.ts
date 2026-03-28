@@ -5,6 +5,7 @@
  * If center agrees → transitions to terms_agreed.
  */
 
+import crypto from "crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
@@ -338,7 +339,7 @@ async function autoOnboardPartner(
   const nameMatch = replyFromEmail.match(/^([^<]+)</);
   const contactName = nameMatch ? nameMatch[1].trim() : contactEmail.split("@")[0];
 
-  const tempPassword = "Welcome2RehabAtlas!";
+  const tempPassword = crypto.randomBytes(12).toString("base64url");
 
   // Verify center exists before creating account
   const { data: centerCheck } = await admin

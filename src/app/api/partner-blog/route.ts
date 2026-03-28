@@ -3,8 +3,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { sendBlogSubmissionNotification } from "@/lib/email/send";
+import { validateOrigin } from "@/lib/csrf";
 
 export async function POST(request: Request) {
+  const originError = validateOrigin(request);
+  if (originError) return originError;
+
   try {
     const body = await request.json();
     const { title, slug, content, meta_description, center_id, center_name, author_name, is_draft } = body;
@@ -64,7 +68,8 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("Partner blog insert error:", error);
+      return NextResponse.json({ error: "Failed to save article" }, { status: 500 });
     }
 
     // Send notification email only when submitting for review (not saving draft)

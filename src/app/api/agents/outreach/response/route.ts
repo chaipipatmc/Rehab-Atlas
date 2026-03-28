@@ -11,34 +11,12 @@ import { processInboundReplies, processThreadReply } from "@/lib/agents/outreach
 
 // POST: Handle Gmail push notification or trigger manual scan
 export async function POST(request: Request) {
+  const CRON_SECRET = process.env.CRON_SECRET;
+  const authHeader = request.headers.get("authorization");
+  const isCron = CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
   const isWebhook = verifyWebhookSecret(request);
 
-  if (!isWebhook) {
-    // Check for Google Pub/Sub push
-    const contentType = request.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      const body = await request.json();
-
-      // Google Pub/Sub format
-      if (body.message?.data) {
-        const enabled = await isAgentEnabled("outreach_response");
-        if (!enabled) return NextResponse.json({ skipped: true });
-
-        // Pub/Sub sends a notification, we need to scan for new replies
-        const stats = await processInboundReplies();
-        return NextResponse.json({ success: true, stats });
-      }
-
-      // Direct thread notification
-      if (body.thread_id) {
-        const enabled = await isAgentEnabled("outreach_response");
-        if (!enabled) return NextResponse.json({ skipped: true });
-
-        await processThreadReply(body.thread_id);
-        return NextResponse.json({ success: true });
-      }
-    }
-
+  if (!isCron && !isWebhook) {
     // Admin manual trigger
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();

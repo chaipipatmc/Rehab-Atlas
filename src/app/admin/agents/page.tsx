@@ -27,6 +27,7 @@ interface AgentConfig {
   content_creator: boolean;
   content_scheduler: boolean;
   content_planner: boolean;
+  content_auto_approve: boolean;
 }
 
 interface AgentTaskRow {

@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateOrigin } from "@/lib/csrf";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const csrfError = validateOrigin(request);
   if (csrfError) return csrfError;
+
+  // Rate limit: 10 subscriptions per hour per IP
+  const ip = getClientIp(request);
+  const rl = rateLimit(`newsletter:${ip}`, { limit: 10, windowSeconds: 3600 });
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
+    );
+  }
 
   try {
     const { email, source } = await request.json();

@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { validateOrigin } from "@/lib/csrf";
 
 export async function PATCH(request: Request) {
+  const originError = validateOrigin(request);
+  if (originError) return originError;
+
   try {
     const cookieStore = await cookies();
     const supabaseAuth = createServerClient(
@@ -85,6 +89,9 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const deleteOriginError = validateOrigin(request);
+  if (deleteOriginError) return deleteOriginError;
+
   try {
     const cookieStore = await cookies();
     const supabaseAuth = createServerClient(

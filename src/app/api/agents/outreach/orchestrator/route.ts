@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Orchestrator error:", err);
-    return NextResponse.json({ error: "Orchestrator failed", details: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Orchestrator failed" }, { status: 500 });
   }
 }
 

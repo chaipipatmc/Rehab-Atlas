@@ -13,34 +13,41 @@ export default async function PartnerDashboard() {
     .eq("id", user!.id)
     .single();
 
+  if (!profile?.center_id) {
+    const { redirect } = await import("next/navigation");
+    return redirect("/partner/join");
+  }
+
+  const centerId = profile.center_id;
+
   const { data: center } = await supabase
     .from("centers")
     .select("*")
-    .eq("id", profile!.center_id!)
+    .eq("id", centerId)
     .single();
 
   const { count: photoCount } = await supabase
     .from("center_photos")
     .select("*", { count: "exact", head: true })
-    .eq("center_id", profile!.center_id!);
+    .eq("center_id", centerId);
 
   const { count: pendingCount } = await supabase
     .from("center_edit_requests")
     .select("*", { count: "exact", head: true })
-    .eq("center_id", profile!.center_id!)
+    .eq("center_id", centerId)
     .eq("status", "pending");
 
   const { count: totalEdits } = await supabase
     .from("center_edit_requests")
     .select("*", { count: "exact", head: true })
-    .eq("center_id", profile!.center_id!);
+    .eq("center_id", centerId);
 
   // Article counts (use admin client to bypass RLS on pages table)
   const admin = createAdminClient();
   const { data: articles } = await admin
     .from("pages")
     .select("status")
-    .eq("author_center_id", profile!.center_id!)
+    .eq("author_center_id", centerId)
     .eq("author_type", "partner");
 
   const articlePublished = (articles || []).filter((a) => a.status === "published").length;
@@ -51,7 +58,7 @@ export default async function PartnerDashboard() {
   const { data: analyticsAll } = await admin
     .from("center_analytics")
     .select("profile_views, card_clicks, inquiry_clicks")
-    .eq("center_id", profile!.center_id!);
+    .eq("center_id", centerId);
 
   const totalViews = (analyticsAll || []).reduce((sum, r) => sum + (r.profile_views || 0), 0);
   const totalClicks = (analyticsAll || []).reduce((sum, r) => sum + (r.card_clicks || 0), 0);
@@ -62,7 +69,7 @@ export default async function PartnerDashboard() {
   const { data: analytics30d } = await admin
     .from("center_analytics")
     .select("profile_views, card_clicks")
-    .eq("center_id", profile!.center_id!)
+    .eq("center_id", centerId)
     .gte("event_date", thirtyDaysAgo.toISOString().split("T")[0]);
 
   const views30d = (analytics30d || []).reduce((sum, r) => sum + (r.profile_views || 0), 0);
@@ -81,7 +88,7 @@ export default async function PartnerDashboard() {
   const { data: currentMonthBlogs } = await admin
     .from("pages")
     .select("id")
-    .eq("author_center_id", profile!.center_id!)
+    .eq("author_center_id", centerId)
     .eq("author_type", "partner")
     .eq("status", "published")
     .gte("created_at", startOfMonth)
@@ -104,7 +111,7 @@ export default async function PartnerDashboard() {
   const { data: lastMonthBlogs } = await admin
     .from("pages")
     .select("id")
-    .eq("author_center_id", profile!.center_id!)
+    .eq("author_center_id", centerId)
     .eq("author_type", "partner")
     .eq("status", "published")
     .gte("created_at", startOfLastMonth)

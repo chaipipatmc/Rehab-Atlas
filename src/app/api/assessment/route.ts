@@ -87,7 +87,10 @@ export async function POST(request: Request) {
 
     // Generate signed session ID
     const cookieStore = await cookies();
-    const hmacKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "fallback-key";
+    const hmacKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!hmacKey) {
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
     let sessionId = cookieStore.get("assessment_session")?.value;
 
     // Verify existing session signature
