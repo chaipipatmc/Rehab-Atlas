@@ -131,7 +131,12 @@ export default async function AdminDashboard() {
     <div>
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-headline-lg font-semibold text-foreground">System Overview</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-headline-lg font-semibold text-foreground">System Overview</h1>
+          <p className="text-[10px] text-muted-foreground">
+            Last updated: {new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+          </p>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Welcome back. Here&apos;s what&apos;s happening across Rehab-Atlas.
         </p>

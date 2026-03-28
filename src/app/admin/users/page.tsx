@@ -17,6 +17,8 @@ interface Profile {
   role: string;
   center_id: string | null;
   created_at: string;
+  last_login: string | null;
+  login_count: number | null;
 }
 
 interface CenterOption {
@@ -186,6 +188,7 @@ export default function AdminUsersPage() {
               <th className="text-left px-6 py-3 font-medium">Role</th>
               <th className="text-left px-6 py-3 font-medium">Linked Center</th>
               <th className="text-left px-6 py-3 font-medium">Joined</th>
+              <th className="text-left px-6 py-3 font-medium">Last Login</th>
               <th className="text-left px-6 py-3 font-medium">Actions</th>
             </tr>
           </thead>
@@ -219,6 +222,16 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="px-6 py-4 text-xs text-muted-foreground">
                   {new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </td>
+                <td className="px-6 py-4 text-xs text-muted-foreground">
+                  {profile.last_login ? (
+                    <div>
+                      <p>{new Date(profile.last_login).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                      {profile.login_count ? (
+                        <p className="text-[10px] text-muted-foreground/70">{profile.login_count} login{profile.login_count !== 1 ? "s" : ""}</p>
+                      ) : null}
+                    </div>
+                  ) : "Never"}
                 </td>
                 <td className="px-6 py-4">
                   {editingUser === profile.id ? (

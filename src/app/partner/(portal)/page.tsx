@@ -129,7 +129,12 @@ export default async function PartnerDashboard() {
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-headline-lg font-semibold text-foreground">{center?.name}</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-headline-lg font-semibold text-foreground">{center?.name}</h1>
+            <p className="text-[10px] text-muted-foreground">
+              Last updated: {new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+            </p>
+          </div>
           <div className="flex items-center gap-3 mt-1">
             <span className={`text-[10px] uppercase tracking-wider font-medium rounded-full px-2 py-0.5 ${
               center?.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
