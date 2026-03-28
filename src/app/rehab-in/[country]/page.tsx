@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { CenterCard } from "@/components/centers/center-card";
-import { BreadcrumbJsonLd } from "@/components/shared/json-ld";
+import { BreadcrumbJsonLd, MedicalWebPageJsonLd } from "@/components/shared/json-ld";
 import { Button } from "@/components/ui/button";
 import {
   MapPin,
@@ -243,6 +243,11 @@ export default async function CountryRehabPage({ params }: PageProps) {
             url: `${BASE_URL}/rehab-in/${slug}`,
           },
         ]}
+      />
+      <MedicalWebPageJsonLd
+        title={`Rehabilitation Centers in ${countryData.name}`}
+        description={countryData.description}
+        url={`${BASE_URL}/rehab-in/${slug}`}
       />
 
       {/* Hero */}

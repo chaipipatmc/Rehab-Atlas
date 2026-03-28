@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { CenterCard } from "@/components/centers/center-card";
-import { BreadcrumbJsonLd } from "@/components/shared/json-ld";
+import { BreadcrumbJsonLd, MedicalWebPageJsonLd } from "@/components/shared/json-ld";
 import { ArrowRight, BookOpen, Search } from "lucide-react";
 import type { Center, CenterPhoto } from "@/types/center";
 
@@ -235,6 +235,11 @@ export default async function ConditionPage({
           { name: "Treatment Conditions", url: `${BASE_URL}/rehab` },
           { name: data.title, url: `${BASE_URL}/rehab/${condition}` },
         ]}
+      />
+      <MedicalWebPageJsonLd
+        title={data.title}
+        description={data.description}
+        url={`${BASE_URL}/rehab/${condition}`}
       />
 
       {/* Hero */}
