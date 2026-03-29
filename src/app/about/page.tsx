@@ -82,33 +82,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Founder Story */}
-      <section className="py-16 md:py-20 bg-surface-bright">
-        <div className="container mx-auto px-4 sm:px-6 max-w-3xl">
-          <div className="bg-surface-container-lowest rounded-2xl p-8 md:p-10 shadow-ambient">
-            <p className="text-xs uppercase tracking-widest text-primary font-medium mb-4">Why I Built This</p>
-            <h2 className="text-headline-md font-serif font-semibold text-foreground">A Personal Note from Our Founder</h2>
-            <div className="mt-5 space-y-4 text-sm text-muted-foreground leading-relaxed">
-              <p>
-                When someone close to me needed help with addiction, I realized how broken the search process was. There were hundreds of rehab centers online, but no way to tell which ones were legitimate, which ones actually helped people, and which ones were just marketing. The confusion and urgency made a difficult time even harder.
-              </p>
-              <p>
-                That experience stayed with me. I started Rehab-Atlas because I believe that when someone finally reaches out for help — often one of the hardest decisions of their life — they deserve a clear, honest, and compassionate guide. Not a sales funnel.
-              </p>
-              <p>
-                We are a small, early-stage team. We do not pretend to have all the answers, but we are committed to building something genuinely useful: a platform where quality centers are easy to find, where information is transparent, and where every person who reaches out is treated with dignity.
-              </p>
-              <p>
-                If Rehab-Atlas can help even one person find the right center at the right time, then this work is worth it.
-              </p>
-            </div>
-            <p className="mt-6 text-sm font-semibold text-foreground">
-              Chaipipat M.
-            </p>
-            <p className="text-xs text-muted-foreground">Founder, Rehab-Atlas</p>
-          </div>
-        </div>
-      </section>
+      {/* Founder Story — hidden for now, will publish later */}
 
       {/* Image break */}
       <section className="relative h-64 md:h-80 overflow-hidden">
