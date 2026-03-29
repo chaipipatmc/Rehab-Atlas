@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Shield } from "lucide-react";
+import { MapPin, Star, Shield, Info } from "lucide-react";
 import type { Center, CenterPhoto } from "@/types/center";
 import { TrackingLink } from "./tracking-link";
 
@@ -26,14 +26,19 @@ export function CenterCard({ center }: CenterCardProps) {
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        {center.verified_profile && (
-          <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3">
+          {center.verified_profile && !(center as unknown as Record<string, unknown>).is_unclaimed ? (
             <span className="inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs text-foreground rounded-full px-2.5 py-1">
               <Shield className="h-3 w-3 text-primary" />
               Verified
             </span>
-          </div>
-        )}
+          ) : (center as unknown as Record<string, unknown>).is_unclaimed ? (
+            <span className="inline-flex items-center gap-1 bg-amber-50/90 backdrop-blur-sm text-xs text-amber-700 rounded-full px-2.5 py-1">
+              <Info className="h-3 w-3" />
+              Public listing
+            </span>
+          ) : null}
+        </div>
         {center.rating && (
           <div className="absolute top-3 right-3">
             <span className="inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-medium text-foreground rounded-full px-2.5 py-1">

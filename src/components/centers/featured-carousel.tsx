@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Shield, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { Shield, ArrowRight, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface FeaturedCenter {
@@ -14,6 +14,7 @@ interface FeaturedCenter {
   country: string;
   short_description: string | null;
   verified_profile: boolean;
+  is_unclaimed?: boolean | null;
   photos: Array<{ url: string; alt_text: string | null }>;
 }
 
@@ -79,14 +80,19 @@ export function FeaturedCarousel({ centers }: FeaturedCarouselProps) {
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          {mainCenter.verified_profile && (
-            <div className="absolute top-4 left-4">
+          <div className="absolute top-4 left-4">
+            {mainCenter.verified_profile && !mainCenter.is_unclaimed ? (
               <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white text-xs rounded-full px-3 py-1">
                 <Shield className="h-3 w-3" />
                 Verified Center
               </span>
-            </div>
-          )}
+            ) : mainCenter.is_unclaimed ? (
+              <span className="inline-flex items-center gap-1.5 bg-amber-500/20 backdrop-blur-sm text-white text-xs rounded-full px-3 py-1">
+                <Info className="h-3 w-3" />
+                Public listing
+              </span>
+            ) : null}
+          </div>
           <div className="absolute bottom-4 md:bottom-6 left-4 md:left-6 right-4 md:right-6 text-white">
             <h3 className="text-headline-sm md:text-headline-md font-semibold">{mainCenter.name}</h3>
             <p className="mt-1 text-xs md:text-sm text-white/80">
