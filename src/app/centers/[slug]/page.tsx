@@ -262,6 +262,7 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                 verifiedProfile={typedCenter.verified_profile}
                 trustedPartner={typedCenter.trusted_partner}
                 isSponsored={typedCenter.is_sponsored}
+                isUnclaimed={(typedCenter as unknown as Record<string, unknown>).is_unclaimed as boolean}
               />
             </div>
 
