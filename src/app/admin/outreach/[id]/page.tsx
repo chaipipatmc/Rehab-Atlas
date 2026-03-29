@@ -267,9 +267,17 @@ export default function OutreachDetailPage() {
               )}
             </div>
           </div>
-          <Badge className={`text-sm ${pipeline.stage === "active" ? "bg-emerald-100 text-emerald-800" : pipeline.stage === "declined" ? "bg-red-100 text-red-700" : "bg-primary/10 text-primary"}`}>
-            {STAGE_LABELS[pipeline.stage] || pipeline.stage}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Link href={`/admin/centers/${pipeline.center_id}`}>
+              <Button variant="outline" size="sm" className="rounded-full ghost-border border-0">
+                <Pencil className="mr-1 h-3 w-3" />
+                Edit Center
+              </Button>
+            </Link>
+            <Badge className={`text-sm ${pipeline.stage === "active" ? "bg-emerald-100 text-emerald-800" : pipeline.stage === "declined" ? "bg-red-100 text-red-700" : "bg-primary/10 text-primary"}`}>
+              {STAGE_LABELS[pipeline.stage] || pipeline.stage}
+            </Badge>
+          </div>
         </div>
       </div>
 

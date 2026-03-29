@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Eye, Trash2, ExternalLink, CheckCircle, X, Plus } from "lucide-react";
+import { Save, ArrowLeft, Eye, Trash2, ExternalLink, CheckCircle, X, Plus, MessageSquare, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 
 const SUGGESTED_TAGS = [
@@ -35,6 +35,9 @@ export default function AdminContentEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [requestingRewrite, setRequestingRewrite] = useState(false);
 
 
   useEffect(() => {
@@ -136,6 +139,43 @@ export default function AdminContentEditPage() {
       toast.success("Deleted");
       router.push("/admin/content");
     }
+  }
+
+  async function handleRequestRewrite() {
+    if (!page || !feedbackText.trim()) {
+      toast.error("Please write feedback before requesting a rewrite.");
+      return;
+    }
+    setRequestingRewrite(true);
+
+    const timestamp = new Date().toLocaleDateString("en-US", {
+      month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+    const feedbackBlock = `> **Admin Feedback (${timestamp}):** ${feedbackText.trim()}\n\n`;
+    const currentContent = (page.content as string) || "";
+    // Prepend feedback to content so the content creator agent or editor can see it
+    const updatedContent = feedbackBlock + currentContent.replace(/^(> \*\*Admin Feedback.*?\n\n)+/, "");
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("pages")
+      .update({
+        status: "draft",
+        content: updatedContent,
+      })
+      .eq("id", params.id);
+
+    if (error) {
+      toast.error("Failed to request rewrite: " + error.message);
+    } else {
+      update("status", "draft");
+      update("content", updatedContent);
+      setFeedbackText("");
+      setFeedbackOpen(false);
+      toast.success("Rewrite requested — article set back to draft with feedback.");
+      router.refresh();
+    }
+    setRequestingRewrite(false);
   }
 
   if (loading) return <div className="animate-pulse h-96 bg-surface-container rounded-2xl" />;
@@ -271,6 +311,42 @@ export default function AdminContentEditPage() {
 Use the toolbar to format text. Click the Upload button or paste/drag images directly into the editor."
             minHeight="450px"
           />
+        </div>
+
+        {/* Feedback / Request Rewrite */}
+        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient overflow-hidden">
+          <button
+            onClick={() => setFeedbackOpen(!feedbackOpen)}
+            className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-surface-container-low/50 transition-colors duration-200"
+          >
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-amber-600" />
+              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Feedback / Request Rewrite</h2>
+            </div>
+            {feedbackOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+          {feedbackOpen && (
+            <div className="px-6 pb-6 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Write feedback about what needs to change. Clicking &quot;Request Rewrite&quot; will set the article back to draft and prepend your feedback to the content.
+              </p>
+              <Textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="e.g. Make the introduction more engaging, add statistics about recovery rates, expand the section on holistic therapy..."
+                className="bg-surface-container-low border-0 rounded-xl ghost-border"
+                rows={3}
+              />
+              <Button
+                onClick={handleRequestRewrite}
+                disabled={requestingRewrite || !feedbackText.trim()}
+                className="rounded-full bg-amber-600 text-white hover:bg-amber-700 transition-colors duration-300"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                {requestingRewrite ? "Requesting..." : "Request Rewrite"}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* SEO */}
