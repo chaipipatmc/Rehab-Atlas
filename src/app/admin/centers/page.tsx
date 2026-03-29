@@ -67,6 +67,17 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
 
   const { data: centers, count } = await query.range(offset, offset + PAGE_SIZE - 1);
 
+  // Fetch pipeline stages for these centers
+  const centerIds = (centers || []).map((c) => c.id);
+  const pipelineMap = new Map<string, string>();
+  if (centerIds.length > 0) {
+    const { data: pipelines } = await supabase
+      .from("outreach_pipeline")
+      .select("center_id, stage")
+      .in("center_id", centerIds);
+    (pipelines || []).forEach((p) => pipelineMap.set(p.center_id, p.stage as string));
+  }
+
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
   const buildPageUrl = (page: number, overrides?: Record<string, string>) => {
@@ -164,6 +175,7 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
               <TableHead>Name</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Outreach</TableHead>
               <TableHead>Badges</TableHead>
               <TableHead></TableHead>
             </TableRow>
@@ -183,6 +195,34 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
                   >
                     {center.status}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const stage = pipelineMap.get(center.id);
+                    if (!stage) return <span className="text-xs text-muted-foreground">—</span>;
+                    const stageStyles: Record<string, string> = {
+                      new: "bg-gray-100 text-gray-600",
+                      researching: "bg-blue-50 text-blue-600",
+                      research_complete: "bg-blue-50 text-blue-600",
+                      outreach_drafted: "bg-amber-50 text-amber-700",
+                      outreach_sent: "bg-sky-50 text-sky-700",
+                      followed_up: "bg-sky-50 text-sky-700",
+                      responded: "bg-emerald-50 text-emerald-700",
+                      negotiating: "bg-amber-50 text-amber-700",
+                      terms_agreed: "bg-emerald-50 text-emerald-700",
+                      agreement_drafted: "bg-violet-50 text-violet-700",
+                      agreement_sent: "bg-violet-50 text-violet-700",
+                      active: "bg-emerald-100 text-emerald-800",
+                      declined: "bg-red-50 text-red-600",
+                      stalled: "bg-gray-100 text-gray-500",
+                    };
+                    const label = stage.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+                    return (
+                      <span className={`text-[10px] font-medium rounded-full px-2 py-0.5 ${stageStyles[stage] || "bg-gray-100 text-gray-600"}`}>
+                        {label}
+                      </span>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
