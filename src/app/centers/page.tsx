@@ -114,6 +114,9 @@ export default async function CentersPage({ searchParams }: PageProps) {
   if (params.treatment_focus) {
     query = query.contains("treatment_focus", [params.treatment_focus]);
   }
+  if (params.condition) {
+    query = query.contains("conditions", [params.condition]);
+  }
   if (params.setting_type) {
     query = query.eq("setting_type", params.setting_type);
   }

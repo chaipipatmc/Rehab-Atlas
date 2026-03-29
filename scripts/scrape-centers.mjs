@@ -76,24 +76,31 @@ async function scrapeCenter(center) {
   const homeHtml = await fetchPageRaw(baseUrl);
   const homeText = stripHtml(homeHtml).slice(0, 3000);
 
-  // 2. Find subpage links
+  // 2. Find subpage links — separate facility/gallery pages from content pages
   const allLinks = extractLinks(homeHtml, host);
-  const patterns = [/about/i, /team/i, /staff/i, /program/i, /treatment/i, /service/i, /contact/i, /admission/i, /approach/i, /therap/i, /special/i, /faq/i, /pric/i, /accommodation/i, /facilit/i, /our-/i, /what-we/i, /how-we/i];
+  const contentPatterns = [/about/i, /team/i, /staff/i, /program/i, /treatment/i, /service/i, /contact/i, /admission/i, /approach/i, /therap/i, /special/i, /faq/i, /pric/i, /our-/i, /what-we/i, /how-we/i];
+  const facilityPatterns = [/gallery/i, /photo/i, /facilit/i, /accommodation/i, /campus/i, /virtual-tour/i, /tour/i, /rooms/i, /amenities/i];
+  // Skip blog/article links for photos
+  const blogPatterns = [/blog/i, /article/i, /news/i, /post/i, /story/i, /stories/i];
+
   const subpages = [];
+  const facilityPages = [];
   for (const link of allLinks) {
-    if (subpages.length >= 6) break;
     const full = link.startsWith("/") ? `${baseUrl}${link}` : link;
     if (!full.startsWith("http")) continue;
-    if (patterns.some((p) => p.test(link)) && !subpages.includes(full)) {
+    if (blogPatterns.some((p) => p.test(link))) continue; // Skip blog pages
+    if (facilityPatterns.some((p) => p.test(link)) && !facilityPages.includes(full)) {
+      facilityPages.push(full);
+    } else if (contentPatterns.some((p) => p.test(link)) && !subpages.includes(full) && subpages.length < 6) {
       subpages.push(full);
     }
   }
 
-  // 3. Scrape subpages
+  // 3. Scrape subpages (content for profile data)
   const sections = [`[HOMEPAGE]\n${homeText}`];
   const allHtml = [homeHtml];
 
-  for (const url of subpages) {
+  for (const url of [...facilityPages.slice(0, 3), ...subpages]) {
     const html = await fetchPageRaw(url);
     if (html) {
       allHtml.push(html);
@@ -103,12 +110,29 @@ async function scrapeCenter(center) {
     }
   }
 
-  // 4. Extract images from ALL pages
-  const allImages = [];
-  for (const html of allHtml) {
-    allImages.push(...extractImages(html));
+  // 4. Extract images — prioritize facility/gallery pages, skip blog images
+  const facilityImages = [];
+  const otherImages = [];
+
+  // First: images from facility/gallery pages (highest quality facility photos)
+  for (const url of facilityPages.slice(0, 3)) {
+    const html = await fetchPageRaw(url);
+    if (html) facilityImages.push(...extractImages(html));
   }
-  const uniqueImages = [...new Set(allImages)];
+
+  // Then: images from homepage (often has hero/facility shots)
+  otherImages.push(...extractImages(homeHtml));
+
+  // Deduplicate, facility images first
+  const seenUrls = new Set();
+  const prioritizedImages = [];
+  for (const img of [...facilityImages, ...otherImages]) {
+    if (!seenUrls.has(img)) {
+      seenUrls.add(img);
+      prioritizedImages.push(img);
+    }
+  }
+  const uniqueImages = prioritizedImages;
 
   return {
     content: sections.join("\n\n").slice(0, 12000),

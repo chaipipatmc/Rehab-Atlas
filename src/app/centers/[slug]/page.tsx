@@ -24,6 +24,7 @@ import type { Center, CenterFaq } from "@/types/center";
 import { BreadcrumbJsonLd, FAQJsonLd, LocalBusinessJsonLd } from "@/components/shared/json-ld";
 import { ViewTracker } from "@/components/shared/view-tracker";
 import { SaveButton } from "@/components/centers/save-button";
+import { PhotoGallery } from "@/components/centers/photo-gallery";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -285,37 +286,10 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
 
       {/* Image Gallery */}
       {photos && photos.length > 0 && (
-        <div className="container mx-auto px-4 sm:px-6 mb-8 md:mb-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 h-48 md:h-80">
-            {/* Main large image */}
-            <div className="col-span-2 row-span-2 rounded-2xl bg-surface-container overflow-hidden relative">
-              <img
-                src={photos[0].url}
-                alt={photos[0].alt_text || typedCenter.name}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            </div>
-            {/* Secondary images */}
-            {photos.slice(1, 5).map((photo, i) => (
-              <div key={photo.id} className="rounded-2xl bg-surface-container overflow-hidden relative">
-                <img
-                  src={photo.url}
-                  alt={photo.alt_text || `${typedCenter.name} photo ${i + 2}`}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                {i === 3 && photos.length > 5 && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">+{photos.length - 5} more</span>
-                  </div>
-                )}
-              </div>
-            ))}
-            {/* Fill empty slots if less than 4 secondary images */}
-            {photos.length < 5 && Array.from({ length: 4 - (photos.length - 1) }).map((_, i) => (
-              <div key={`empty-${i}`} className="rounded-2xl bg-surface-container overflow-hidden" />
-            ))}
-          </div>
-        </div>
+        <PhotoGallery
+          photos={(photos as Array<{ id: string; url: string; alt_text: string | null }>)}
+          centerName={typedCenter.name}
+        />
       )}
 
 <div className="container mx-auto px-4 sm:px-6">

@@ -15,6 +15,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   TREATMENT_FOCUS_OPTIONS,
+  CONDITION_OPTIONS,
   SETTING_TYPE_OPTIONS,
   INSURANCE_OPTIONS,
 } from "@/lib/constants";
@@ -114,6 +115,27 @@ export function CenterFilters({ countries }: CenterFiltersProps) {
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             {TREATMENT_FOCUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Conditions */}
+      <div>
+        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Condition</Label>
+        <Select
+          value={searchParams.get("condition") || "all"}
+          onValueChange={(v) => updateFilter("condition", v)}
+        >
+          <SelectTrigger className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border">
+            <SelectValue placeholder="All conditions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Conditions</SelectItem>
+            {CONDITION_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>

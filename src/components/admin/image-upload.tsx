@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Loader2, Star, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ImageUploadProps {
   onUpload: (url: string) => void;
@@ -200,6 +200,22 @@ export function MultiImageUpload({
     onChange(updated);
   }
 
+  function setPrimary(index: number) {
+    if (index === 0) return;
+    const updated = [...images];
+    const [item] = updated.splice(index, 1);
+    updated.unshift(item);
+    onChange(updated);
+  }
+
+  function moveImage(index: number, direction: "left" | "right") {
+    const newIndex = direction === "left" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= images.length) return;
+    const updated = [...images];
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+    onChange(updated);
+  }
+
   return (
     <div>
       {/* Image Grid */}
@@ -213,6 +229,38 @@ export function MultiImageUpload({
             >
               <X className="h-3 w-3" />
             </button>
+            <button
+              onClick={() => setPrimary(i)}
+              title={i === 0 ? "Primary photo" : "Set as primary"}
+              className={`absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
+                i === 0
+                  ? "bg-primary text-white"
+                  : "bg-black/50 text-white/70 opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-white"
+              }`}
+            >
+              <Star className={`h-3 w-3 ${i === 0 ? "fill-current" : ""}`} />
+            </button>
+            {/* Move left/right buttons */}
+            <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {i > 0 && (
+                <button
+                  onClick={() => moveImage(i, "left")}
+                  className="w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                  title="Move left"
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </button>
+              )}
+              {i < images.length - 1 && (
+                <button
+                  onClick={() => moveImage(i, "right")}
+                  className="w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                  title="Move right"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </button>
+              )}
+            </div>
             {i === 0 && (
               <span className="absolute bottom-2 left-2 text-[9px] uppercase tracking-wider bg-primary text-white rounded-full px-2 py-0.5">
                 Primary
@@ -250,7 +298,7 @@ export function MultiImageUpload({
       />
 
       <p className="text-[10px] text-muted-foreground">
-        {images.length}/{maxImages} photos. First photo is the primary image.
+        {images.length}/{maxImages} photos. Click the star icon to set a photo as primary.
       </p>
     </div>
   );
