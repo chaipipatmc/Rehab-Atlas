@@ -148,6 +148,8 @@ export default function OutreachDashboard() {
     const params = new URLSearchParams();
     if (stageFilter !== "all") params.set("stage", stageFilter);
     if (search) params.set("search", search);
+    if (unclaimedFilter !== "all") params.set("unclaimed", unclaimedFilter);
+    if (locationFilter !== "all") params.set("country", locationFilter);
     params.set("page", String(page));
 
     let pipelineData: PipelineEntry[] = [];
@@ -221,7 +223,7 @@ export default function OutreachDashboard() {
     }
 
     setLoading(false);
-  }, [stageFilter, search, page]);
+  }, [stageFilter, search, page, unclaimedFilter, locationFilter]);
 
   useEffect(() => {
     loadData();
@@ -485,12 +487,7 @@ export default function OutreachDashboard() {
             </tr>
           </thead>
           <tbody>
-            {pipelines.filter((p) => {
-              if (locationFilter !== "all" && p.centers?.country !== locationFilter) return false;
-              if (unclaimedFilter === "unclaimed" && !p.centers?.is_unclaimed) return false;
-              if (unclaimedFilter === "claimed" && p.centers?.is_unclaimed) return false;
-              return true;
-            }).map((p) => {
+            {pipelines.map((p) => {
               const stageInfo = STAGE_CONFIG[p.stage] || STAGE_CONFIG.new;
               const StageIcon = stageInfo.icon;
               const days = daysInStage(p.updated_at);

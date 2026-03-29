@@ -20,6 +20,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const stage = url.searchParams.get("stage");
   const search = url.searchParams.get("search");
+  const unclaimed = url.searchParams.get("unclaimed");
+  const country = url.searchParams.get("country");
   const page = parseInt(url.searchParams.get("page") || "1", 10);
   const limit = 20;
   const offset = (page - 1) * limit;
@@ -37,6 +39,16 @@ export async function GET(request: Request) {
 
   if (search) {
     query = query.ilike("centers.name", `%${search}%`);
+  }
+
+  if (unclaimed === "unclaimed") {
+    query = query.eq("centers.is_unclaimed", true);
+  } else if (unclaimed === "claimed") {
+    query = query.or("centers.is_unclaimed.is.null,centers.is_unclaimed.eq.false");
+  }
+
+  if (country && country !== "all") {
+    query = query.eq("centers.country", country);
   }
 
   const { data, count, error } = await query;
