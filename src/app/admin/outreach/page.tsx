@@ -49,6 +49,7 @@ interface PipelineEntry {
     accreditation: string | null;
     status: string | null;
     updated_at: string | null;
+    is_unclaimed: boolean | null;
   };
 }
 
@@ -136,6 +137,8 @@ export default function OutreachDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [researching, setResearching] = useState(false);
   const [locationFilter, setLocationFilter] = useState("all");
+  const [unclaimedFilter, setUnclaimedFilter] = useState("all");
+  const [unclaimedCount, setUnclaimedCount] = useState(0);
   const [countries, setCountries] = useState<string[]>([]);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [draftTasks, setDraftTasks] = useState<Record<string, AgentTask>>({});
@@ -177,6 +180,13 @@ export default function OutreachDashboard() {
       if (c?.country) countrySet.add(c.country);
     });
     setCountries(Array.from(countrySet).sort());
+
+    // Count unclaimed listings
+    const { count: ucCount } = await supabase
+      .from("centers")
+      .select("id", { count: "exact", head: true })
+      .eq("is_unclaimed", true);
+    setUnclaimedCount(ucCount || 0);
 
     if (allPipelines) {
       const contactedStages = ["outreach_sent", "followed_up", "responded", "negotiating", "terms_agreed", "agreement_drafted", "agreement_sent", "agreement_signed", "active", "stalled", "declined"];
@@ -445,6 +455,18 @@ export default function OutreachDashboard() {
               ))}
             </select>
           </div>
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <select
+              value={unclaimedFilter}
+              onChange={(e) => { setUnclaimedFilter(e.target.value); setPage(1); }}
+              className="text-sm bg-surface-container-lowest rounded-lg px-2 py-1.5 ghost-border text-foreground"
+            >
+              <option value="all">All Listings</option>
+              <option value="unclaimed">Unclaimed ({unclaimedCount})</option>
+              <option value="claimed">Claimed</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -463,7 +485,12 @@ export default function OutreachDashboard() {
             </tr>
           </thead>
           <tbody>
-            {pipelines.filter((p) => locationFilter === "all" || p.centers?.country === locationFilter).map((p) => {
+            {pipelines.filter((p) => {
+              if (locationFilter !== "all" && p.centers?.country !== locationFilter) return false;
+              if (unclaimedFilter === "unclaimed" && !p.centers?.is_unclaimed) return false;
+              if (unclaimedFilter === "claimed" && p.centers?.is_unclaimed) return false;
+              return true;
+            }).map((p) => {
               const stageInfo = STAGE_CONFIG[p.stage] || STAGE_CONFIG.new;
               const StageIcon = stageInfo.icon;
               const days = daysInStage(p.updated_at);
@@ -537,9 +564,14 @@ export default function OutreachDashboard() {
                     ) : (
                       /* Normal row - center name */
                       <>
-                        <Link href={`/admin/outreach/${p.id}`} className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-                          {p.centers?.name || "Unknown"}
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          <Link href={`/admin/outreach/${p.id}`} className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+                            {p.centers?.name || "Unknown"}
+                          </Link>
+                          {p.centers?.is_unclaimed && (
+                            <span className="text-[9px] font-medium text-amber-600 bg-amber-50 rounded px-1 py-0.5">Unclaimed</span>
+                          )}
+                        </div>
                         {p.centers?.website_url && (
                           <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{p.centers.website_url}</p>
                         )}
