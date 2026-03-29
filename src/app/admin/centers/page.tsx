@@ -13,6 +13,7 @@ import {
 import { Plus, Pencil, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PublishToggle } from "@/components/admin/publish-toggle";
+import { CountrySelect } from "@/components/admin/country-select";
 
 const PAGE_SIZE = 20;
 
@@ -27,24 +28,63 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
   const offset = (currentPage - 1) * PAGE_SIZE;
 
   const search = params.search?.trim() || "";
+  const statusFilter = params.status || "all";
+  const countryFilter = params.country || "all";
+  const claimFilter = params.claim || "all";
+
+  // Fetch distinct countries for filter dropdown
+  const { data: countryRows } = await supabase
+    .from("centers")
+    .select("country")
+    .not("country", "is", null)
+    .order("country");
+  const countries = [...new Set((countryRows || []).map((r) => r.country).filter(Boolean))] as string[];
 
   let query = supabase
     .from("centers")
-    .select("id, name, slug, city, country, status, verified_profile, trusted_partner, referral_eligible", { count: "exact" })
+    .select("id, name, slug, city, country, status, verified_profile, trusted_partner, referral_eligible, is_unclaimed", { count: "exact" })
     .order("name");
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,country.ilike.%${search}%`);
   }
 
+  if (statusFilter === "draft") {
+    query = query.eq("status", "draft");
+  } else if (statusFilter === "published") {
+    query = query.eq("status", "published");
+  }
+
+  if (countryFilter !== "all") {
+    query = query.eq("country", countryFilter);
+  }
+
+  if (claimFilter === "unclaimed") {
+    query = query.eq("is_unclaimed", true);
+  } else if (claimFilter === "claimed") {
+    query = query.or("is_unclaimed.is.null,is_unclaimed.eq.false");
+  }
+
   const { data: centers, count } = await query.range(offset, offset + PAGE_SIZE - 1);
 
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
-  const buildPageUrl = (page: number) => {
+  const buildPageUrl = (page: number, overrides?: Record<string, string>) => {
     const p = new URLSearchParams();
     if (page > 1) p.set("page", String(page));
     if (search) p.set("search", search);
+    if (statusFilter !== "all") p.set("status", statusFilter);
+    if (countryFilter !== "all") p.set("country", countryFilter);
+    if (claimFilter !== "all") p.set("claim", claimFilter);
+    if (overrides) {
+      for (const [k, v] of Object.entries(overrides)) {
+        if (v === "all" || v === "") {
+          p.delete(k);
+        } else {
+          p.set(k, v);
+        }
+      }
+    }
     const qs = p.toString();
     return `/admin/centers${qs ? `?${qs}` : ""}`;
   };
@@ -61,16 +101,61 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
         </Button>
       </div>
 
-      {/* Search */}
-      <form action="/admin/centers" className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          name="search"
-          defaultValue={search}
-          placeholder="Search centers by name, city, country..."
-          className="pl-9 bg-surface-container-lowest border-0 rounded-xl ghost-border"
-        />
-      </form>
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        {/* Search */}
+        <form action="/admin/centers" className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input type="hidden" name="status" value={statusFilter} />
+          <input type="hidden" name="country" value={countryFilter} />
+          <input type="hidden" name="claim" value={claimFilter} />
+          <Input
+            name="search"
+            defaultValue={search}
+            placeholder="Search by name, city, country..."
+            className="pl-9 bg-surface-container-lowest border-0 rounded-xl ghost-border"
+          />
+        </form>
+
+        {/* Status Filter */}
+        <div className="flex items-center gap-1.5">
+          {(["all", "draft", "published"] as const).map((s) => (
+            <Button
+              key={s}
+              variant={statusFilter === s ? "default" : "outline"}
+              size="sm"
+              asChild
+              className="rounded-full text-xs h-8"
+            >
+              <Link href={buildPageUrl(1, { status: s, page: "" })}>
+                {s === "all" ? "All Status" : s.charAt(0).toUpperCase() + s.slice(1)}
+              </Link>
+            </Button>
+          ))}
+        </div>
+
+        {/* Claim Filter */}
+        <div className="flex items-center gap-1.5">
+          {(["all", "unclaimed", "claimed"] as const).map((c) => (
+            <Button
+              key={c}
+              variant={claimFilter === c ? "default" : "outline"}
+              size="sm"
+              asChild
+              className="rounded-full text-xs h-8"
+            >
+              <Link href={buildPageUrl(1, { claim: c, page: "" })}>
+                {c === "all" ? "All Claims" : c.charAt(0).toUpperCase() + c.slice(1)}
+              </Link>
+            </Button>
+          ))}
+        </div>
+
+        {/* Country Filter */}
+        {countries.length > 0 && (
+          <CountrySelect countries={countries} currentValue={countryFilter} />
+        )}
+      </div>
 
       <div className="border rounded-lg">
         <Table>
@@ -100,7 +185,10 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
+                    {center.is_unclaimed && (
+                      <Badge variant="outline" className="text-xs text-amber-700 border-amber-300 bg-amber-50">Unclaimed</Badge>
+                    )}
                     {center.verified_profile && (
                       <Badge variant="outline" className="text-xs">V</Badge>
                     )}

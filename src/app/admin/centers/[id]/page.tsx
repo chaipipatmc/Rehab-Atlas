@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, BookOpen, ExternalLink, ArrowLeft } from "lucide-react";
+import { Save, BookOpen, ExternalLink, ArrowLeft, ShieldCheck, AlertTriangle, Globe, GlobeLock } from "lucide-react";
 import Link from "next/link";
 import { MultiImageUpload } from "@/components/admin/image-upload";
 
@@ -38,6 +38,7 @@ export default function AdminCenterEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [blogStats, setBlogStats] = useState<{ thisMonth: number; lastMonth: number } | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -116,6 +117,51 @@ export default function AdminCenterEditPage() {
     }
   }
 
+  async function handleMarkClaimed() {
+    if (!center) return;
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/admin/centers", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: params.id,
+          center: { is_unclaimed: false, verified_profile: true },
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update claim status");
+      setCenter((prev) => prev ? { ...prev, is_unclaimed: false, verified_profile: true } : prev);
+      toast.success("Center marked as claimed and verified");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function handlePublishToggle() {
+    if (!center) return;
+    const newStatus = center.status === "published" ? "draft" : "published";
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/admin/centers", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: params.id,
+          center: { status: newStatus },
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      setCenter((prev) => prev ? { ...prev, status: newStatus } : prev);
+      toast.success(newStatus === "published" ? "Center published" : "Center unpublished");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update status");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   function update(key: string, value: unknown) {
     setCenter((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
@@ -149,12 +195,55 @@ export default function AdminCenterEditPage() {
               </Link>
             </Button>
           )}
+          {center.status === "draft" && (
+            <Button
+              onClick={handlePublishToggle}
+              disabled={publishing}
+              variant="outline"
+              className="rounded-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+            >
+              <Globe className="mr-2 h-4 w-4" />
+              Publish
+            </Button>
+          )}
+          {center.status === "published" && (
+            <Button
+              onClick={handlePublishToggle}
+              disabled={publishing}
+              variant="outline"
+              className="rounded-full border-amber-200 text-amber-700 hover:bg-amber-50"
+            >
+              <GlobeLock className="mr-2 h-4 w-4" />
+              Unpublish
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={saving} className="rounded-full gradient-primary text-white">
             <Save className="mr-2 h-4 w-4" />
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
+
+      {/* Unclaimed Center Banner */}
+      {!!center.is_unclaimed && (
+        <div className="flex items-center justify-between p-4 rounded-xl bg-amber-50 border border-amber-200 mb-6">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-900">Unclaimed Profile</p>
+              <p className="text-xs text-amber-700">This center has not been claimed by a partner yet. Mark as claimed when the partner signs up and verifies ownership.</p>
+            </div>
+          </div>
+          <Button
+            onClick={handleMarkClaimed}
+            disabled={publishing}
+            className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex-shrink-0"
+          >
+            <ShieldCheck className="mr-2 h-4 w-4" />
+            Mark as Claimed / Verified
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* Basic Info */}
