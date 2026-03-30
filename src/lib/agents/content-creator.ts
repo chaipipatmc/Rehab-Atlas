@@ -335,6 +335,7 @@ async function generateArticle(topic: string, category: string, brief?: string, 
   content: string;
   meta_title: string;
   meta_description: string;
+  image_queries: string[];
   slug: string;
 } | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null;
@@ -388,7 +389,8 @@ Return a JSON object with:
   "content": "full markdown article body (do NOT include the title as H1)",
   "meta_title": "SEO title tag, max 65 characters",
   "meta_description": "SEO meta description, max 155 characters, include CTA",
-  "slug": "url-friendly-slug"
+  "slug": "url-friendly-slug",
+  "image_queries": ["5 specific image search queries for this article - each should find a photo that visually represents a key section of this specific article. Be descriptive and specific to THIS topic, not generic. Example for an article about EMDR therapy: 'therapist guiding patient through EMDR session', 'brain neural pathways healing illustration', 'woman in therapy session peaceful office', 'trauma recovery support group therapy', 'calm meditation mindfulness practice'"]
 }`,
       messages: [
         {
@@ -412,6 +414,7 @@ Return a JSON object with:
       meta_title: (parsed.meta_title || topic).slice(0, 70),
       meta_description: (parsed.meta_description || "").slice(0, 160),
       slug: slugify(parsed.slug || parsed.title || topic),
+      image_queries: Array.isArray(parsed.image_queries) ? parsed.image_queries : [],
     };
   } catch (err) {
     console.error("Article generation failed:", err);
@@ -568,20 +571,28 @@ async function writeOneArticle(
     return false;
   }
 
-  // Determine image search query based on category
-  const imageQueries: Record<string, string> = {
-    "addiction-types": "recovery wellness nature calm",
-    "treatment-types": "therapy wellness healing peaceful",
-    "mental-health": "mental health mindfulness peaceful",
-    "recovery-guides": "sunrise new beginning hope nature",
-    "practical-guides": "planning notebook organized calm",
-    "international-treatment": "travel wellness tropical healing",
-    "family-support": "family support together caring",
-  };
-  const imageQuery = imageQueries[category] || "wellness recovery nature";
+  // Use article-specific image queries from Claude, fall back to topic-based
+  const articleQueries = article.image_queries || [];
+  const images: string[] = [];
 
-  // Search for images (1 featured + up to 4 inline), excluding already-used ones
-  const images = await searchImages(imageQuery, 5, usedImages);
+  // Search with each specific query to get diverse, relevant images
+  if (articleQueries.length > 0) {
+    for (const q of articleQueries.slice(0, 5)) {
+      if (images.length >= 5) break;
+      const found = await searchImages(q, 1, usedImages);
+      if (found.length > 0) {
+        images.push(found[0]);
+        usedImages?.add(found[0]); // Prevent duplicates within same article
+      }
+    }
+  }
+
+  // Fallback: if not enough specific images, use topic-based search
+  if (images.length < 5) {
+    const fallbackQuery = topic.replace(/[^a-zA-Z ]/g, "").slice(0, 60);
+    const fallback = await searchImages(fallbackQuery, 5 - images.length, usedImages);
+    images.push(...fallback);
+  }
   const featuredImage = images[0] || null;
   const inlineImages = images.slice(1);
 
