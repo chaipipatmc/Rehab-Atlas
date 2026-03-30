@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Send, Upload, X, Plus, Trash2, GripVertical,
@@ -55,6 +56,12 @@ const TREATMENT_METHODS = [
   "Neurofeedback", "Biofeedback", "Yoga & Meditation",
 ];
 
+const SUBSTANCE_USE_OPTIONS = [
+  "Alcohol", "Opioids", "Heroin", "Cocaine", "Methamphetamine",
+  "Benzodiazepines", "Prescription Drugs", "Cannabis", "Gambling",
+  "Process Addictions", "Co-Occurring Disorders",
+];
+
 const FACILITY_OPTIONS = [
   "Private Rooms", "Shared Rooms", "Swimming Pool", "Gym/Fitness Center",
   "Meditation Room", "Art Studio", "Gardens/Outdoor Space", "Chef-Prepared Meals",
@@ -99,6 +106,7 @@ export default function PartnerEditPage() {
     "setting_type", "program_length", "languages", "has_detox",
     "clinical_director", "medical_director", "price_min", "price_max",
     "insurance", "accreditation", "occupancy",
+    "substance_use", "review_summary", "review_count",
   ];
 
   useEffect(() => {
@@ -657,6 +665,26 @@ export default function PartnerEditPage() {
                 </div>
               </div>
               <div>
+                <Label className="text-xs text-muted-foreground">Substances Treated</Label>
+                <p className="text-[10px] text-muted-foreground mb-2">Select all substances your center treats</p>
+                <div className="flex flex-wrap gap-2">
+                  {SUBSTANCE_USE_OPTIONS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => toggleArrayItem("substance_use", item)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
+                        ((center.substance_use as string[]) || []).includes(item)
+                          ? "bg-[#45636b] text-white border-[#45636b]"
+                          : "bg-surface-container-low text-muted-foreground border-surface-container-high hover:border-primary/30"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
                 <Label className="text-xs text-muted-foreground">Languages Spoken</Label>
                 <Input
                   value={((center.languages as string[]) || []).join(", ")}
@@ -771,6 +799,38 @@ export default function PartnerEditPage() {
                   className={inputClass}
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">Separate with commas. Leave blank if self-pay only.</p>
+              </div>
+              <Separator className="my-4" />
+              <div>
+                <Label className="text-xs text-muted-foreground font-semibold">Reviews & Ratings</Label>
+                <p className="text-[10px] text-muted-foreground mb-3">Add your Google or third-party review information to display on your profile</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Review Count</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={(center.review_count as number) ?? ""}
+                      onChange={(e) => update("review_count", e.target.value ? parseInt(e.target.value) : null)}
+                      placeholder="e.g., 120"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    {/* spacer for alignment */}
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <Label className="text-xs text-muted-foreground">Review Summary</Label>
+                  <Textarea
+                    value={(center.review_summary as string) || ""}
+                    onChange={(e) => update("review_summary", e.target.value)}
+                    rows={2}
+                    placeholder="e.g., 4.8 stars from 120 Google reviews. Clients praise our caring staff and serene environment."
+                    className={inputClass}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Brief summary of your reviews to display publicly</p>
+                </div>
               </div>
             </>
           )}

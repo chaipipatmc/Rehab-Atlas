@@ -464,6 +464,77 @@ export default function AdminCenterEditPage() {
           </CardContent>
         </Card>
 
+        {/* Treatment & Clinical */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Treatment & Clinical</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ArrayField
+              label="Treatment Focus"
+              value={(center.treatment_focus as string[]) || []}
+              onChange={(v) => update("treatment_focus", v)}
+              placeholder="e.g. Alcohol Addiction, Dual Diagnosis"
+            />
+            <ArrayField
+              label="Conditions Treated"
+              value={(center.conditions as string[]) || []}
+              onChange={(v) => update("conditions", v)}
+              placeholder="e.g. Anxiety, Depression, PTSD"
+            />
+            <ArrayField
+              label="Services"
+              value={(center.services as string[]) || []}
+              onChange={(v) => update("services", v)}
+              placeholder="e.g. Medical Detox, Inpatient/Residential"
+            />
+            <ArrayField
+              label="Treatment Methods"
+              value={(center.treatment_methods as string[]) || []}
+              onChange={(v) => update("treatment_methods", v)}
+              placeholder="e.g. CBT, DBT, EMDR, 12-Step"
+            />
+            <ArrayField
+              label="Substances Treated"
+              value={(center.substance_use as string[]) || []}
+              onChange={(v) => update("substance_use", v)}
+              placeholder="e.g. Alcohol, Opioids, Cocaine"
+            />
+            <ArrayField
+              label="Languages"
+              value={(center.languages as string[]) || []}
+              onChange={(v) => update("languages", v)}
+              placeholder="e.g. English, Spanish, Thai"
+            />
+            <ArrayField
+              label="Accreditation"
+              value={(center.accreditation as string[]) || []}
+              onChange={(v) => update("accreditation", v)}
+              placeholder="e.g. JCAHO, CARF, LegitScript"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Setting Type</Label>
+                <Input
+                  value={(center.setting_type as string) || ""}
+                  onChange={(e) => update("setting_type", e.target.value)}
+                  placeholder="e.g. luxury, residential, outpatient"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Program Length</Label>
+                <Input
+                  value={(center.program_length as string) || ""}
+                  onChange={(e) => update("program_length", e.target.value)}
+                  placeholder="e.g. 30, 60, 90 days"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Separator />
 
         {/* Status & Commercial */}
@@ -802,6 +873,66 @@ export default function AdminCenterEditPage() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function ArrayField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1.5">
+          {value.map((item, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary"
+            >
+              {item}
+              <button
+                type="button"
+                onClick={() => onChange(value.filter((_, idx) => idx !== i))}
+                className="ml-0.5 hover:text-red-500 transition-colors"
+              >
+                &times;
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <Input
+        placeholder={placeholder}
+        className="mt-1.5"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            const input = e.currentTarget;
+            const val = input.value.trim().replace(/,$/, "");
+            if (val && !value.includes(val)) {
+              onChange([...value, val]);
+              input.value = "";
+            }
+          }
+        }}
+        onBlur={(e) => {
+          const val = e.currentTarget.value.trim().replace(/,$/, "");
+          if (val && !value.includes(val)) {
+            onChange([...value, val]);
+            e.currentTarget.value = "";
+          }
+        }}
+      />
+      <p className="text-xs text-muted-foreground mt-1">Press Enter or comma to add. Click &times; to remove.</p>
     </div>
   );
 }
