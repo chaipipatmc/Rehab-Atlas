@@ -46,6 +46,11 @@ function LoginForm() {
       return;
     }
 
+    // Track login (fire and forget)
+    if (signInData.session?.user?.id) {
+      fetch("/api/track-login", { method: "POST" }).catch(() => {});
+    }
+
     // If there's an explicit redirect, use it
     if (redirect !== "/") {
       router.push(redirect);

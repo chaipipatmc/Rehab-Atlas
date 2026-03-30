@@ -112,6 +112,8 @@ export default function AdminAgentsPage() {
   const [taskTotal, setTaskTotal] = useState(0);
   const [activeTab, setActiveTab] = useState<"tasks" | "config">("tasks");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [bulkActioning, setBulkActioning] = useState(false);
   const TASKS_PER_PAGE = 50;
 
   async function loadTasks(filter?: string, page?: number) {
@@ -180,6 +182,53 @@ export default function AdminAgentsPage() {
       toast.error("Action failed");
     }
     setActioning(null);
+  }
+
+  function toggleTaskSelection(taskId: string) {
+    setSelectedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId); else next.add(taskId);
+      return next;
+    });
+  }
+
+  function selectAllInGroup(groupTasks: AgentTaskRow[]) {
+    setSelectedTasks((prev) => {
+      const next = new Set(prev);
+      const allSelected = groupTasks.every((t) => next.has(t.id));
+      if (allSelected) {
+        groupTasks.forEach((t) => next.delete(t.id));
+      } else {
+        groupTasks.forEach((t) => { if (t.status === "awaiting_owner") next.add(t.id); });
+      }
+      return next;
+    });
+  }
+
+  async function handleBulkAction(decision: string) {
+    if (selectedTasks.size === 0) return;
+    const confirmed = confirm(`Are you sure you want to ${decision === "approved" ? "approve" : "reject"} ${selectedTasks.size} tasks?`);
+    if (!confirmed) return;
+
+    setBulkActioning(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const taskId of selectedTasks) {
+      try {
+        const res = await fetch("/api/agents/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task_id: taskId, decision: decision === "approved" ? "approve" : "reject" }),
+        });
+        if (res.ok) success++; else failed++;
+      } catch { failed++; }
+    }
+
+    toast.success(`${success} tasks ${decision}${failed > 0 ? `, ${failed} failed` : ""}`);
+    setSelectedTasks(new Set());
+    await loadTasks();
+    setBulkActioning(false);
   }
 
   function toggleGroup(group: string) {
@@ -267,6 +316,42 @@ export default function AdminAgentsPage() {
             <p className="text-xs text-muted-foreground">{taskTotal} task{taskTotal !== 1 ? "s" : ""}</p>
           </div>
 
+          {/* Bulk action bar */}
+          {selectedTasks.size > 0 && (
+            <div className="flex items-center justify-between bg-primary/5 rounded-xl px-4 py-2.5 mb-4">
+              <span className="text-sm font-medium text-foreground">{selectedTasks.size} selected</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="rounded-full text-xs gradient-primary text-white"
+                  onClick={() => handleBulkAction("approved")}
+                  disabled={bulkActioning}
+                >
+                  {bulkActioning ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <CheckCircle className="h-3 w-3 mr-1" />}
+                  Approve All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full text-xs"
+                  onClick={() => handleBulkAction("rejected")}
+                  disabled={bulkActioning}
+                >
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Reject All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full text-xs"
+                  onClick={() => setSelectedTasks(new Set())}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Task groups */}
           {sortedGroups.length > 0 ? (
             <div className="space-y-4">
@@ -279,11 +364,18 @@ export default function AdminAgentsPage() {
                 return (
                   <div key={agentType} className="bg-surface-container-lowest rounded-2xl shadow-ambient overflow-hidden">
                     {/* Group header */}
-                    <button
-                      onClick={() => toggleGroup(agentType)}
-                      className="w-full flex items-center justify-between px-5 py-3 hover:bg-surface-container/30 transition-colors duration-200"
-                    >
+                    <div className="flex items-center justify-between px-5 py-3 hover:bg-surface-container/30 transition-colors duration-200">
                       <div className="flex items-center gap-3">
+                        {statusFilter === "awaiting_owner" && (
+                          <input
+                            type="checkbox"
+                            checked={groupTasks.filter(t => t.status === "awaiting_owner").every(t => selectedTasks.has(t.id)) && groupTasks.some(t => t.status === "awaiting_owner")}
+                            onChange={() => selectAllInGroup(groupTasks)}
+                            className="h-4 w-4 rounded text-primary cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
+                        <button onClick={() => toggleGroup(agentType)} className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Icon className={`h-4 w-4 ${info?.color || "text-primary"}`} />
                         </div>
@@ -291,16 +383,25 @@ export default function AdminAgentsPage() {
                         <span className="text-[10px] font-medium bg-surface-container-low text-muted-foreground rounded-full px-2 py-0.5">
                           {groupTasks.length}
                         </span>
+                      </button>
                       </div>
-                      {isCollapsed ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronUp className="h-4 w-4 text-muted-foreground" />}
-                    </button>
+                      {isCollapsed ? <ChevronDown className="h-4 w-4 text-muted-foreground cursor-pointer" onClick={() => toggleGroup(agentType)} /> : <ChevronUp className="h-4 w-4 text-muted-foreground cursor-pointer" onClick={() => toggleGroup(agentType)} />}
+                    </div>
 
                     {/* Task cards */}
                     {!isCollapsed && (
                       <div className="px-5 pb-4 space-y-2">
                         {groupTasks.map((task) => (
+                          <div key={task.id} className="flex items-start gap-2">
+                            {task.status === "awaiting_owner" && (
+                              <input
+                                type="checkbox"
+                                checked={selectedTasks.has(task.id)}
+                                onChange={() => toggleTaskSelection(task.id)}
+                                className="h-4 w-4 rounded text-primary cursor-pointer mt-3 flex-shrink-0"
+                              />
+                            )}
                           <TaskCard
-                            key={task.id}
                             task={task}
                             isExpanded={expandedTask === task.id}
                             onToggle={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
@@ -329,6 +430,7 @@ export default function AdminAgentsPage() {
                             actioning={actioning === task.id}
                             onAction={(decision) => handleAction(task.id, task.action_token!, decision)}
                           />
+                          </div>
                         ))}
                       </div>
                     )}
