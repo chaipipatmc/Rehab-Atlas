@@ -105,6 +105,18 @@ export interface CenterFaq {
   sort_order: number;
 }
 
+export interface CenterStaff {
+  id: string;
+  center_id: string;
+  name: string;
+  position: string;
+  credentials: string | null;
+  photo_url: string | null;
+  bio: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface CenterFilters {
   country?: string;
   city?: string;

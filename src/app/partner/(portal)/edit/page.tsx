@@ -12,6 +12,7 @@ import {
   Send, Upload, X, Plus, Trash2, GripVertical,
   Building2, MapPin, Phone, Globe, DollarSign,
   Stethoscope, Users, BedDouble, Heart, ExternalLink,
+  HelpCircle, Check, Loader2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,6 +24,14 @@ interface StaffMember {
   photo_url: string;
   bio: string;
   isNew?: boolean;
+}
+
+interface FAQ {
+  id: string;
+  center_id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
 }
 
 const TREATMENT_FOCUS_OPTIONS = [
@@ -77,6 +86,11 @@ export default function PartnerEditPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingStaffPhoto, setUploadingStaffPhoto] = useState<number | null>(null);
   const [photos, setPhotos] = useState<{ id: string; url: string; alt_text: string; is_primary: boolean }[]>([]);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [newFaqQuestion, setNewFaqQuestion] = useState("");
+  const [newFaqAnswer, setNewFaqAnswer] = useState("");
+  const [savingFaqId, setSavingFaqId] = useState<string | null>(null);
+  const [addingFaq, setAddingFaq] = useState(false);
 
   const allowedFields = [
     "short_description", "description", "phone", "email", "website_url",
@@ -111,6 +125,17 @@ export default function PartnerEditPage() {
       const { data: photoData } = await supabase
         .from("center_photos").select("*").eq("center_id", profile.center_id).order("sort_order");
       if (photoData) setPhotos(photoData as { id: string; url: string; alt_text: string; is_primary: boolean }[]);
+
+      // Load FAQs
+      try {
+        const faqRes = await fetch("/api/partner-faqs");
+        if (faqRes.ok) {
+          const faqData = await faqRes.json();
+          if (faqData.faqs) setFaqs(faqData.faqs as FAQ[]);
+        }
+      } catch {
+        // non-fatal
+      }
 
       setLoading(false);
     }
@@ -182,6 +207,81 @@ export default function PartnerEditPage() {
     setStaff((prev) => prev.map((s, i) => i === index ? { ...s, [key]: value } : s));
   }
 
+  async function addFaq() {
+    if (!newFaqQuestion.trim() || !newFaqAnswer.trim()) {
+      toast.error("Both question and answer are required");
+      return;
+    }
+    setAddingFaq(true);
+    try {
+      const res = await fetch("/api/partner-faqs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          question: newFaqQuestion,
+          answer: newFaqAnswer,
+          sort_order: faqs.length,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setFaqs((prev) => [...prev, data.faq as FAQ]);
+      setNewFaqQuestion("");
+      setNewFaqAnswer("");
+      toast.success("FAQ added");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to add FAQ");
+    }
+    setAddingFaq(false);
+  }
+
+  async function updateFaq(id: string, question: string, answer: string) {
+    if (!question.trim() || !answer.trim()) {
+      toast.error("Both question and answer are required");
+      return;
+    }
+    setSavingFaqId(id);
+    try {
+      const res = await fetch("/api/partner-faqs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update", id, question, answer }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setFaqs((prev) => prev.map((f) => f.id === id ? (data.faq as FAQ) : f));
+      toast.success("FAQ updated");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update FAQ");
+    }
+    setSavingFaqId(null);
+  }
+
+  async function deleteFaq(id: string) {
+    setSavingFaqId(id);
+    try {
+      const res = await fetch("/api/partner-faqs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", id }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error);
+      }
+      setFaqs((prev) => prev.filter((f) => f.id !== id));
+      toast.success("FAQ removed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete FAQ");
+    }
+    setSavingFaqId(null);
+  }
+
+  function updateFaqLocal(id: string, key: "question" | "answer", value: string) {
+    setFaqs((prev) => prev.map((f) => f.id === id ? { ...f, [key]: value } : f));
+  }
+
   async function handleSubmit() {
     if (!center || !original) return;
 
@@ -251,6 +351,7 @@ export default function PartnerEditPage() {
     { id: "facilities", label: "Facilities & Program", icon: BedDouble },
     { id: "pricing", label: "Pricing & Insurance", icon: DollarSign },
     { id: "staff", label: "Clinical Team", icon: Stethoscope },
+    { id: "faqs", label: "FAQs", icon: HelpCircle },
     { id: "photos", label: "Photos", icon: Upload },
   ];
 
@@ -768,6 +869,104 @@ export default function PartnerEditPage() {
             </>
           )}
 
+          {/* ── FAQs ── */}
+          {activeSection === "faqs" && (
+            <>
+              <SectionHeader title="Frequently Asked Questions" desc="Add common questions and answers that appear on your center's page" />
+
+              {/* Existing FAQs */}
+              {faqs.map((faq) => (
+                <div key={faq.id} className="border border-surface-container-high rounded-xl p-4 space-y-3 relative">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <HelpCircle className="h-3.5 w-3.5" />
+                      <span>FAQ</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => updateFaq(faq.id, faq.question, faq.answer)}
+                        disabled={savingFaqId === faq.id}
+                        className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
+                        title="Save changes"
+                      >
+                        {savingFaqId === faq.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => deleteFaq(faq.id)}
+                        disabled={savingFaqId === faq.id}
+                        className="text-red-400 hover:text-red-600 transition-colors p-1"
+                        title="Delete FAQ"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Question</Label>
+                    <Input
+                      value={faq.question}
+                      onChange={(e) => updateFaqLocal(faq.id, "question", e.target.value)}
+                      placeholder="e.g., What is your admission process?"
+                      className={`${inputClass} text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Answer</Label>
+                    <Textarea
+                      value={faq.answer}
+                      onChange={(e) => updateFaqLocal(faq.id, "answer", e.target.value)}
+                      rows={3}
+                      placeholder="Provide a clear, helpful answer..."
+                      className={`${inputClass} text-sm`}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Add new FAQ form */}
+              <div className="border-2 border-dashed border-surface-container-high rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add New FAQ</span>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Question <span className="text-red-500">*</span></Label>
+                  <Input
+                    value={newFaqQuestion}
+                    onChange={(e) => setNewFaqQuestion(e.target.value)}
+                    placeholder="e.g., Do you accept insurance?"
+                    className={`${inputClass} text-sm`}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Answer <span className="text-red-500">*</span></Label>
+                  <Textarea
+                    value={newFaqAnswer}
+                    onChange={(e) => setNewFaqAnswer(e.target.value)}
+                    rows={3}
+                    placeholder="Provide a clear, helpful answer..."
+                    className={`${inputClass} text-sm`}
+                  />
+                </div>
+                <Button
+                  onClick={addFaq}
+                  disabled={addingFaq || !newFaqQuestion.trim() || !newFaqAnswer.trim()}
+                  className="rounded-full gradient-primary text-white hover:opacity-90 transition-opacity duration-300 h-9 text-sm"
+                >
+                  {addingFaq ? (
+                    <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Adding...</>
+                  ) : (
+                    <><Plus className="mr-2 h-3.5 w-3.5" /> Add FAQ</>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
+
           {/* ── PHOTOS ── */}
           {activeSection === "photos" && (
             <>
@@ -889,6 +1088,11 @@ export default function PartnerEditPage() {
             <div className="text-center py-2">
               <p className="text-sm text-emerald-600 font-medium">Photos are saved automatically</p>
               <p className="text-xs text-muted-foreground mt-0.5">Upload, delete, and set primary — changes apply instantly.</p>
+            </div>
+          ) : activeSection === "faqs" ? (
+            <div className="text-center py-2">
+              <p className="text-sm text-emerald-600 font-medium">FAQs are saved automatically</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Add, edit (click the checkmark to save), and delete — changes apply instantly.</p>
             </div>
           ) : activeSection === "staff" ? (
             <Button

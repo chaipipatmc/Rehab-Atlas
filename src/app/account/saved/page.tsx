@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Heart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import { CenterCard } from "@/components/centers/center-card";
+import { CompareSelector } from "@/components/centers/compare-selector";
 import type { Center, CenterPhoto } from "@/types/center";
 
 export const metadata = {
@@ -61,11 +61,7 @@ export default async function SavedCentersPage() {
         </p>
 
         {centers.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {centers.map((center) => (
-              <CenterCard key={center.id} center={center} />
-            ))}
-          </div>
+          <CompareSelector centers={centers} />
         ) : (
           <div className="bg-surface-container-lowest rounded-2xl p-8 shadow-ambient text-center">
             <Heart className="h-10 w-10 text-muted-foreground mx-auto mb-4" />

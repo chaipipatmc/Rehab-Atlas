@@ -18,9 +18,15 @@ import {
   Star,
   ArrowRight,
   Shield,
+  ShieldCheck,
+  Languages,
+  Pill,
+  Brain,
+  Quote,
+  Users,
 } from "lucide-react";
 import type { Metadata } from "next";
-import type { Center, CenterFaq } from "@/types/center";
+import type { Center, CenterFaq, CenterStaff } from "@/types/center";
 import { BreadcrumbJsonLd, FAQJsonLd, LocalBusinessJsonLd } from "@/components/shared/json-ld";
 import { ViewTracker } from "@/components/shared/view-tracker";
 import { SaveButton } from "@/components/centers/save-button";
@@ -128,6 +134,15 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
     .order("sort_order");
 
   const typedFaqs = (faqs || []) as unknown as CenterFaq[];
+
+  // Load staff
+  const { data: staffRows } = await supabase
+    .from("center_staff")
+    .select("*")
+    .eq("center_id", center.id)
+    .order("sort_order");
+
+  const staff = (staffRows || []) as unknown as CenterStaff[];
 
   // Check if user has saved this center
   let isSaved = false;
@@ -335,7 +350,7 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                 </div>
               )}
 
-              {/* Services & Methods grid */}
+              {/* Services grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
                 {(typedCenter.services || []).slice(0, 6).map((s) => (
                   <div key={s} className="text-center p-4 bg-surface-container-low rounded-xl ghost-border">
@@ -344,6 +359,43 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                   </div>
                 ))}
               </div>
+
+              {/* Treatment Methods */}
+              {(typedCenter.treatment_methods || []).length > 0 && (
+                <div className="mt-8">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Treatment Methods
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {(typedCenter.treatment_methods || []).map((m) => (
+                      <div key={m} className="flex items-center gap-2.5 p-3 bg-surface-container-low rounded-xl ghost-border">
+                        <Brain className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="text-xs text-foreground capitalize">{m.replace(/_/g, " ")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Substances Treated */}
+              {(typedCenter.substance_use || []).length > 0 && (
+                <div className="mt-8">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Substances Treated
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(typedCenter.substance_use || []).map((s) => (
+                      <span
+                        key={s}
+                        className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary rounded-full px-3 py-1.5"
+                      >
+                        <Pill className="h-3 w-3" />
+                        {s.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
 
 {/* Editorial Quote */}
@@ -365,6 +417,68 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
               privacy={typedCenter.editorial_privacy}
               value={typedCenter.editorial_value}
             />
+
+            {/* Review Summary */}
+            {typedCenter.review_summary && (
+              <section className="bg-surface-container-low rounded-2xl p-8 ghost-border">
+                <div className="flex items-start gap-3">
+                  <Quote className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                      Guest Reviews
+                      {typedCenter.review_count > 0 && (
+                        <span className="ml-2 normal-case">({typedCenter.review_count} reviews)</span>
+                      )}
+                    </p>
+                    <p className="font-editorial italic text-base text-foreground leading-relaxed">
+                      &ldquo;{typedCenter.review_summary}&rdquo;
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Staff Profiles */}
+            {staff.length > 0 && (
+              <section>
+                <h2 className="text-headline-lg font-semibold text-foreground flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Clinical Team
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                  {staff.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-start gap-4 p-5 bg-surface-container-low rounded-2xl ghost-border"
+                    >
+                      {member.photo_url ? (
+                        <img
+                          src={member.photo_url}
+                          alt={member.name}
+                          className="h-14 w-14 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="h-14 w-14 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
+                          <span className="text-lg font-semibold text-muted-foreground">
+                            {member.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground">{member.name}</p>
+                        <p className="text-xs text-primary">{member.position}</p>
+                        {member.credentials && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{member.credentials}</p>
+                        )}
+                        {member.bio && (
+                          <p className="text-xs text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{member.bio}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Pricing & Program */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -469,6 +583,40 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                   </div>
                 )}
               </div>
+              {/* Accreditations */}
+              {(typedCenter.accreditation || []).length > 0 && (
+                <div className="pt-4">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                    Accreditations
+                  </p>
+                  <div className="space-y-2">
+                    {(typedCenter.accreditation || []).map((acc) => (
+                      <div key={acc} className="flex items-center gap-2 text-sm text-foreground">
+                        <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="text-xs">{acc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Languages */}
+              {(typedCenter.languages || []).length > 0 && (
+                <div className="pt-4">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                    Languages Spoken
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(typedCenter.languages || []).map((lang) => (
+                      <Badge key={lang} variant="secondary" className="text-[10px] rounded-full bg-surface-container-high">
+                        <Languages className="h-3 w-3 mr-1" />
+                        {lang}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <p className="text-[10px] text-muted-foreground pt-2">
                 All inquiries are handled through Rehab-Atlas to protect your privacy.
               </p>
