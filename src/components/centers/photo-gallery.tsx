@@ -56,8 +56,48 @@ export function PhotoGallery({ photos, centerName }: PhotoGalleryProps) {
     <>
       {/* Grid */}
       <div className="container mx-auto px-4 sm:px-6 mb-8 md:mb-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 h-48 md:h-80">
-          {/* Main large image */}
+        {/* Mobile: stacked hero + horizontal scroll */}
+        <div className="md:hidden space-y-2">
+          {/* Main hero photo — full width, tall */}
+          <button
+            type="button"
+            onClick={() => openLightbox(0)}
+            className="w-full aspect-[16/10] rounded-2xl bg-surface-container overflow-hidden relative cursor-pointer"
+          >
+            <img
+              src={photos[0].url}
+              alt={photos[0].alt_text || centerName}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </button>
+          {/* Secondary: horizontal scroll row */}
+          {photos.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
+              {photos.slice(1).map((photo, i) => (
+                <button
+                  type="button"
+                  key={photo.id}
+                  onClick={() => openLightbox(i + 1)}
+                  className="flex-shrink-0 w-40 h-28 rounded-xl bg-surface-container overflow-hidden relative cursor-pointer snap-start"
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.alt_text || `${centerName} photo ${i + 2}`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {i === photos.length - 2 && photos.length > 5 && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">View all {photos.length}</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: grid layout */}
+        <div className="hidden md:grid grid-cols-4 gap-3 h-80">
           <button
             type="button"
             onClick={() => openLightbox(0)}
@@ -69,7 +109,6 @@ export function PhotoGallery({ photos, centerName }: PhotoGalleryProps) {
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"
             />
           </button>
-          {/* Secondary images */}
           {photos.slice(1, 5).map((photo, i) => (
             <button
               type="button"
@@ -89,7 +128,6 @@ export function PhotoGallery({ photos, centerName }: PhotoGalleryProps) {
               )}
             </button>
           ))}
-          {/* Fill empty slots if less than 4 secondary images */}
           {photos.length < 5 &&
             Array.from({ length: 4 - (photos.length - 1) }).map((_, i) => (
               <div key={`empty-${i}`} className="rounded-2xl bg-surface-container overflow-hidden" />
