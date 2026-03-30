@@ -24,6 +24,12 @@ import {
   Brain,
   Quote,
   Users,
+  UserCheck,
+  Compass,
+  HeartHandshake,
+  Sparkles,
+  Activity,
+  Accessibility,
 } from "lucide-react";
 import type { Metadata } from "next";
 import type { Center, CenterFaq, CenterStaff } from "@/types/center";
@@ -350,6 +356,26 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                 </div>
               )}
 
+              {/* Who We Treat */}
+              {(typedCenter.who_we_treat || []).length > 0 && (
+                <div className="mt-8">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Who We Treat
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(typedCenter.who_we_treat || []).map((w) => (
+                      <span
+                        key={w}
+                        className="inline-flex items-center gap-1.5 text-xs bg-surface-container-high text-foreground rounded-full px-3 py-1.5"
+                      >
+                        <UserCheck className="h-3 w-3 text-primary" />
+                        {w.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Services grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
                 {(typedCenter.services || []).slice(0, 6).map((s) => (
@@ -377,6 +403,26 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                 </div>
               )}
 
+              {/* Our Approach */}
+              {(typedCenter.approaches || []).length > 0 && (
+                <div className="mt-8">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Our Approach
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(typedCenter.approaches || []).map((a) => (
+                      <span
+                        key={a}
+                        className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary rounded-full px-3 py-1.5"
+                      >
+                        <Compass className="h-3 w-3" />
+                        {a.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Substances Treated */}
               {(typedCenter.substance_use || []).length > 0 && (
                 <div className="mt-8">
@@ -396,7 +442,94 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                   </div>
                 </div>
               )}
+
+              {/* Aftercare */}
+              {(typedCenter.aftercare || []).length > 0 && (
+                <div className="mt-8">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Aftercare
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(typedCenter.aftercare || []).map((a) => (
+                      <span
+                        key={a}
+                        className="inline-flex items-center gap-1.5 text-xs bg-surface-container-high text-foreground rounded-full px-3 py-1.5"
+                      >
+                        <HeartHandshake className="h-3 w-3 text-primary" />
+                        {a.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
+
+            {/* Experience — Amenities, Activities, Accommodations */}
+            {((typedCenter.amenities || []).length > 0 || (typedCenter.activities || []).length > 0 || (typedCenter.accommodations || []).length > 0) && (
+              <section>
+                <h2 className="text-headline-lg font-semibold text-foreground flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  The Experience
+                </h2>
+
+                {/* Amenities */}
+                {(typedCenter.amenities || []).length > 0 && (
+                  <div className="mt-6">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                      Amenities
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {(typedCenter.amenities || []).map((a) => (
+                        <div key={a} className="flex items-center gap-2.5 p-3 bg-surface-container-low rounded-xl ghost-border">
+                          <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
+                          <span className="text-xs text-foreground capitalize">{a.replace(/_/g, " ")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Activities */}
+                {(typedCenter.activities || []).length > 0 && (
+                  <div className="mt-6">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                      Activities
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(typedCenter.activities || []).map((a) => (
+                        <span
+                          key={a}
+                          className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary rounded-full px-3 py-1.5"
+                        >
+                          <Activity className="h-3 w-3" />
+                          {a.replace(/_/g, " ")}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Special Accommodations */}
+                {(typedCenter.accommodations || []).length > 0 && (
+                  <div className="mt-6">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                      Special Accommodations
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(typedCenter.accommodations || []).map((a) => (
+                        <span
+                          key={a}
+                          className="inline-flex items-center gap-1.5 text-xs bg-surface-container-high text-foreground rounded-full px-3 py-1.5"
+                        >
+                          <Accessibility className="h-3 w-3 text-primary" />
+                          {a.replace(/_/g, " ")}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
 
 {/* Editorial Quote */}
             <section className="bg-surface-container-low rounded-2xl p-8 ghost-border">

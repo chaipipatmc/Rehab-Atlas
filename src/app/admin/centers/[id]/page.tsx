@@ -21,6 +21,21 @@ import { toast } from "sonner";
 import { Save, BookOpen, ExternalLink, ArrowLeft, ShieldCheck, AlertTriangle, Globe, GlobeLock } from "lucide-react";
 import Link from "next/link";
 import { MultiImageUpload } from "@/components/admin/image-upload";
+import { ChipSelector } from "@/components/shared/chip-selector";
+import {
+  TREATMENT_FOCUS_OPTIONS,
+  SUBSTANCE_OPTIONS,
+  CONDITION_OPTIONS,
+  WHO_WE_TREAT_OPTIONS,
+  SERVICE_OPTIONS,
+  APPROACH_OPTIONS,
+  TREATMENT_METHOD_OPTIONS,
+  AFTERCARE_OPTIONS,
+  LANGUAGE_OPTIONS,
+  AMENITY_OPTIONS,
+  ACTIVITY_OPTIONS,
+  ACCOMMODATION_OPTIONS,
+} from "@/lib/constants";
 
 interface PhotoItem {
   id?: string;
@@ -469,43 +484,103 @@ export default function AdminCenterEditPage() {
           <CardHeader>
             <CardTitle>Treatment & Clinical</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <ArrayField
-              label="Treatment Focus"
+          <CardContent className="space-y-6">
+            <ChipSelector
+              label="Specializations"
+              description="Primary treatment focus areas"
+              options={TREATMENT_FOCUS_OPTIONS}
               value={(center.treatment_focus as string[]) || []}
               onChange={(v) => update("treatment_focus", v)}
-              placeholder="e.g. Alcohol Addiction, Dual Diagnosis"
             />
-            <ArrayField
-              label="Conditions Treated"
-              value={(center.conditions as string[]) || []}
-              onChange={(v) => update("conditions", v)}
-              placeholder="e.g. Anxiety, Depression, PTSD"
-            />
-            <ArrayField
-              label="Services"
-              value={(center.services as string[]) || []}
-              onChange={(v) => update("services", v)}
-              placeholder="e.g. Medical Detox, Inpatient/Residential"
-            />
-            <ArrayField
-              label="Treatment Methods"
-              value={(center.treatment_methods as string[]) || []}
-              onChange={(v) => update("treatment_methods", v)}
-              placeholder="e.g. CBT, DBT, EMDR, 12-Step"
-            />
-            <ArrayField
-              label="Substances Treated"
+            <Separator />
+            <ChipSelector
+              label="Substances We Treat"
+              description="Specific substances treated"
+              options={SUBSTANCE_OPTIONS}
               value={(center.substance_use as string[]) || []}
               onChange={(v) => update("substance_use", v)}
-              placeholder="e.g. Alcohol, Opioids, Cocaine"
             />
-            <ArrayField
+            <Separator />
+            <ChipSelector
+              label="Conditions We Treat"
+              description="Mental health and co-occurring conditions"
+              options={CONDITION_OPTIONS}
+              value={(center.conditions as string[]) || []}
+              onChange={(v) => update("conditions", v)}
+            />
+            <Separator />
+            <ChipSelector
+              label="Who We Treat"
+              description="Demographics and populations served"
+              options={WHO_WE_TREAT_OPTIONS}
+              value={(center.who_we_treat as string[]) || []}
+              onChange={(v) => update("who_we_treat", v)}
+            />
+            <Separator />
+            <ChipSelector
+              label="Treatment Services"
+              description="Programs and levels of care offered"
+              options={SERVICE_OPTIONS}
+              value={(center.services as string[]) || []}
+              onChange={(v) => update("services", v)}
+            />
+            <Separator />
+            <ChipSelector
+              label="Approaches"
+              description="Treatment philosophy and framework"
+              options={APPROACH_OPTIONS}
+              value={(center.approaches as string[]) || []}
+              onChange={(v) => update("approaches", v)}
+            />
+            <Separator />
+            <ChipSelector
+              label="Therapies"
+              description="Therapeutic modalities and methods used"
+              options={TREATMENT_METHOD_OPTIONS}
+              value={(center.treatment_methods as string[]) || []}
+              onChange={(v) => update("treatment_methods", v)}
+            />
+            <Separator />
+            <ChipSelector
+              label="Aftercare"
+              description="Post-treatment support services"
+              options={AFTERCARE_OPTIONS}
+              value={(center.aftercare as string[]) || []}
+              onChange={(v) => update("aftercare", v)}
+            />
+            <Separator />
+            <ChipSelector
               label="Languages"
+              description="Languages spoken by staff"
+              options={LANGUAGE_OPTIONS}
               value={(center.languages as string[]) || []}
               onChange={(v) => update("languages", v)}
-              placeholder="e.g. English, Spanish, Thai"
             />
+            <Separator />
+            <ChipSelector
+              label="Amenities"
+              description="Facility features and comforts"
+              options={AMENITY_OPTIONS}
+              value={(center.amenities as string[]) || []}
+              onChange={(v) => update("amenities", v)}
+            />
+            <Separator />
+            <ChipSelector
+              label="Activities"
+              description="Recreational and wellness activities"
+              options={ACTIVITY_OPTIONS}
+              value={(center.activities as string[]) || []}
+              onChange={(v) => update("activities", v)}
+            />
+            <Separator />
+            <ChipSelector
+              label="Special Accommodations"
+              description="Accessibility, dietary, and special programs"
+              options={ACCOMMODATION_OPTIONS}
+              value={(center.accommodations as string[]) || []}
+              onChange={(v) => update("accommodations", v)}
+            />
+            <Separator />
             <ArrayField
               label="Accreditation"
               value={(center.accreditation as string[]) || []}

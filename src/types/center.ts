@@ -29,6 +29,14 @@ export interface Center {
   program_length: string | null;
   languages: string[];
 
+  // Extended categories
+  who_we_treat: string[];
+  approaches: string[];
+  aftercare: string[];
+  amenities: string[];
+  activities: string[];
+  accommodations: string[];
+
   // Pricing
   pricing_text: string | null;
   price_min: number | null;

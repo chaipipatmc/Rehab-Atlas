@@ -123,6 +123,27 @@ export default async function CentersPage({ searchParams }: PageProps) {
   if (params.insurance) {
     query = query.contains("insurance", [params.insurance]);
   }
+  if (params.who_we_treat) {
+    query = query.contains("who_we_treat", [params.who_we_treat]);
+  }
+  if (params.treatment_methods) {
+    query = query.contains("treatment_methods", [params.treatment_methods]);
+  }
+  if (params.languages) {
+    query = query.contains("languages", [params.languages]);
+  }
+  if (params.amenities) {
+    query = query.contains("amenities", [params.amenities]);
+  }
+  if (params.approaches) {
+    query = query.contains("approaches", [params.approaches]);
+  }
+  if (params.activities) {
+    query = query.contains("activities", [params.activities]);
+  }
+  if (params.accommodations) {
+    query = query.contains("accommodations", [params.accommodations]);
+  }
   if (params.has_detox === "true") {
     query = query.eq("has_detox", true);
   }
@@ -153,7 +174,7 @@ export default async function CentersPage({ searchParams }: PageProps) {
 
   // For geo-sorting: if no explicit sort/country filter and we know user's country,
   // fetch all results first, sort by distance, then paginate manually
-  const isDefaultView = !params.sort && !params.country && !params.search && !params.treatment_focus && !params.setting_type && !params.insurance && !params.has_detox;
+  const isDefaultView = !params.sort && !params.country && !params.search && !params.treatment_focus && !params.setting_type && !params.insurance && !params.has_detox && !params.who_we_treat && !params.treatment_methods && !params.languages && !params.amenities && !params.approaches && !params.activities && !params.accommodations;
   const useGeoSort = isDefaultView && userCountry && COUNTRY_COORDS[userCountry];
 
   let centers: Record<string, unknown>[] | null = null;
@@ -198,16 +219,56 @@ export default async function CentersPage({ searchParams }: PageProps) {
   }
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
-  // Get distinct countries for filter
-  const { data: countryData } = await supabase
+  // Get distinct filter values from published centers
+  const { data: filterData } = await supabase
     .from("centers")
-    .select("country")
-    .eq("status", "published")
-    .order("country");
+    .select("country, treatment_focus, conditions, setting_type, insurance, who_we_treat, treatment_methods, languages, amenities")
+    .eq("status", "published");
+
+  const allCentersForFilters = filterData || [];
 
   const countries = [
-    ...new Set((countryData || []).map((c) => c.country).filter(Boolean)),
-  ];
+    ...new Set(allCentersForFilters.map((c) => c.country).filter(Boolean)),
+  ].sort();
+
+  // Helper to extract unique values from array columns
+  function extractUniqueValues(field: string): { value: string; label: string }[] {
+    const values = new Set<string>();
+    for (const center of allCentersForFilters) {
+      const arr = (center as Record<string, unknown>)[field];
+      if (Array.isArray(arr)) {
+        for (const v of arr) {
+          if (typeof v === "string" && v) values.add(v);
+        }
+      }
+    }
+    return [...values].sort().map((v) => ({
+      value: v,
+      label: v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    }));
+  }
+
+  // Extract unique scalar values (like setting_type)
+  function extractUniqueScalarValues(field: string): { value: string; label: string }[] {
+    const values = new Set<string>();
+    for (const center of allCentersForFilters) {
+      const val = (center as Record<string, unknown>)[field];
+      if (typeof val === "string" && val) values.add(val);
+    }
+    return [...values].sort().map((v) => ({
+      value: v,
+      label: v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    }));
+  }
+
+  const treatmentFocusOptions = extractUniqueValues("treatment_focus");
+  const conditionOptions = extractUniqueValues("conditions");
+  const settingTypeOptions = extractUniqueScalarValues("setting_type");
+  const insuranceOptions = extractUniqueValues("insurance");
+  const whoWeTreatOptions = extractUniqueValues("who_we_treat");
+  const treatmentMethodOptions = extractUniqueValues("treatment_methods");
+  const languageOptions = extractUniqueValues("languages");
+  const amenityOptions = extractUniqueValues("amenities");
 
   return (
     <div className="bg-surface min-h-screen">
@@ -250,7 +311,17 @@ export default async function CentersPage({ searchParams }: PageProps) {
           {/* Filters Sidebar */}
           <aside className="w-full lg:w-64 flex-shrink-0">
             <Suspense fallback={<Skeleton className="h-96 w-full rounded-2xl" />}>
-              <CenterFilters countries={countries} />
+              <CenterFilters
+                countries={countries}
+                treatmentFocusOptions={treatmentFocusOptions}
+                conditionOptions={conditionOptions}
+                settingTypeOptions={settingTypeOptions}
+                insuranceOptions={insuranceOptions}
+                whoWeTreatOptions={whoWeTreatOptions}
+                treatmentMethodOptions={treatmentMethodOptions}
+                languageOptions={languageOptions}
+                amenityOptions={amenityOptions}
+              />
             </Suspense>
           </aside>
 

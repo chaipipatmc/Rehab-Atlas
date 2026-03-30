@@ -16,6 +16,21 @@ import {
   HelpCircle, Check, Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { ChipSelector } from "@/components/shared/chip-selector";
+import {
+  TREATMENT_FOCUS_OPTIONS,
+  SUBSTANCE_OPTIONS,
+  CONDITION_OPTIONS,
+  WHO_WE_TREAT_OPTIONS,
+  SERVICE_OPTIONS,
+  APPROACH_OPTIONS,
+  TREATMENT_METHOD_OPTIONS,
+  AFTERCARE_OPTIONS,
+  LANGUAGE_OPTIONS,
+  AMENITY_OPTIONS,
+  ACTIVITY_OPTIONS,
+  ACCOMMODATION_OPTIONS,
+} from "@/lib/constants";
 
 interface StaffMember {
   id?: string;
@@ -35,39 +50,6 @@ interface FAQ {
   sort_order: number;
 }
 
-const TREATMENT_FOCUS_OPTIONS = [
-  "Alcohol Addiction", "Drug Addiction", "Behavioral Addiction", "Dual Diagnosis",
-  "Mental Health", "Trauma & PTSD", "Eating Disorders", "Process Addictions",
-  "Prescription Drug Abuse", "Opioid Addiction", "Gambling Addiction",
-];
-
-const SERVICES_OPTIONS = [
-  "Medical Detox", "Inpatient/Residential", "Outpatient", "Intensive Outpatient (IOP)",
-  "Partial Hospitalization (PHP)", "Sober Living", "Aftercare Planning",
-  "Family Therapy", "Group Therapy", "Individual Counseling",
-  "Medication-Assisted Treatment (MAT)", "Holistic Therapies", "Art/Music Therapy",
-  "Adventure/Wilderness Therapy", "Telehealth", "Executive Program",
-];
-
-const TREATMENT_METHODS = [
-  "Cognitive Behavioral Therapy (CBT)", "Dialectical Behavior Therapy (DBT)",
-  "EMDR", "12-Step Program", "Motivational Interviewing", "Mindfulness-Based",
-  "Trauma-Informed Care", "Psychodynamic Therapy", "Acceptance & Commitment Therapy",
-  "Neurofeedback", "Biofeedback", "Yoga & Meditation",
-];
-
-const SUBSTANCE_USE_OPTIONS = [
-  "Alcohol", "Opioids", "Heroin", "Cocaine", "Methamphetamine",
-  "Benzodiazepines", "Prescription Drugs", "Cannabis", "Gambling",
-  "Process Addictions", "Co-Occurring Disorders",
-];
-
-const FACILITY_OPTIONS = [
-  "Private Rooms", "Shared Rooms", "Swimming Pool", "Gym/Fitness Center",
-  "Meditation Room", "Art Studio", "Gardens/Outdoor Space", "Chef-Prepared Meals",
-  "Spa/Wellness Center", "Library", "Recreation Room", "Chapel/Prayer Room",
-  "Beach Access", "Mountain Views", "Pet-Friendly", "On-Site Pharmacy",
-];
 
 const SETTING_TYPES = [
   { value: "luxury", label: "Luxury / Executive" },
@@ -107,6 +89,7 @@ export default function PartnerEditPage() {
     "clinical_director", "medical_director", "price_min", "price_max",
     "insurance", "accreditation", "occupancy",
     "substance_use", "review_summary", "review_count",
+    "who_we_treat", "approaches", "aftercare", "amenities", "activities", "accommodations",
   ];
 
   useEffect(() => {
@@ -152,12 +135,6 @@ export default function PartnerEditPage() {
 
   function update(key: string, value: unknown) {
     setCenter((prev) => (prev ? { ...prev, [key]: value } : prev));
-  }
-
-  function toggleArrayItem(key: string, item: string) {
-    const arr = ((center?.[key] as string[]) || []);
-    const newArr = arr.includes(item) ? arr.filter((i) => i !== item) : [...arr, item];
-    update(key, newArr);
   }
 
   async function uploadPhoto(file: File) {
@@ -624,76 +601,69 @@ export default function PartnerEditPage() {
           {activeSection === "treatment" && (
             <>
               <SectionHeader title="Treatment & Focus" desc="What your center specializes in" />
-              <div>
-                <RequiredLabel>Treatment Focus</RequiredLabel>
-                <p className="text-[10px] text-muted-foreground mb-2">Select all that apply</p>
-                <div className="flex flex-wrap gap-2">
-                  {TREATMENT_FOCUS_OPTIONS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => toggleArrayItem("treatment_focus", item)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                        ((center.treatment_focus as string[]) || []).includes(item)
-                          ? "bg-[#45636b] text-white border-[#45636b]"
-                          : "bg-surface-container-low text-muted-foreground border-surface-container-high hover:border-primary/30"
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Treatment Methods</Label>
-                <p className="text-[10px] text-muted-foreground mb-2">Select all therapeutic approaches you use</p>
-                <div className="flex flex-wrap gap-2">
-                  {TREATMENT_METHODS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => toggleArrayItem("treatment_methods", item)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                        ((center.treatment_methods as string[]) || []).includes(item)
-                          ? "bg-[#45636b] text-white border-[#45636b]"
-                          : "bg-surface-container-low text-muted-foreground border-surface-container-high hover:border-primary/30"
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Substances Treated</Label>
-                <p className="text-[10px] text-muted-foreground mb-2">Select all substances your center treats</p>
-                <div className="flex flex-wrap gap-2">
-                  {SUBSTANCE_USE_OPTIONS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => toggleArrayItem("substance_use", item)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                        ((center.substance_use as string[]) || []).includes(item)
-                          ? "bg-[#45636b] text-white border-[#45636b]"
-                          : "bg-surface-container-low text-muted-foreground border-surface-container-high hover:border-primary/30"
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Languages Spoken</Label>
-                <Input
-                  value={((center.languages as string[]) || []).join(", ")}
-                  onChange={(e) => update("languages", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))}
-                  placeholder="English, Spanish, Thai..."
-                  className={inputClass}
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">Separate with commas</p>
-              </div>
+              <ChipSelector
+                label="Specializations"
+                description="Primary treatment focus areas"
+                options={TREATMENT_FOCUS_OPTIONS}
+                value={(center.treatment_focus as string[]) || []}
+                onChange={(v) => update("treatment_focus", v)}
+                inputClassName={inputClass}
+                required
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Substances We Treat"
+                description="Specific substances your center treats"
+                options={SUBSTANCE_OPTIONS}
+                value={(center.substance_use as string[]) || []}
+                onChange={(v) => update("substance_use", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Conditions We Treat"
+                description="Mental health and co-occurring conditions"
+                options={CONDITION_OPTIONS}
+                value={(center.conditions as string[]) || []}
+                onChange={(v) => update("conditions", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Who We Treat"
+                description="Demographics and populations served"
+                options={WHO_WE_TREAT_OPTIONS}
+                value={(center.who_we_treat as string[]) || []}
+                onChange={(v) => update("who_we_treat", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Approaches"
+                description="Treatment philosophy and framework"
+                options={APPROACH_OPTIONS}
+                value={(center.approaches as string[]) || []}
+                onChange={(v) => update("approaches", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Therapies"
+                description="Therapeutic modalities and methods used"
+                options={TREATMENT_METHOD_OPTIONS}
+                value={(center.treatment_methods as string[]) || []}
+                onChange={(v) => update("treatment_methods", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Languages"
+                description="Languages spoken by staff"
+                options={LANGUAGE_OPTIONS}
+                value={(center.languages as string[]) || []}
+                onChange={(v) => update("languages", v)}
+                inputClassName={inputClass}
+              />
             </>
           )}
 
@@ -701,46 +671,51 @@ export default function PartnerEditPage() {
           {activeSection === "facilities" && (
             <>
               <SectionHeader title="Facilities & Program" desc="What your center offers" />
-              <div>
-                <Label className="text-xs text-muted-foreground">Services Offered</Label>
-                <p className="text-[10px] text-muted-foreground mb-2">Select all programs and services available</p>
-                <div className="flex flex-wrap gap-2">
-                  {SERVICES_OPTIONS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => toggleArrayItem("services", item)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                        ((center.services as string[]) || []).includes(item)
-                          ? "bg-[#45636b] text-white border-[#45636b]"
-                          : "bg-surface-container-low text-muted-foreground border-surface-container-high hover:border-primary/30"
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Facilities & Amenities</Label>
-                <p className="text-[10px] text-muted-foreground mb-2">Select available amenities</p>
-                <div className="flex flex-wrap gap-2">
-                  {FACILITY_OPTIONS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => toggleArrayItem("conditions", item)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                        ((center.conditions as string[]) || []).includes(item)
-                          ? "bg-[#45636b] text-white border-[#45636b]"
-                          : "bg-surface-container-low text-muted-foreground border-surface-container-high hover:border-primary/30"
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ChipSelector
+                label="Treatment Services"
+                description="Programs and levels of care offered"
+                options={SERVICE_OPTIONS}
+                value={(center.services as string[]) || []}
+                onChange={(v) => update("services", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Aftercare"
+                description="Post-treatment support services"
+                options={AFTERCARE_OPTIONS}
+                value={(center.aftercare as string[]) || []}
+                onChange={(v) => update("aftercare", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Amenities"
+                description="Facility features and comforts"
+                options={AMENITY_OPTIONS}
+                value={(center.amenities as string[]) || []}
+                onChange={(v) => update("amenities", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Activities"
+                description="Recreational and wellness activities"
+                options={ACTIVITY_OPTIONS}
+                value={(center.activities as string[]) || []}
+                onChange={(v) => update("activities", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
+              <ChipSelector
+                label="Special Accommodations"
+                description="Accessibility, dietary, and special programs"
+                options={ACCOMMODATION_OPTIONS}
+                value={(center.accommodations as string[]) || []}
+                onChange={(v) => update("accommodations", v)}
+                inputClassName={inputClass}
+              />
+              <Separator className="my-2" />
               <div>
                 <Label className="text-xs text-muted-foreground">Accreditation / Certifications</Label>
                 <Input
