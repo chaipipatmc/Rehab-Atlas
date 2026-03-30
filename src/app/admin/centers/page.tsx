@@ -17,6 +17,18 @@ import { CountrySelect } from "@/components/admin/country-select";
 
 const PAGE_SIZE = 20;
 
+function calcCompleteness(c: Record<string, unknown>): number {
+  const checks = [
+    !!c.name, !!(c.description && (c.description as string).length > 50), !!c.short_description,
+    !!c.country, !!c.city, !!c.address, !!c.phone, !!c.email, !!c.website_url,
+    !!((c.treatment_focus as string[])?.length), !!((c.conditions as string[])?.length),
+    !!((c.services as string[])?.length), !!((c.treatment_methods as string[])?.length),
+    !!c.setting_type, !!c.program_length, !!((c.languages as string[])?.length),
+    !!c.pricing_text, !!((c.accreditation as string[])?.length),
+  ];
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+}
+
 interface PageProps {
   searchParams: Promise<Record<string, string | undefined>>;
 }
@@ -31,6 +43,7 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
   const statusFilter = params.status || "all";
   const countryFilter = params.country || "all";
   const claimFilter = params.claim || "all";
+  const profileFilter = params.profile || "all"; // all, low (0-39), medium (40-79), high (80-100)
 
   // Fetch distinct countries for filter dropdown
   const { data: countryRows } = await supabase
@@ -42,7 +55,7 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
 
   let query = supabase
     .from("centers")
-    .select("id, name, slug, city, country, status, verified_profile, trusted_partner, referral_eligible, is_unclaimed", { count: "exact" })
+    .select("id, name, slug, city, country, status, verified_profile, trusted_partner, referral_eligible, is_unclaimed, description, short_description, phone, email, website_url, address, treatment_focus, conditions, services, treatment_methods, setting_type, program_length, languages, pricing_text, accreditation", { count: "exact" })
     .order("name");
 
   if (search) {
@@ -61,14 +74,36 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
 
   if (claimFilter === "unclaimed") {
     query = query.eq("is_unclaimed", true);
-  } else if (claimFilter === "claimed") {
-    query = query.or("is_unclaimed.is.null,is_unclaimed.eq.false");
+  } else if (claimFilter === "verified") {
+    query = query.eq("verified_profile", true).or("is_unclaimed.is.null,is_unclaimed.eq.false");
+  } else if (claimFilter === "pending") {
+    query = query.or("verified_profile.is.null,verified_profile.eq.false").or("is_unclaimed.is.null,is_unclaimed.eq.false");
   }
 
-  const { data: centers, count } = await query.range(offset, offset + PAGE_SIZE - 1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let centers: any[] = [];
+  let count: number | null = 0;
+
+  if (profileFilter !== "all") {
+    // Profile completeness is calculated, so fetch all matching rows and filter
+    const { data: allCenters } = await query;
+    const filtered = (allCenters || []).filter((c) => {
+      const pct = calcCompleteness(c as Record<string, unknown>);
+      if (profileFilter === "low") return pct < 40;
+      if (profileFilter === "medium") return pct >= 40 && pct < 80;
+      if (profileFilter === "high") return pct >= 80;
+      return true;
+    });
+    count = filtered.length;
+    centers = filtered.slice(offset, offset + PAGE_SIZE);
+  } else {
+    const result = await query.range(offset, offset + PAGE_SIZE - 1);
+    centers = result.data || [];
+    count = result.count;
+  }
 
   // Fetch pipeline stages for these centers
-  const centerIds = (centers || []).map((c) => c.id);
+  const centerIds = centers.map((c) => c.id);
   const pipelineMap = new Map<string, string>();
   if (centerIds.length > 0) {
     const { data: pipelines } = await supabase
@@ -87,6 +122,7 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
     if (statusFilter !== "all") p.set("status", statusFilter);
     if (countryFilter !== "all") p.set("country", countryFilter);
     if (claimFilter !== "all") p.set("claim", claimFilter);
+    if (profileFilter !== "all") p.set("profile", profileFilter);
     if (overrides) {
       for (const [k, v] of Object.entries(overrides)) {
         if (v === "all" || v === "") {
@@ -147,16 +183,43 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
 
         {/* Claim Filter */}
         <div className="flex items-center gap-1.5">
-          {(["all", "unclaimed", "claimed"] as const).map((c) => (
+          {([
+            { value: "all", label: "All" },
+            { value: "unclaimed", label: "Unclaimed" },
+            { value: "verified", label: "Verified" },
+            { value: "pending", label: "Pending" },
+          ] as const).map((c) => (
             <Button
-              key={c}
-              variant={claimFilter === c ? "default" : "outline"}
+              key={c.value}
+              variant={claimFilter === c.value ? "default" : "outline"}
               size="sm"
               asChild
               className="rounded-full text-xs h-8"
             >
-              <Link href={buildPageUrl(1, { claim: c, page: "" })}>
-                {c === "all" ? "All Claims" : c.charAt(0).toUpperCase() + c.slice(1)}
+              <Link href={buildPageUrl(1, { claim: c.value, page: "" })}>
+                {c.label}
+              </Link>
+            </Button>
+          ))}
+        </div>
+
+        {/* Profile Completeness Filter */}
+        <div className="flex items-center gap-1.5">
+          {([
+            { value: "all", label: "All %" },
+            { value: "low", label: "< 40%" },
+            { value: "medium", label: "40-79%" },
+            { value: "high", label: "80%+" },
+          ] as const).map((p) => (
+            <Button
+              key={p.value}
+              variant={profileFilter === p.value ? "default" : "outline"}
+              size="sm"
+              asChild
+              className="rounded-full text-xs h-8"
+            >
+              <Link href={buildPageUrl(1, { profile: p.value, page: "" })}>
+                {p.label}
               </Link>
             </Button>
           ))}
@@ -175,6 +238,7 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
               <TableHead>Name</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Profile</TableHead>
               <TableHead>Outreach</TableHead>
               <TableHead>Badges</TableHead>
               <TableHead></TableHead>
@@ -195,6 +259,19 @@ export default async function AdminCentersPage({ searchParams }: PageProps) {
                   >
                     {center.status}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const pct = calcCompleteness(center as unknown as Record<string, unknown>);
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${pct >= 80 ? "bg-emerald-500" : pct >= 40 ? "bg-amber-500" : "bg-red-400"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className={`text-[10px] font-medium ${pct >= 80 ? "text-emerald-600" : pct >= 40 ? "text-amber-600" : "text-red-500"}`}>{pct}%</span>
+                      </div>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   {(() => {

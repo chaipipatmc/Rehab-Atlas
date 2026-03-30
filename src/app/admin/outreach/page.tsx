@@ -139,6 +139,7 @@ export default function OutreachDashboard() {
   const [locationFilter, setLocationFilter] = useState("all");
   const [unclaimedFilter, setUnclaimedFilter] = useState("all");
   const [unclaimedCount, setUnclaimedCount] = useState(0);
+  const [profileFilter, setProfileFilter] = useState("all");
   const [countries, setCountries] = useState<string[]>([]);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [draftTasks, setDraftTasks] = useState<Record<string, AgentTask>>({});
@@ -469,6 +470,18 @@ export default function OutreachDashboard() {
               <option value="claimed">Claimed</option>
             </select>
           </div>
+          <div className="flex items-center gap-1.5">
+            <select
+              value={profileFilter}
+              onChange={(e) => setProfileFilter(e.target.value)}
+              className="text-sm bg-surface-container-lowest rounded-lg px-2 py-1.5 ghost-border text-foreground"
+            >
+              <option value="all">All Profile %</option>
+              <option value="low">&lt; 40%</option>
+              <option value="medium">40-79%</option>
+              <option value="high">80%+</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -487,7 +500,14 @@ export default function OutreachDashboard() {
             </tr>
           </thead>
           <tbody>
-            {pipelines.map((p) => {
+            {pipelines.filter((p) => {
+              if (profileFilter === "all") return true;
+              const pct = quickCompleteness(p.centers);
+              if (profileFilter === "low") return pct < 40;
+              if (profileFilter === "medium") return pct >= 40 && pct < 80;
+              if (profileFilter === "high") return pct >= 80;
+              return true;
+            }).map((p) => {
               const stageInfo = STAGE_CONFIG[p.stage] || STAGE_CONFIG.new;
               const StageIcon = stageInfo.icon;
               const days = daysInStage(p.updated_at);
