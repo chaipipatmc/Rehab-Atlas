@@ -348,6 +348,37 @@ export default function AdminCenterEditPage() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Latitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={(center.latitude as number) ?? ""}
+                  onChange={(e) =>
+                    update("latitude", e.target.value ? Number(e.target.value) : null)
+                  }
+                  placeholder="e.g. 13.7563"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Longitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={(center.longitude as number) ?? ""}
+                  onChange={(e) =>
+                    update("longitude", e.target.value ? Number(e.target.value) : null)
+                  }
+                  placeholder="e.g. 100.5018"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tip: Right-click on Google Maps &rarr; &ldquo;What&apos;s here?&rdquo; to get coordinates
+            </p>
           </CardContent>
         </Card>
 
@@ -706,6 +737,68 @@ export default function AdminCenterEditPage() {
                 />
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Additional Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Additional Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Insurance</Label>
+                <Input
+                  value={(center.insurance as string) || ""}
+                  onChange={(e) => update("insurance", e.target.value)}
+                  placeholder="e.g. Accepts most private insurance"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Occupancy</Label>
+                <Input
+                  value={(center.occupancy as string) || ""}
+                  onChange={(e) => update("occupancy", e.target.value)}
+                  placeholder="e.g. Currently accepting new clients"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Review Count</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={(center.review_count as number) ?? ""}
+                  onChange={(e) =>
+                    update("review_count", e.target.value ? Number(e.target.value) : null)
+                  }
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Last Verified</Label>
+                <Input
+                  type="date"
+                  value={(center.last_verified as string) || ""}
+                  onChange={(e) => update("last_verified", e.target.value || null)}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Review Summary</Label>
+              <Textarea
+                value={(center.review_summary as string) || ""}
+                onChange={(e) => update("review_summary", e.target.value)}
+                placeholder="e.g. 4.8 stars from 120 Google reviews"
+                className="mt-1.5"
+                rows={2}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
