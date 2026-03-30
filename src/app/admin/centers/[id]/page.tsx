@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, BookOpen, ExternalLink, ArrowLeft, ShieldCheck, AlertTriangle, Globe, GlobeLock } from "lucide-react";
+import { Save, BookOpen, ExternalLink, ArrowLeft, ShieldCheck, AlertTriangle, Globe, GlobeLock, Upload, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { MultiImageUpload } from "@/components/admin/image-upload";
 import { ChipSelector } from "@/components/shared/chip-selector";
@@ -68,6 +68,38 @@ export default function AdminCenterEditPage() {
   const [newStaff, setNewStaff] = useState<StaffMember>({ name: "", position: "", credentials: "", photo_url: "", bio: "", sort_order: 0 });
   const [faqs, setFaqs] = useState<Array<{ id?: string; question: string; answer: string }>>([]);
   const [newFaq, setNewFaq] = useState({ question: "", answer: "" });
+  const staffPhotoRef = useRef<HTMLInputElement>(null);
+  const [uploadingStaffPhoto, setUploadingStaffPhoto] = useState<string | null>(null);
+  const [uploadingNewStaffPhoto, setUploadingNewStaffPhoto] = useState(false);
+
+  async function uploadStaffPhotoFile(file: File, staffId?: string) {
+    if (!center) return;
+    const isNew = !staffId;
+    if (isNew) setUploadingNewStaffPhoto(true);
+    else setUploadingStaffPhoto(staffId);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("center_id", params.id as string);
+    formData.append("staff_photo", "true");
+
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (isNew) {
+        setNewStaff((prev) => ({ ...prev, photo_url: data.url }));
+      } else {
+        updateStaffMember(staffId, { photo_url: data.url });
+      }
+      toast.success("Staff photo uploaded");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    }
+    if (isNew) setUploadingNewStaffPhoto(false);
+    else setUploadingStaffPhoto(null);
+  }
 
   useEffect(() => {
     async function load() {
@@ -350,7 +382,7 @@ export default function AdminCenterEditPage() {
       )}
 
       <div className="space-y-6">
-        {/* Basic Info */}
+        {/* 1. Basic Info */}
         <Card>
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
@@ -395,7 +427,7 @@ export default function AdminCenterEditPage() {
           </CardContent>
         </Card>
 
-        {/* Photos */}
+        {/* 2. Photos */}
         <Card>
           <CardHeader>
             <CardTitle>Photos</CardTitle>
@@ -412,22 +444,52 @@ export default function AdminCenterEditPage() {
           </CardContent>
         </Card>
 
-        {/* Clinical Team / Staff */}
+        {/* 3. Clinical Team / Staff */}
         <Card>
           <CardHeader>
             <CardTitle>Clinical Team</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Hidden file input for staff photo uploads */}
+            <input
+              ref={staffPhotoRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                const targetId = staffPhotoRef.current?.getAttribute("data-staff-id") || "";
+                if (file) uploadStaffPhotoFile(file, targetId || undefined);
+                e.target.value = "";
+              }}
+            />
+
             {/* Existing staff */}
             {staff.map((s) => (
               <div key={s.id} className="flex gap-3 p-3 rounded-xl bg-surface-container-low">
-                {s.photo_url ? (
-                  <img src={s.photo_url} alt={s.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
-                ) : (
-                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary font-semibold text-lg">
-                    {s.name.charAt(0)}
+                {/* Photo with upload */}
+                <div className="flex-shrink-0">
+                  <div
+                    className="w-14 h-14 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all"
+                    onClick={() => {
+                      staffPhotoRef.current?.setAttribute("data-staff-id", s.id || "");
+                      staffPhotoRef.current?.click();
+                    }}
+                  >
+                    {uploadingStaffPhoto === s.id ? (
+                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      </div>
+                    ) : s.photo_url ? (
+                      <img src={s.photo_url} alt={s.name} className="w-14 h-14 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg">
+                        {s.name.charAt(0)}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <p className="text-[9px] text-muted-foreground text-center mt-1">Click to upload</p>
+                </div>
                 <div className="flex-1 space-y-1.5">
                   <div className="grid grid-cols-3 gap-2">
                     <Input
@@ -452,7 +514,7 @@ export default function AdminCenterEditPage() {
                   <Input
                     value={s.photo_url}
                     onChange={(e) => updateStaffMember(s.id!, { photo_url: e.target.value })}
-                    placeholder="Photo URL"
+                    placeholder="Or paste photo URL"
                     className="text-xs"
                   />
                   <textarea
@@ -472,32 +534,54 @@ export default function AdminCenterEditPage() {
             {/* Add new staff */}
             <div className="border-2 border-dashed border-surface-container-high rounded-xl p-4 space-y-2">
               <p className="text-xs font-medium text-muted-foreground">Add Team Member</p>
-              <div className="grid grid-cols-3 gap-2">
-                <Input
-                  value={newStaff.name}
-                  onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
-                  placeholder="Full Name"
-                  className="text-sm"
-                />
-                <Input
-                  value={newStaff.position}
-                  onChange={(e) => setNewStaff({ ...newStaff, position: e.target.value })}
-                  placeholder="Position / Title"
-                  className="text-sm"
-                />
-                <Input
-                  value={newStaff.credentials}
-                  onChange={(e) => setNewStaff({ ...newStaff, credentials: e.target.value })}
-                  placeholder="Credentials"
-                  className="text-sm"
-                />
+              <div className="flex gap-3">
+                {/* New staff photo upload */}
+                <div className="flex-shrink-0">
+                  <div
+                    className="w-14 h-14 rounded-full overflow-hidden cursor-pointer bg-surface-container-low border border-surface-container-high hover:border-primary/30 transition-colors flex items-center justify-center"
+                    onClick={() => {
+                      staffPhotoRef.current?.setAttribute("data-staff-id", "");
+                      staffPhotoRef.current?.click();
+                    }}
+                  >
+                    {uploadingNewStaffPhoto ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    ) : newStaff.photo_url ? (
+                      <img src={newStaff.photo_url} alt="New staff" className="w-14 h-14 rounded-full object-cover" />
+                    ) : (
+                      <Upload className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      value={newStaff.name}
+                      onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                      placeholder="Full Name"
+                      className="text-sm"
+                    />
+                    <Input
+                      value={newStaff.position}
+                      onChange={(e) => setNewStaff({ ...newStaff, position: e.target.value })}
+                      placeholder="Position / Title"
+                      className="text-sm"
+                    />
+                    <Input
+                      value={newStaff.credentials}
+                      onChange={(e) => setNewStaff({ ...newStaff, credentials: e.target.value })}
+                      placeholder="Credentials"
+                      className="text-sm"
+                    />
+                  </div>
+                  <Input
+                    value={newStaff.photo_url}
+                    onChange={(e) => setNewStaff({ ...newStaff, photo_url: e.target.value })}
+                    placeholder="Or paste photo URL"
+                    className="text-xs"
+                  />
+                </div>
               </div>
-              <Input
-                value={newStaff.photo_url}
-                onChange={(e) => setNewStaff({ ...newStaff, photo_url: e.target.value })}
-                placeholder="Photo URL (optional)"
-                className="text-xs"
-              />
               <textarea
                 value={newStaff.bio}
                 onChange={(e) => setNewStaff({ ...newStaff, bio: e.target.value })}
@@ -509,203 +593,11 @@ export default function AdminCenterEditPage() {
                 Add Staff Member
               </Button>
             </div>
-            <p className="text-[10px] text-muted-foreground">Staff changes are saved immediately.</p>
+            <p className="text-[10px] text-muted-foreground">Staff changes are saved immediately. Click the avatar to upload a photo.</p>
           </CardContent>
         </Card>
 
-        {/* FAQs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>FAQs</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {faqs.map((faq) => (
-              <div key={faq.id} className="p-3 rounded-xl bg-surface-container-low space-y-1">
-                <p className="text-sm font-medium text-foreground">{faq.question}</p>
-                <p className="text-xs text-muted-foreground">{faq.answer}</p>
-                <Button variant="outline" size="sm" className="text-xs text-red-600 mt-1" onClick={() => deleteFaq(faq.id!)}>
-                  Delete
-                </Button>
-              </div>
-            ))}
-            <div className="border-2 border-dashed border-surface-container-high rounded-xl p-4 space-y-2">
-              <Input
-                value={newFaq.question}
-                onChange={(e) => setNewFaq({ ...newFaq, question: e.target.value })}
-                placeholder="Question"
-                className="text-sm"
-              />
-              <textarea
-                value={newFaq.answer}
-                onChange={(e) => setNewFaq({ ...newFaq, answer: e.target.value })}
-                placeholder="Answer"
-                rows={2}
-                className="w-full text-xs border rounded-lg p-2 bg-surface-container-lowest"
-              />
-              <Button size="sm" className="rounded-full text-xs" onClick={addFaq} disabled={!newFaq.question || !newFaq.answer}>
-                Add FAQ
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Location */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Location</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Address</Label>
-              <Input
-                value={(center.address as string) || ""}
-                onChange={(e) => update("address", e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>City</Label>
-                <Input
-                  value={(center.city as string) || ""}
-                  onChange={(e) => update("city", e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>State/Province</Label>
-                <Input
-                  value={(center.state_province as string) || ""}
-                  onChange={(e) => update("state_province", e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Country</Label>
-                <Input
-                  value={(center.country as string) || ""}
-                  onChange={(e) => update("country", e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Latitude</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={(center.latitude as number) ?? ""}
-                  onChange={(e) =>
-                    update("latitude", e.target.value ? Number(e.target.value) : null)
-                  }
-                  placeholder="e.g. 13.7563"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Longitude</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={(center.longitude as number) ?? ""}
-                  onChange={(e) =>
-                    update("longitude", e.target.value ? Number(e.target.value) : null)
-                  }
-                  placeholder="e.g. 100.5018"
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Tip: Right-click on Google Maps &rarr; &ldquo;What&apos;s here?&rdquo; to get coordinates
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Contact */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Phone</Label>
-              <Input
-                value={(center.phone as string) || ""}
-                onChange={(e) => update("phone", e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input
-                value={(center.email as string) || ""}
-                onChange={(e) => update("email", e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label>Website</Label>
-              <Input
-                value={(center.website_url as string) || ""}
-                onChange={(e) => update("website_url", e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label>Inquiry Email (for lead forwarding)</Label>
-              <Input
-                value={(center.inquiry_email as string) || ""}
-                onChange={(e) => update("inquiry_email", e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pricing */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pricing</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Pricing Text</Label>
-              <Input
-                value={(center.pricing_text as string) || ""}
-                onChange={(e) => update("pricing_text", e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Price Min (USD/month)</Label>
-                <Input
-                  type="number"
-                  value={(center.price_min as number) || ""}
-                  onChange={(e) =>
-                    update("price_min", e.target.value ? Number(e.target.value) : null)
-                  }
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Price Max (USD/month)</Label>
-                <Input
-                  type="number"
-                  value={(center.price_max as number) || ""}
-                  onChange={(e) =>
-                    update("price_max", e.target.value ? Number(e.target.value) : null)
-                  }
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Treatment & Clinical */}
+        {/* 4. Treatment & Clinical */}
         <Card>
           <CardHeader>
             <CardTitle>Treatment & Clinical</CardTitle>
@@ -813,6 +705,121 @@ export default function AdminCenterEditPage() {
               onChange={(v) => update("accreditation", v)}
               placeholder="e.g. JCAHO, CARF, LegitScript"
             />
+          </CardContent>
+        </Card>
+
+        {/* 5. Location */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Location</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Address</Label>
+              <Input
+                value={(center.address as string) || ""}
+                onChange={(e) => update("address", e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>City</Label>
+                <Input
+                  value={(center.city as string) || ""}
+                  onChange={(e) => update("city", e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>State/Province</Label>
+                <Input
+                  value={(center.state_province as string) || ""}
+                  onChange={(e) => update("state_province", e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Country</Label>
+                <Input
+                  value={(center.country as string) || ""}
+                  onChange={(e) => update("country", e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Latitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={(center.latitude as number) ?? ""}
+                  onChange={(e) =>
+                    update("latitude", e.target.value ? Number(e.target.value) : null)
+                  }
+                  placeholder="e.g. 13.7563"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Longitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={(center.longitude as number) ?? ""}
+                  onChange={(e) =>
+                    update("longitude", e.target.value ? Number(e.target.value) : null)
+                  }
+                  placeholder="e.g. 100.5018"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tip: Right-click on Google Maps &rarr; &ldquo;What&apos;s here?&rdquo; to get coordinates
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* 6. Pricing & Program */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing & Program</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Pricing Text</Label>
+              <Input
+                value={(center.pricing_text as string) || ""}
+                onChange={(e) => update("pricing_text", e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Price Min (USD/month)</Label>
+                <Input
+                  type="number"
+                  value={(center.price_min as number) || ""}
+                  onChange={(e) =>
+                    update("price_min", e.target.value ? Number(e.target.value) : null)
+                  }
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Price Max (USD/month)</Label>
+                <Input
+                  type="number"
+                  value={(center.price_max as number) || ""}
+                  onChange={(e) =>
+                    update("price_max", e.target.value ? Number(e.target.value) : null)
+                  }
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Setting Type</Label>
@@ -833,15 +840,207 @@ export default function AdminCenterEditPage() {
                 />
               </div>
             </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <Label>Has Detox</Label>
+              <Switch
+                checked={!!center.has_detox}
+                onCheckedChange={(v) => update("has_detox", v)}
+              />
+            </div>
+            <div>
+              <Label>Hospital Affiliation</Label>
+              <Select
+                value={(center.hospital_affiliation as string) || "none"}
+                onValueChange={(v) => update("hospital_affiliation", v)}
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="on_site">Hospital On-Site</SelectItem>
+                  <SelectItem value="partnered">Partnered Hospital</SelectItem>
+                  <SelectItem value="none">No Hospital Affiliation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
-        <Separator />
-
-        {/* Status & Commercial */}
+        {/* 7. Additional Details */}
         <Card>
           <CardHeader>
-            <CardTitle>Status & Commercial</CardTitle>
+            <CardTitle>Additional Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Insurance</Label>
+                <Input
+                  value={(center.insurance as string) || ""}
+                  onChange={(e) => update("insurance", e.target.value)}
+                  placeholder="e.g. Accepts most private insurance"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Occupancy</Label>
+                <Input
+                  value={(center.occupancy as string) || ""}
+                  onChange={(e) => update("occupancy", e.target.value)}
+                  placeholder="e.g. Currently accepting new clients"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Review Count</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={(center.review_count as number) ?? ""}
+                  onChange={(e) =>
+                    update("review_count", e.target.value ? Number(e.target.value) : null)
+                  }
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Last Verified</Label>
+                <Input
+                  type="date"
+                  value={(center.last_verified as string) || ""}
+                  onChange={(e) => update("last_verified", e.target.value || null)}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Review Summary</Label>
+              <Textarea
+                value={(center.review_summary as string) || ""}
+                onChange={(e) => update("review_summary", e.target.value)}
+                placeholder="e.g. 4.8 stars from 120 Google reviews"
+                className="mt-1.5"
+                rows={2}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 8. Contact */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Contact</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Phone</Label>
+              <Input
+                value={(center.phone as string) || ""}
+                onChange={(e) => update("phone", e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input
+                value={(center.email as string) || ""}
+                onChange={(e) => update("email", e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label>Website</Label>
+              <Input
+                value={(center.website_url as string) || ""}
+                onChange={(e) => update("website_url", e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label>Inquiry Email (for lead forwarding)</Label>
+              <Input
+                value={(center.inquiry_email as string) || ""}
+                onChange={(e) => update("inquiry_email", e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 9. FAQs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>FAQs</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {faqs.map((faq) => (
+              <div key={faq.id} className="p-3 rounded-xl bg-surface-container-low space-y-1">
+                <p className="text-sm font-medium text-foreground">{faq.question}</p>
+                <p className="text-xs text-muted-foreground">{faq.answer}</p>
+                <Button variant="outline" size="sm" className="text-xs text-red-600 mt-1" onClick={() => deleteFaq(faq.id!)}>
+                  Delete
+                </Button>
+              </div>
+            ))}
+            <div className="border-2 border-dashed border-surface-container-high rounded-xl p-4 space-y-2">
+              <Input
+                value={newFaq.question}
+                onChange={(e) => setNewFaq({ ...newFaq, question: e.target.value })}
+                placeholder="Question"
+                className="text-sm"
+              />
+              <textarea
+                value={newFaq.answer}
+                onChange={(e) => setNewFaq({ ...newFaq, answer: e.target.value })}
+                placeholder="Answer"
+                rows={2}
+                className="w-full text-xs border rounded-lg p-2 bg-surface-container-lowest"
+              />
+              <Button size="sm" className="rounded-full text-xs" onClick={addFaq} disabled={!newFaq.question || !newFaq.answer}>
+                Add FAQ
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 10. Editorial Ratings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Editorial Ratings (1-5)</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-3 gap-4">
+            {[
+              { key: "editorial_overall", label: "Overall" },
+              { key: "editorial_staff", label: "Staff" },
+              { key: "editorial_facility", label: "Facility" },
+              { key: "editorial_program", label: "Program" },
+              { key: "editorial_privacy", label: "Privacy" },
+              { key: "editorial_value", label: "Value" },
+            ].map(({ key, label }) => (
+              <div key={key}>
+                <Label>{label}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={(center[key] as number) || ""}
+                  onChange={(e) =>
+                    update(key, e.target.value ? Number(e.target.value) : null)
+                  }
+                  className="mt-1.5"
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* 11. Status & Badges */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Status & Badges</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -867,7 +1066,6 @@ export default function AdminCenterEditPage() {
                 { key: "referral_eligible", label: "Referral Eligible" },
                 { key: "is_featured", label: "Featured" },
                 { key: "is_sponsored", label: "Sponsored" },
-                { key: "has_detox", label: "Has Detox" },
               ].map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between p-3 rounded-lg border">
                   <Label>{label}</Label>
@@ -881,29 +1079,9 @@ export default function AdminCenterEditPage() {
           </CardContent>
         </Card>
 
-        {/* Hospital Affiliation */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Hospital Affiliation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select
-              value={(center.hospital_affiliation as string) || "none"}
-              onValueChange={(v) => update("hospital_affiliation", v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="on_site">Hospital On-Site</SelectItem>
-                <SelectItem value="partnered">Partnered Hospital</SelectItem>
-                <SelectItem value="none">No Hospital Affiliation</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+        <Separator />
 
-        {/* Commission & Agreement */}
+        {/* 12. Commission & Commercial Agreement — LAST */}
         <Card>
           <CardHeader>
             <CardTitle>Commission & Commercial Agreement</CardTitle>
@@ -1101,100 +1279,6 @@ export default function AdminCenterEditPage() {
             </CardContent>
           </Card>
         )}
-
-        {/* Editorial Ratings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Editorial Ratings (1-5)</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-4">
-            {[
-              { key: "editorial_overall", label: "Overall" },
-              { key: "editorial_staff", label: "Staff" },
-              { key: "editorial_facility", label: "Facility" },
-              { key: "editorial_program", label: "Program" },
-              { key: "editorial_privacy", label: "Privacy" },
-              { key: "editorial_value", label: "Value" },
-            ].map(({ key, label }) => (
-              <div key={key}>
-                <Label>{label}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="5"
-                  step="0.1"
-                  value={(center[key] as number) || ""}
-                  onChange={(e) =>
-                    update(key, e.target.value ? Number(e.target.value) : null)
-                  }
-                  className="mt-1.5"
-                />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Additional Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Insurance</Label>
-                <Input
-                  value={(center.insurance as string) || ""}
-                  onChange={(e) => update("insurance", e.target.value)}
-                  placeholder="e.g. Accepts most private insurance"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Occupancy</Label>
-                <Input
-                  value={(center.occupancy as string) || ""}
-                  onChange={(e) => update("occupancy", e.target.value)}
-                  placeholder="e.g. Currently accepting new clients"
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Review Count</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={(center.review_count as number) ?? ""}
-                  onChange={(e) =>
-                    update("review_count", e.target.value ? Number(e.target.value) : null)
-                  }
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Last Verified</Label>
-                <Input
-                  type="date"
-                  value={(center.last_verified as string) || ""}
-                  onChange={(e) => update("last_verified", e.target.value || null)}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Review Summary</Label>
-              <Textarea
-                value={(center.review_summary as string) || ""}
-                onChange={(e) => update("review_summary", e.target.value)}
-                placeholder="e.g. 4.8 stars from 120 Google reviews"
-                className="mt-1.5"
-                rows={2}
-              />
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

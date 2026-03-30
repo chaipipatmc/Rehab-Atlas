@@ -317,15 +317,27 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-12">
+            {/* About Section — Full Description */}
+            {typedCenter.description && (
+              <section>
+                <h2 className="text-headline-lg font-semibold text-foreground">
+                  About {typedCenter.name}
+                </h2>
+                <div className="mt-4 text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {typedCenter.description}
+                </div>
+              </section>
+            )}
+
             {/* Treatment & Focus */}
             <section>
               <h2 className="text-headline-lg font-semibold text-foreground flex items-center gap-2">
                 Treatment &amp; Focus
               </h2>
 
-              {typedCenter.description && (
+              {typedCenter.short_description && (
                 <blockquote className="mt-4 font-editorial italic text-lg text-foreground/80 leading-relaxed">
-                  &ldquo;{typedCenter.short_description || typedCenter.description.slice(0, 150)}&rdquo;
+                  &ldquo;{typedCenter.short_description}&rdquo;
                 </blockquote>
               )}
 
