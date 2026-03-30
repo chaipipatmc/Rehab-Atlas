@@ -339,3 +339,10 @@ export const SORT_OPTIONS = [
   { value: "price_desc", label: "Price: High to Low" },
   { value: "rating", label: "Highest Rated" },
 ] as const;
+
+// Hospital Affiliation
+export const HOSPITAL_AFFILIATION_OPTIONS = [
+  { value: "on_site", label: "Hospital On-Site" },
+  { value: "partnered", label: "Partnered Hospital" },
+  { value: "none", label: "No Hospital Affiliation" },
+] as const;

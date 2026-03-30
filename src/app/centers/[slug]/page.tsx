@@ -716,6 +716,22 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                   </div>
                 )}
               </div>
+              {/* Hospital Affiliation */}
+              {(() => {
+                const ha = (typedCenter as unknown as Record<string, unknown>).hospital_affiliation as string | null;
+                if (!ha || ha === "none") return null;
+                return (
+                  <div className="pt-4">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Hospital</p>
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1.5 ${
+                      ha === "on_site" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"
+                    }`}>
+                      {ha === "on_site" ? "Hospital On-Site" : "Partnered Hospital"}
+                    </span>
+                  </div>
+                );
+              })()}
+
               {/* Accreditations */}
               {(typedCenter.accreditation || []).length > 0 && (
                 <div className="pt-4">

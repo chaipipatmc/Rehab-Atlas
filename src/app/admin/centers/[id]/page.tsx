@@ -655,6 +655,28 @@ export default function AdminCenterEditPage() {
           </CardContent>
         </Card>
 
+        {/* Hospital Affiliation */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Hospital Affiliation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select
+              value={(center.hospital_affiliation as string) || "none"}
+              onValueChange={(v) => update("hospital_affiliation", v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="on_site">Hospital On-Site</SelectItem>
+                <SelectItem value="partnered">Partnered Hospital</SelectItem>
+                <SelectItem value="none">No Hospital Affiliation</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
         {/* Commission & Agreement */}
         <Card>
           <CardHeader>

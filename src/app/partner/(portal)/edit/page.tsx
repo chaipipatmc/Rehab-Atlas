@@ -90,6 +90,7 @@ export default function PartnerEditPage() {
     "insurance", "accreditation", "occupancy",
     "substance_use", "review_summary", "review_count",
     "who_we_treat", "approaches", "aftercare", "amenities", "activities", "accommodations",
+    "hospital_affiliation",
   ];
 
   useEffect(() => {
@@ -495,6 +496,29 @@ export default function PartnerEditPage() {
                   className="h-4 w-4 rounded text-primary"
                 />
                 <Label className="text-sm text-foreground">On-site medical detox available</Label>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-foreground">Hospital Affiliation</Label>
+                <div className="flex gap-3 mt-2">
+                  {[
+                    { value: "on_site", label: "Hospital On-Site" },
+                    { value: "partnered", label: "Partnered Hospital" },
+                    { value: "none", label: "No Hospital Affiliation" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => update("hospital_affiliation", opt.value)}
+                      className={`text-xs rounded-full px-3 py-1.5 transition-colors ${
+                        (center.hospital_affiliation || "none") === opt.value
+                          ? "bg-primary text-white"
+                          : "bg-surface-container-low text-muted-foreground hover:bg-surface-container"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
