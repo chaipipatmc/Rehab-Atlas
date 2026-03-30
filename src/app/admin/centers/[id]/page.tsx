@@ -45,6 +45,16 @@ interface PhotoItem {
   is_primary?: boolean;
 }
 
+interface StaffMember {
+  id?: string;
+  name: string;
+  position: string;
+  credentials: string;
+  photo_url: string;
+  bio: string;
+  sort_order: number;
+}
+
 export default function AdminCenterEditPage() {
   const params = useParams();
   const router = useRouter();
@@ -54,6 +64,10 @@ export default function AdminCenterEditPage() {
   const [saving, setSaving] = useState(false);
   const [blogStats, setBlogStats] = useState<{ thisMonth: number; lastMonth: number } | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [newStaff, setNewStaff] = useState<StaffMember>({ name: "", position: "", credentials: "", photo_url: "", bio: "", sort_order: 0 });
+  const [faqs, setFaqs] = useState<Array<{ id?: string; question: string; answer: string }>>([]);
+  const [newFaq, setNewFaq] = useState({ question: "", answer: "" });
 
   useEffect(() => {
     async function load() {
@@ -72,6 +86,22 @@ export default function AdminCenterEditPage() {
         .eq("center_id", params.id)
         .order("sort_order");
       setPhotos((photoData || []) as PhotoItem[]);
+
+      // Load staff
+      const { data: staffData } = await supabase
+        .from("center_staff")
+        .select("*")
+        .eq("center_id", params.id)
+        .order("sort_order");
+      setStaff((staffData || []) as StaffMember[]);
+
+      // Load FAQs
+      const { data: faqData } = await supabase
+        .from("center_faqs")
+        .select("*")
+        .eq("center_id", params.id)
+        .order("sort_order");
+      setFaqs((faqData || []) as Array<{ id: string; question: string; answer: string }>);
 
       // Load blog counts for commission tier
       const now = new Date();
@@ -152,6 +182,65 @@ export default function AdminCenterEditPage() {
     } finally {
       setPublishing(false);
     }
+  }
+
+  async function addStaff() {
+    if (!newStaff.name) return;
+    const supabase = createClient();
+    const { data, error } = await supabase.from("center_staff").insert({
+      center_id: params.id,
+      ...newStaff,
+      sort_order: staff.length,
+    }).select().single();
+    if (!error && data) {
+      setStaff([...staff, data as StaffMember]);
+      setNewStaff({ name: "", position: "", credentials: "", photo_url: "", bio: "", sort_order: 0 });
+      toast.success("Staff member added");
+    } else {
+      toast.error("Failed to add staff");
+    }
+  }
+
+  async function updateStaffMember(id: string, updates: Partial<StaffMember>) {
+    const supabase = createClient();
+    const { error } = await supabase.from("center_staff").update(updates).eq("id", id);
+    if (!error) {
+      setStaff(staff.map(s => s.id === id ? { ...s, ...updates } : s));
+    }
+  }
+
+  async function deleteStaff(id: string) {
+    if (!confirm("Remove this staff member?")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("center_staff").delete().eq("id", id);
+    if (!error) {
+      setStaff(staff.filter(s => s.id !== id));
+      toast.success("Staff member removed");
+    }
+  }
+
+  async function addFaq() {
+    if (!newFaq.question || !newFaq.answer) return;
+    const supabase = createClient();
+    const { data, error } = await supabase.from("center_faqs").insert({
+      center_id: params.id,
+      question: newFaq.question,
+      answer: newFaq.answer,
+      sort_order: faqs.length,
+    }).select().single();
+    if (!error && data) {
+      setFaqs([...faqs, data as { id: string; question: string; answer: string }]);
+      setNewFaq({ question: "", answer: "" });
+      toast.success("FAQ added");
+    }
+  }
+
+  async function deleteFaq(id: string) {
+    if (!confirm("Delete this FAQ?")) return;
+    const supabase = createClient();
+    await supabase.from("center_faqs").delete().eq("id", id);
+    setFaqs(faqs.filter(f => f.id !== id));
+    toast.success("FAQ deleted");
   }
 
   async function handlePublishToggle() {
@@ -320,6 +409,143 @@ export default function AdminCenterEditPage() {
               folder={`centers/${params.id}`}
               maxImages={10}
             />
+          </CardContent>
+        </Card>
+
+        {/* Clinical Team / Staff */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Clinical Team</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Existing staff */}
+            {staff.map((s) => (
+              <div key={s.id} className="flex gap-3 p-3 rounded-xl bg-surface-container-low">
+                {s.photo_url ? (
+                  <img src={s.photo_url} alt={s.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary font-semibold text-lg">
+                    {s.name.charAt(0)}
+                  </div>
+                )}
+                <div className="flex-1 space-y-1.5">
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      value={s.name}
+                      onChange={(e) => updateStaffMember(s.id!, { name: e.target.value })}
+                      placeholder="Name"
+                      className="text-sm"
+                    />
+                    <Input
+                      value={s.position}
+                      onChange={(e) => updateStaffMember(s.id!, { position: e.target.value })}
+                      placeholder="Position"
+                      className="text-sm"
+                    />
+                    <Input
+                      value={s.credentials}
+                      onChange={(e) => updateStaffMember(s.id!, { credentials: e.target.value })}
+                      placeholder="Credentials (e.g. M.D., LCSW)"
+                      className="text-sm"
+                    />
+                  </div>
+                  <Input
+                    value={s.photo_url}
+                    onChange={(e) => updateStaffMember(s.id!, { photo_url: e.target.value })}
+                    placeholder="Photo URL"
+                    className="text-xs"
+                  />
+                  <textarea
+                    value={s.bio}
+                    onChange={(e) => updateStaffMember(s.id!, { bio: e.target.value })}
+                    placeholder="Brief bio..."
+                    rows={2}
+                    className="w-full text-xs border rounded-lg p-2 bg-surface-container-lowest"
+                  />
+                  <Button variant="outline" size="sm" className="text-xs text-red-600" onClick={() => deleteStaff(s.id!)}>
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            {/* Add new staff */}
+            <div className="border-2 border-dashed border-surface-container-high rounded-xl p-4 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Add Team Member</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  value={newStaff.name}
+                  onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                  placeholder="Full Name"
+                  className="text-sm"
+                />
+                <Input
+                  value={newStaff.position}
+                  onChange={(e) => setNewStaff({ ...newStaff, position: e.target.value })}
+                  placeholder="Position / Title"
+                  className="text-sm"
+                />
+                <Input
+                  value={newStaff.credentials}
+                  onChange={(e) => setNewStaff({ ...newStaff, credentials: e.target.value })}
+                  placeholder="Credentials"
+                  className="text-sm"
+                />
+              </div>
+              <Input
+                value={newStaff.photo_url}
+                onChange={(e) => setNewStaff({ ...newStaff, photo_url: e.target.value })}
+                placeholder="Photo URL (optional)"
+                className="text-xs"
+              />
+              <textarea
+                value={newStaff.bio}
+                onChange={(e) => setNewStaff({ ...newStaff, bio: e.target.value })}
+                placeholder="Brief bio (optional)"
+                rows={2}
+                className="w-full text-xs border rounded-lg p-2 bg-surface-container-lowest"
+              />
+              <Button size="sm" className="rounded-full text-xs" onClick={addStaff} disabled={!newStaff.name}>
+                Add Staff Member
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">Staff changes are saved immediately.</p>
+          </CardContent>
+        </Card>
+
+        {/* FAQs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>FAQs</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {faqs.map((faq) => (
+              <div key={faq.id} className="p-3 rounded-xl bg-surface-container-low space-y-1">
+                <p className="text-sm font-medium text-foreground">{faq.question}</p>
+                <p className="text-xs text-muted-foreground">{faq.answer}</p>
+                <Button variant="outline" size="sm" className="text-xs text-red-600 mt-1" onClick={() => deleteFaq(faq.id!)}>
+                  Delete
+                </Button>
+              </div>
+            ))}
+            <div className="border-2 border-dashed border-surface-container-high rounded-xl p-4 space-y-2">
+              <Input
+                value={newFaq.question}
+                onChange={(e) => setNewFaq({ ...newFaq, question: e.target.value })}
+                placeholder="Question"
+                className="text-sm"
+              />
+              <textarea
+                value={newFaq.answer}
+                onChange={(e) => setNewFaq({ ...newFaq, answer: e.target.value })}
+                placeholder="Answer"
+                rows={2}
+                className="w-full text-xs border rounded-lg p-2 bg-surface-container-lowest"
+              />
+              <Button size="sm" className="rounded-full text-xs" onClick={addFaq} disabled={!newFaq.question || !newFaq.answer}>
+                Add FAQ
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
