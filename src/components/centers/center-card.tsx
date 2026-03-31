@@ -64,7 +64,7 @@ export function CenterCard({ center }: CenterCardProps) {
               {cityParts}{cityParts && country ? ", " : ""}
             </span>
             {country && (
-              <Link href={`/rehab-in/${countryToSlug(country)}`} className="text-primary hover:underline text-xs shrink-0" onClick={(e) => e.stopPropagation()}>
+              <Link href={`/rehab-in/${countryToSlug(country)}`} className="text-primary hover:underline text-xs shrink-0">
                 {country}
               </Link>
             )}
