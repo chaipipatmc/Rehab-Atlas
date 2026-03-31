@@ -211,21 +211,27 @@ export default function AdminAgentsPage() {
     if (!confirmed) return;
 
     setBulkActioning(true);
-    let success = 0;
-    let failed = 0;
+    const taskIds = [...selectedTasks];
 
-    for (const taskId of selectedTasks) {
-      try {
-        const res = await fetch("/api/agents/action", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ task_id: taskId, decision: decision === "approved" ? "approve" : "reject" }),
-        });
-        if (res.ok) success++; else failed++;
-      } catch { failed++; }
+    try {
+      const res = await fetch("/api/agents/bulk-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task_ids: taskIds,
+          decision: decision === "approved" ? "approve" : "reject",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`${data.processed} tasks ${decision}${data.emails_queued ? ` — ${data.emails_queued} emails sending in background` : ""}`);
+      } else {
+        toast.error(data.error || "Bulk action failed");
+      }
+    } catch {
+      toast.error("Bulk action failed — network error");
     }
 
-    toast.success(`${success} tasks ${decision}${failed > 0 ? `, ${failed} failed` : ""}`);
     setSelectedTasks(new Set());
     await loadTasks();
     setBulkActioning(false);
