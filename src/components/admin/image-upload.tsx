@@ -221,31 +221,33 @@ export function MultiImageUpload({
       {/* Image Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
         {images.map((img, i) => (
-          <div key={i} className="relative group aspect-[4/3] rounded-xl overflow-hidden bg-surface-container">
+          <div key={`${img.url}-${i}`} className="relative group aspect-[4/3] rounded-xl overflow-hidden bg-surface-container">
             <img src={img.url} alt={img.alt_text || ""} className="w-full h-full object-cover" />
+            {/* Delete button */}
             <button
               onClick={() => removeImage(i)}
-              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-destructive transition-colors"
             >
               <X className="h-3 w-3" />
             </button>
+            {/* Primary star — always visible */}
             <button
               onClick={() => setPrimary(i)}
               title={i === 0 ? "Primary photo" : "Set as primary"}
               className={`absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
                 i === 0
                   ? "bg-primary text-white"
-                  : "bg-black/50 text-white/70 opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-white"
+                  : "bg-black/60 text-white/80 hover:bg-primary hover:text-white"
               }`}
             >
               <Star className={`h-3 w-3 ${i === 0 ? "fill-current" : ""}`} />
             </button>
-            {/* Move left/right buttons */}
-            <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Move left/right — always visible */}
+            <div className="absolute bottom-2 right-2 flex gap-1">
               {i > 0 && (
                 <button
                   onClick={() => moveImage(i, "left")}
-                  className="w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                  className="w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
                   title="Move left"
                 >
                   <ChevronLeft className="h-3 w-3" />
@@ -254,13 +256,14 @@ export function MultiImageUpload({
               {i < images.length - 1 && (
                 <button
                   onClick={() => moveImage(i, "right")}
-                  className="w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                  className="w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
                   title="Move right"
                 >
                   <ChevronRight className="h-3 w-3" />
                 </button>
               )}
             </div>
+            {/* Primary label */}
             {i === 0 && (
               <span className="absolute bottom-2 left-2 text-[9px] uppercase tracking-wider bg-primary text-white rounded-full px-2 py-0.5">
                 Primary

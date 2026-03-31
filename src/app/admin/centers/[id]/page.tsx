@@ -180,7 +180,7 @@ export default function AdminCenterEditPage() {
         body: JSON.stringify({
           id: params.id,
           center,
-          photos: photos.map((p) => ({ url: p.url, alt_text: p.alt_text })),
+          photos: photos.map((p, i) => ({ url: p.url, alt_text: p.alt_text, sort_order: i, is_primary: i === 0 })),
         }),
       });
       const data = await res.json();
