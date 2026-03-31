@@ -58,17 +58,17 @@ export function CenterCard({ center }: CenterCardProps) {
         </TrackingLink>
 
         {(cityParts || country) && (
-          <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1.5">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1.5">
             <MapPin className="h-3 w-3 flex-shrink-0" />
             <span className="truncate">
               {cityParts}{cityParts && country ? ", " : ""}
-              {country && (
-                <Link href={`/rehab-in/${countryToSlug(country)}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-                  {country}
-                </Link>
-              )}
             </span>
-          </p>
+            {country && (
+              <Link href={`/rehab-in/${countryToSlug(country)}`} className="text-primary hover:underline text-xs shrink-0" onClick={(e) => e.stopPropagation()}>
+                {country}
+              </Link>
+            )}
+          </div>
         )}
 
         {center.short_description && (

@@ -270,15 +270,15 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
             </div>
             <div className="flex flex-wrap items-center gap-3 mt-3">
               {location && (
-                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" />
-                  {cityParts}{cityParts && typedCenter.country ? ", " : ""}
+                  <span>{cityParts}{cityParts && typedCenter.country ? ", " : ""}</span>
                   {typedCenter.country && countrySlug ? (
                     <Link href={`/rehab-in/${countrySlug}`} className="text-primary hover:underline">
                       {typedCenter.country}
                     </Link>
-                  ) : typedCenter.country}
-                </span>
+                  ) : <span>{typedCenter.country}</span>}
+                </div>
               )}
               {typedCenter.rating && (
                 <span className="flex items-center gap-1 text-sm text-muted-foreground">
