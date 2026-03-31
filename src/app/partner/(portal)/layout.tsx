@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Building2, Pencil, Image, Clock, LayoutDashboard, BookOpen, Users, Receipt } from "lucide-react";
+import { CenterSwitcher } from "@/components/partner/center-switcher";
 
 const navItems = [
   { href: "/partner", label: "Dashboard", icon: LayoutDashboard },
@@ -27,7 +28,7 @@ export default async function PartnerLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, center_id, full_name")
+    .select("role, center_id, full_name, managed_center_ids")
     .eq("id", user.id)
     .single();
 
@@ -49,20 +50,43 @@ export default async function PartnerLayout({
     );
   }
 
-  // Get center name
+  // Get current center name
   const { data: center } = await supabase
     .from("centers")
-    .select("name")
+    .select("name, city, country")
     .eq("id", profile.center_id)
     .single();
+
+  // Get managed centers for switcher
+  const managedIds = (profile.managed_center_ids as string[]) || [];
+  const hasMultipleCenters = managedIds.length > 1;
+
+  let managedCenters: Array<{ id: string; name: string; city: string | null; country: string | null }> = [];
+  if (hasMultipleCenters) {
+    const { data: centers } = await supabase
+      .from("centers")
+      .select("id, name, city, country")
+      .in("id", managedIds)
+      .order("name");
+    managedCenters = (centers || []) as typeof managedCenters;
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] bg-surface">
       {/* Sidebar */}
       <aside className="w-56 bg-surface-container-lowest hidden md:flex flex-col">
-        <div className="p-5">
-          <p className="text-sm font-semibold text-foreground truncate">{center?.name || "My Center"}</p>
-          <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-medium">Center Partner</p>
+        <div className="p-4">
+          {hasMultipleCenters ? (
+            <CenterSwitcher
+              currentCenterId={profile.center_id}
+              centers={managedCenters}
+            />
+          ) : (
+            <div className="px-1">
+              <p className="text-sm font-semibold text-foreground truncate">{center?.name || "My Center"}</p>
+              <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-medium">Center Partner</p>
+            </div>
+          )}
         </div>
 
         <nav className="flex-1 px-3 space-y-0.5">

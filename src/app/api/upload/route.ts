@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, center_id")
+    .select("role, center_id, managed_center_ids")
     .eq("id", user.id)
     .single();
 
@@ -66,9 +66,12 @@ export async function POST(req: Request) {
     );
   }
 
-  // Partners can only upload to their own center
+  // Partners can only upload to their own center(s)
   if (profile.role === "partner" && centerId !== profile.center_id) {
-    return NextResponse.json({ error: "Not your center" }, { status: 403 });
+    const managedIds = (profile.managed_center_ids as string[]) || [];
+    if (!managedIds.includes(centerId!)) {
+      return NextResponse.json({ error: "Not your center" }, { status: 403 });
+    }
   }
 
   const folder = isStaffPhoto ? "staff" : "centers";
