@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { CenterCard } from "@/components/centers/center-card";
 import { CenterFilters } from "@/components/centers/center-filters";
@@ -11,69 +10,6 @@ import Link from "next/link";
 import type { Center } from "@/types/center";
 import type { Metadata } from "next";
 
-// Country coordinates for distance calculation
-const COUNTRY_COORDS: Record<string, [number, number]> = {
-  "United States": [39.8, -98.5], "United Kingdom": [54.0, -2.0], "Canada": [56.1, -106.3],
-  "Australia": [-25.3, 133.8], "Thailand": [15.9, 100.9], "India": [20.6, 78.9],
-  "Germany": [51.2, 10.4], "France": [46.2, 2.2], "Spain": [40.5, -3.7],
-  "Italy": [41.9, 12.5], "Switzerland": [46.8, 8.2], "Netherlands": [52.1, 5.3],
-  "Mexico": [23.6, -102.6], "Brazil": [-14.2, -51.9], "Japan": [36.2, 138.3],
-  "South Korea": [35.9, 128.0], "China": [35.9, 104.2], "Indonesia": [-0.8, 113.9],
-  "Philippines": [12.9, 121.8], "Malaysia": [4.2, 101.9], "Singapore": [1.4, 103.8],
-  "South Africa": [-30.6, 22.9], "UAE": [23.4, 53.8], "Portugal": [39.4, -8.2],
-  "Sweden": [60.1, 18.6], "Norway": [60.5, 8.5], "Denmark": [56.3, 9.5],
-  "Austria": [47.5, 14.6], "Ireland": [53.1, -7.7], "New Zealand": [-40.9, 174.9],
-  "Costa Rica": [9.7, -83.8], "Colombia": [4.6, -74.3], "Argentina": [-38.4, -63.6],
-  "Peru": [-9.2, -75.0], "Chile": [-35.7, -71.5], "Turkey": [38.9, 35.2],
-  "Israel": [31.0, 34.9], "Egypt": [26.8, 30.8], "Kenya": [-0.0, 37.9],
-  "Nigeria": [9.1, 8.7], "Greece": [39.1, 21.8], "Poland": [51.9, 19.1],
-  "Czech Republic": [49.8, 15.5], "Hungary": [47.2, 19.5], "Romania": [45.9, 25.0],
-  "Vietnam": [14.1, 108.3], "Cambodia": [12.6, 104.9], "Taiwan": [23.7, 120.9],
-};
-
-// Map Vercel country codes to full names
-const COUNTRY_CODE_MAP: Record<string, string> = {
-  US: "United States", GB: "United Kingdom", CA: "Canada", AU: "Australia",
-  TH: "Thailand", IN: "India", DE: "Germany", FR: "France", ES: "Spain",
-  IT: "Italy", CH: "Switzerland", NL: "Netherlands", MX: "Mexico", BR: "Brazil",
-  JP: "Japan", KR: "South Korea", CN: "China", ID: "Indonesia", PH: "Philippines",
-  MY: "Malaysia", SG: "Singapore", ZA: "South Africa", AE: "UAE", PT: "Portugal",
-  SE: "Sweden", NO: "Norway", DK: "Denmark", AT: "Austria", IE: "Ireland",
-  NZ: "New Zealand", CR: "Costa Rica", CO: "Colombia", AR: "Argentina",
-  PE: "Peru", CL: "Chile", TR: "Turkey", IL: "Israel", EG: "Egypt",
-  KE: "Kenya", NG: "Nigeria", GR: "Greece", PL: "Poland", CZ: "Czech Republic",
-  HU: "Hungary", RO: "Romania", VN: "Vietnam", KH: "Cambodia", TW: "Taiwan",
-};
-
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-async function getUserCountry(): Promise<string | null> {
-  try {
-    const h = await headers();
-    // Vercel provides this header
-    const countryCode = h.get("x-vercel-ip-country");
-    if (countryCode && COUNTRY_CODE_MAP[countryCode]) {
-      return COUNTRY_CODE_MAP[countryCode];
-    }
-    // Fallback for localhost: try free IP API
-    const forwarded = h.get("x-forwarded-for");
-    const ip = forwarded?.split(",")[0]?.trim();
-    if (ip && ip !== "127.0.0.1" && ip !== "::1") {
-      const res = await fetch(`http://ip-api.com/json/${ip}?fields=country`, { next: { revalidate: 3600 } });
-      if (res.ok) {
-        const data = await res.json();
-        return data.country || null;
-      }
-    }
-  } catch {}
-  return null;
-}
 
 export const revalidate = 60;
 
@@ -94,9 +30,6 @@ export default async function CentersPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const currentPage = Number(params.page) || 1;
   const offset = (currentPage - 1) * PAGE_SIZE;
-
-  // Detect user's country for geo-sorting
-  const userCountry = await getUserCountry();
 
   // Build query
   let query = supabase
@@ -172,51 +105,9 @@ export default async function CentersPage({ searchParams }: PageProps) {
         .order("editorial_overall", { ascending: false, nullsFirst: false });
   }
 
-  // For geo-sorting: if no explicit sort/country filter and we know user's country,
-  // fetch all results first, sort by distance, then paginate manually
-  const isDefaultView = !params.sort && !params.country && !params.search && !params.treatment_focus && !params.setting_type && !params.insurance && !params.has_detox && !params.who_we_treat && !params.treatment_methods && !params.languages && !params.amenities && !params.approaches && !params.activities && !params.accommodations;
-  const useGeoSort = isDefaultView && userCountry && COUNTRY_COORDS[userCountry];
-
-  let centers: Record<string, unknown>[] | null = null;
-  let count: number | null = null;
-
-  if (useGeoSort) {
-    // Fetch all published centers for geo-sorting
-    const { data: allCenters, count: totalCount } = await supabase
-      .from("centers")
-      .select("*, photos:center_photos(id, url, alt_text, sort_order, is_primary)", { count: "exact" })
-      .eq("status", "published");
-
-    count = totalCount;
-    const userCoords = COUNTRY_COORDS[userCountry!]!;
-
-    // Sort: same country first, then by distance
-    const sorted = (allCenters || []).sort((a, b) => {
-      const aIsLocal = a.country === userCountry ? 0 : 1;
-      const bIsLocal = b.country === userCountry ? 0 : 1;
-      if (aIsLocal !== bIsLocal) return aIsLocal - bIsLocal;
-
-      // Both in same group — sort by distance
-      const aCoordsEntry = COUNTRY_COORDS[a.country || ""];
-      const bCoordsEntry = COUNTRY_COORDS[b.country || ""];
-      const aDist = aCoordsEntry ? haversineDistance(userCoords[0], userCoords[1], aCoordsEntry[0], aCoordsEntry[1]) : 99999;
-      const bDist = bCoordsEntry ? haversineDistance(userCoords[0], userCoords[1], bCoordsEntry[0], bCoordsEntry[1]) : 99999;
-
-      // Within same distance tier, prefer featured
-      if (Math.abs(aDist - bDist) < 500) {
-        if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
-      }
-      return aDist - bDist;
-    });
-
-    centers = sorted.slice(offset, offset + PAGE_SIZE);
-  } else {
-    // Paginate
-    query = query.range(offset, offset + PAGE_SIZE - 1);
-    const result = await query;
-    centers = result.data;
-    count = result.count;
-  }
+  // Paginate
+  query = query.range(offset, offset + PAGE_SIZE - 1);
+  const { data: centers, count } = await query;
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
   // Get distinct filter values from published centers
@@ -332,11 +223,6 @@ export default async function CentersPage({ searchParams }: PageProps) {
               {count !== null && (
                 <p className="text-sm text-muted-foreground">
                   Found <span className="font-medium text-foreground">{count} Centers</span>
-                  {useGeoSort && userCountry && (
-                    <span className="ml-2 text-xs text-primary">
-                      — showing nearest to {userCountry}
-                    </span>
-                  )}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">

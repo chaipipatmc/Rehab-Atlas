@@ -8,8 +8,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
 import {
   Menu, LogOut, User, Shield, LayoutDashboard, ChevronDown,
-  Building2, MessageCircle, Heart, BookOpen, ClipboardList,
+  Building2, MessageCircle, Heart, BookOpen, ClipboardList, MapPin,
 } from "lucide-react";
+import { countryToSlug } from "@/lib/utils";
 
 // Role-specific nav links
 const PUBLIC_NAV = [
@@ -50,11 +51,14 @@ interface UserInfo {
 export function Header() {
   const [open, setOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [centersMenuOpen, setCentersMenuOpen] = useState(false);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [countries, setCountries] = useState<string[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
+  const centersMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -89,16 +93,35 @@ export function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Close menu on click outside
+  // Fetch countries for sub-menu
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("centers")
+      .select("country")
+      .eq("status", "published")
+      .not("country", "is", null)
+      .then(({ data }) => {
+        if (data) {
+          const unique = [...new Set(data.map((c) => c.country).filter(Boolean))].sort() as string[];
+          setCountries(unique);
+        }
+      });
+  }, []);
+
+  // Close menus on click outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
       }
+      if (centersMenuRef.current && !centersMenuRef.current.contains(e.target as Node)) {
+        setCentersMenuOpen(false);
+      }
     }
-    if (userMenuOpen) document.addEventListener("mousedown", handleClick);
+    if (userMenuOpen || centersMenuOpen) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [userMenuOpen]);
+  }, [userMenuOpen, centersMenuOpen]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -149,6 +172,57 @@ export function Header() {
         <nav className="hidden md:flex items-center gap-6 lg:gap-8">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+
+            // Centers link gets a dropdown with countries (for non-admin nav)
+            if (link.href === "/centers" && countries.length > 0) {
+              return (
+                <div key={link.href} className="relative" ref={centersMenuRef}>
+                  <button
+                    className={`text-sm transition-colors duration-300 inline-flex items-center gap-1 ${
+                      isActive || pathname.startsWith("/rehab-in") ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => { router.push("/centers"); setCentersMenuOpen(false); }}
+                    onMouseEnter={() => setCentersMenuOpen(true)}
+                  >
+                    {link.label}
+                    <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${centersMenuOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {centersMenuOpen && (
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50"
+                      onMouseLeave={() => setCentersMenuOpen(false)}
+                    >
+                      <div className="bg-surface-container-lowest rounded-xl shadow-ambient-lg py-2 ghost-border min-w-[200px] max-h-[400px] overflow-y-auto">
+                        <Link
+                          href="/centers"
+                          onClick={() => setCentersMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-foreground font-medium hover:bg-surface-container transition-colors duration-200"
+                        >
+                          All Centers
+                        </Link>
+                        <div className="border-t border-surface-container my-1" />
+                        <p className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                          By Country
+                        </p>
+                        {countries.map((country) => (
+                          <Link
+                            key={country}
+                            href={`/rehab-in/${countryToSlug(country)}`}
+                            onClick={() => setCentersMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container transition-colors duration-200"
+                          >
+                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                            {country}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={link.href}
@@ -293,14 +367,31 @@ export function Header() {
                 <nav className="flex-1 overflow-y-auto px-3 py-3">
                   <div className="space-y-0.5">
                     {navLinks.map((link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setOpen(false)}
-                        className="flex items-center px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container rounded-lg transition-colors duration-200"
-                      >
-                        {link.label}
-                      </Link>
+                      <div key={link.href}>
+                        <Link
+                          href={link.href}
+                          onClick={() => setOpen(false)}
+                          className="flex items-center px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container rounded-lg transition-colors duration-200"
+                        >
+                          {link.label}
+                        </Link>
+                        {/* Country sub-links under Centers */}
+                        {link.href === "/centers" && countries.length > 0 && (
+                          <div className="ml-4 mt-0.5 space-y-0.5">
+                            {countries.map((country) => (
+                              <Link
+                                key={country}
+                                href={`/rehab-in/${countryToSlug(country)}`}
+                                onClick={() => setOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-surface-container rounded-lg transition-colors duration-200"
+                              >
+                                <MapPin className="h-3 w-3 flex-shrink-0" />
+                                {country}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
 
