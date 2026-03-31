@@ -99,10 +99,10 @@ export function CenterCard({ center }: CenterCardProps) {
           <div>
             {center.price_min ? (
               <p className="text-sm font-medium text-foreground">
-                ${center.price_min.toLocaleString()}
-                {center.price_max && (
+                ${Number(center.price_min).toLocaleString("en-US")}
+                {center.price_max && center.price_max > 0 && (
                   <span className="text-muted-foreground font-normal">
-                    {" "}&ndash; ${center.price_max.toLocaleString()}
+                    {" "}&ndash; ${Number(center.price_max).toLocaleString("en-US")}
                   </span>
                 )}
               </p>

@@ -703,6 +703,26 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
           <aside className="space-y-6">
             {/* Inquiry Card */}
             <div className="sticky top-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient space-y-5">
+              {/* Pricing */}
+              {(typedCenter.price_min || typedCenter.pricing_text) && (
+                <div className="pb-4 border-b border-surface-container">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Program Pricing</p>
+                  {typedCenter.price_min ? (
+                    <p className="text-2xl font-semibold text-foreground">
+                      ${Number(typedCenter.price_min).toLocaleString("en-US")}
+                      {typedCenter.price_max && typedCenter.price_max > 0 && (
+                        <span className="text-base font-normal text-muted-foreground">
+                          {" "}&ndash; ${Number(typedCenter.price_max).toLocaleString("en-US")}
+                        </span>
+                      )}
+                    </p>
+                  ) : null}
+                  {typedCenter.pricing_text && (
+                    <p className="text-xs text-muted-foreground mt-1">{typedCenter.pricing_text}</p>
+                  )}
+                </div>
+              )}
+
               <h3 className="text-headline-sm font-semibold text-foreground">
                 Start Your Journey Today
               </h3>
