@@ -32,27 +32,22 @@ export default async function HomePage() {
   }> = [];
   try {
     const supabase = await createClient();
-    // Show featured centers first, then fill with any published centers
-    const { data: featured } = await supabase
+    // Fetch all published centers for the carousel (random rotation on client)
+    const { data: allPublished } = await supabase
       .from("centers")
       .select("id, name, slug, city, state_province, country, short_description, verified_profile, is_unclaimed, photos:center_photos(url, alt_text)")
       .eq("status", "published")
-      .eq("is_featured", true)
-      .order("editorial_overall", { ascending: false, nullsFirst: false })
-      .limit(10);
+      .limit(20);
 
-    let data = featured;
+    let data = allPublished;
 
-    // If not enough featured, fill with any published centers
-    if (!data || data.length < 6) {
-      const featuredIds = (data || []).map(c => c.id);
+    // Fallback: if query failed, try simpler query
+    if (!data || data.length === 0) {
       const { data: others } = await supabase
         .from("centers")
         .select("id, name, slug, city, state_province, country, short_description, verified_profile, is_unclaimed, photos:center_photos(url, alt_text)")
         .eq("status", "published")
-        .not("id", "in", `(${featuredIds.join(",") || "00000000-0000-0000-0000-000000000000"})`)
-        .order("created_at", { ascending: false })
-        .limit(10 - (data?.length || 0));
+        .limit(10);
       data = [...(data || []), ...(others || [])];
     }
     // Only show centers that have at least 1 photo

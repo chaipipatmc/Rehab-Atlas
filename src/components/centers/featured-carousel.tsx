@@ -23,13 +23,17 @@ interface FeaturedCarouselProps {
 }
 
 export function FeaturedCarousel({ centers }: FeaturedCarouselProps) {
-  const [currentSet, setCurrentSet] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Each set shows 2 centers (1 large + 1 small)
   const setsCount = Math.ceil(centers.length / 2);
 
-  // Auto-rotate every 20 seconds
+  // Start at a random set
+  const [currentSet, setCurrentSet] = useState(() =>
+    setsCount > 1 ? Math.floor(Math.random() * setsCount) : 0
+  );
+
+  // Auto-rotate every 15 seconds
   useEffect(() => {
     if (setsCount <= 1) return;
     const interval = setInterval(() => {
@@ -38,7 +42,7 @@ export function FeaturedCarousel({ centers }: FeaturedCarouselProps) {
         setCurrentSet((prev) => (prev + 1) % setsCount);
         setIsTransitioning(false);
       }, 300);
-    }, 20000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [setsCount]);
 
