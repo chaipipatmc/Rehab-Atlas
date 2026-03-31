@@ -114,6 +114,7 @@ export default function AdminAgentsPage() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [bulkActioning, setBulkActioning] = useState(false);
+  const [agentStats, setAgentStats] = useState<Record<string, { pending: number; recent: number; detail: string }>>({});
   const TASKS_PER_PAGE = 50;
 
   async function loadTasks(filter?: string, page?: number) {
@@ -137,11 +138,91 @@ export default function AdminAgentsPage() {
     setTaskTotal(count || 0);
   }
 
+  async function loadAgentStats() {
+    const supabase = createClient();
+
+    // Task counts per agent type
+    const { data: pendingTasks } = await supabase
+      .from("agent_tasks")
+      .select("agent_type")
+      .eq("status", "awaiting_owner");
+
+    const { data: recentTasks } = await supabase
+      .from("agent_tasks")
+      .select("agent_type, status")
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    // Pipeline stats
+    const { data: pipelineStats } = await supabase
+      .from("outreach_pipeline")
+      .select("stage");
+
+    // Content pool
+    const { count: draftsCount } = await supabase
+      .from("pages")
+      .select("id", { count: "exact", head: true })
+      .eq("page_type", "blog")
+      .eq("status", "draft");
+
+    const { count: approvedCount } = await supabase
+      .from("pages")
+      .select("id", { count: "exact", head: true })
+      .eq("page_type", "blog")
+      .eq("status", "approved");
+
+    // Leads stats
+    const { count: newLeads } = await supabase
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new");
+
+    // Build stats per agent
+    const pending: Record<string, number> = {};
+    const recent: Record<string, number> = {};
+    for (const t of pendingTasks || []) {
+      pending[t.agent_type] = (pending[t.agent_type] || 0) + 1;
+    }
+    for (const t of recentTasks || []) {
+      recent[t.agent_type] = (recent[t.agent_type] || 0) + 1;
+    }
+
+    const pStages: Record<string, number> = {};
+    for (const p of pipelineStats || []) {
+      pStages[p.stage] = (pStages[p.stage] || 0) + 1;
+    }
+
+    const totalPool = (draftsCount || 0) + (approvedCount || 0);
+
+    const stats: Record<string, { pending: number; recent: number; detail: string }> = {};
+
+    // Internal agents
+    stats.center_admin = { pending: pending.center_admin || 0, recent: recent.center_admin || 0, detail: `${pending.center_admin || 0} reviews awaiting` };
+    stats.content_admin = { pending: pending.content_admin || 0, recent: recent.content_admin || 0, detail: `${pending.content_admin || 0} articles to review` };
+    stats.lead_verify = { pending: pending.lead_verify || 0, recent: recent.lead_verify || 0, detail: `${newLeads || 0} new leads pending` };
+    stats.follow_up = { pending: pending.follow_up || 0, recent: recent.follow_up || 0, detail: "Runs daily at 09:00 Bangkok time" };
+
+    // Outreach agents
+    stats.outreach_orchestrator = { pending: 0, recent: 0, detail: `Pipeline: ${pStages.new || 0} new, ${pStages.researching || 0} researching, ${pStages.outreach_sent || 0} sent, ${pStages.responded || 0} responded, ${pStages.active || 0} active` };
+    stats.outreach_research = { pending: pending.outreach_research || 0, recent: recent.outreach_research || 0, detail: `${pending.outreach_research || 0} drafts awaiting approval, ${pStages.researching || 0} centers being researched` };
+    stats.outreach_followup = { pending: 0, recent: 0, detail: `${pStages.outreach_sent || 0} centers awaiting response (Day 3/7/14 follow-ups)` };
+    stats.outreach_response = { pending: pending.outreach_response || 0, recent: recent.outreach_response || 0, detail: `Checks Gmail every 15 min. ${pending.outreach_response || 0} replies need review` };
+    stats.outreach_agreement = { pending: pending.outreach_agreement || 0, recent: recent.outreach_agreement || 0, detail: `${pStages.terms_agreed || 0} centers ready for agreement` };
+    stats.outreach_activation = { pending: 0, recent: 0, detail: `${pStages.active || 0} active partners onboarded` };
+
+    // Content agents
+    stats.content_creator = { pending: 0, recent: recent.content_creator || 0, detail: `Pool: ${totalPool}/20 articles (${draftsCount || 0} drafts, ${approvedCount || 0} approved)` };
+    stats.content_scheduler = { pending: 0, recent: 0, detail: "Publishes 1 approved article per day" };
+    stats.content_planner = { pending: pending.content_planner || 0, recent: recent.content_planner || 0, detail: "Plans 2-3 topics per weekday" };
+    stats.content_auto_approve = { pending: 0, recent: 0, detail: `${draftsCount || 0} drafts in queue for review` };
+
+    setAgentStats(stats);
+  }
+
   useEffect(() => {
     async function load() {
       const configRes = await fetch("/api/agents/config");
       if (configRes.ok) setConfig(await configRes.json());
-      await loadTasks("awaiting_owner", 1);
+      await Promise.all([loadTasks("awaiting_owner", 1), loadAgentStats()]);
       setLoading(false);
     }
     load();
@@ -512,6 +593,25 @@ export default function AdminAgentsPage() {
                         <Switch checked={enabled} onCheckedChange={(v) => toggleAgent(key, v)} disabled={toggling === key} />
                       </div>
                       <p className="text-xs text-muted-foreground mt-3 leading-relaxed">{info.description}</p>
+
+                      {/* Agent status details */}
+                      {agentStats[key] && (
+                        <div className="mt-3 pt-3 border-t border-surface-container">
+                          <p className="text-xs text-foreground leading-relaxed">{agentStats[key].detail}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            {agentStats[key].pending > 0 && (
+                              <span className="text-[10px] font-medium bg-amber-100 text-amber-800 rounded-full px-2 py-0.5">
+                                {agentStats[key].pending} pending
+                              </span>
+                            )}
+                            {agentStats[key].recent > 0 && (
+                              <span className="text-[10px] text-muted-foreground">
+                                {agentStats[key].recent} tasks in 24h
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
