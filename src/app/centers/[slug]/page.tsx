@@ -151,6 +151,20 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
 
   const staff = (staffRows || []) as unknown as CenterStaff[];
 
+  // Load sibling locations (same organization)
+  const orgName = (center as Record<string, unknown>).organization_name as string | null;
+  let siblingCenters: Array<{ id: string; name: string; slug: string; city: string | null; country: string | null }> = [];
+  if (orgName) {
+    const { data: siblings } = await supabase
+      .from("centers")
+      .select("id, name, slug, city, country")
+      .eq("organization_name", orgName)
+      .eq("status", "published")
+      .neq("id", center.id)
+      .order("name");
+    siblingCenters = (siblings || []) as typeof siblingCenters;
+  }
+
   // Check if user has saved this center
   let isSaved = false;
   const { data: { user } } = await supabase.auth.getUser();
@@ -293,6 +307,13 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                 isUnclaimed={(typedCenter as unknown as Record<string, unknown>).is_unclaimed as boolean}
               />
             </div>
+
+            {/* Organization label */}
+            {orgName && siblingCenters.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Part of <span className="font-medium text-foreground">{orgName}</span> — {siblingCenters.length + 1} locations worldwide
+              </p>
+            )}
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-3 mt-6">
@@ -694,6 +715,36 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                     src={`https://www.google.com/maps?q=${typedCenter.latitude},${typedCenter.longitude}&z=14&output=embed`}
                     title="Center location"
                   />
+                </div>
+              </section>
+            )}
+
+            {/* Other Locations */}
+            {siblingCenters.length > 0 && (
+              <section>
+                <h2 className="text-headline-lg font-semibold text-foreground mb-4">
+                  Other {orgName} Locations
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {siblingCenters.map((sibling) => (
+                    <Link
+                      key={sibling.id}
+                      href={`/centers/${sibling.slug}`}
+                      className="flex items-center gap-3 p-4 rounded-xl bg-surface-container-lowest shadow-ambient hover:shadow-ambient-lg transition-all duration-300 group"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <MapPin className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                          {sibling.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {[sibling.city, sibling.country].filter(Boolean).join(", ")}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               </section>
             )}
