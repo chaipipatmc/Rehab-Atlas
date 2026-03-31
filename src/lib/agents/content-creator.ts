@@ -422,8 +422,8 @@ Return a JSON object with:
   }
 }
 
-// How many days of content buffer to maintain in the pool (drafts)
-const BUFFER_DAYS = 5;
+// Target number of articles in the content pool (drafts + approved)
+const POOL_TARGET = 20;
 // How many articles per day (matching the content calendar plan)
 const ARTICLES_PER_DAY = 3;
 
@@ -464,21 +464,18 @@ export async function createArticleDraft(): Promise<boolean> {
     .eq("status", "approved");
 
   const totalInPool = (draftsInPool || 0) + (approvedInPool || 0);
-  const daysOfContent = Math.floor(totalInPool / ARTICLES_PER_DAY);
 
-  console.log(`Content Creator: pool has ${totalInPool} articles (~${daysOfContent} days). Buffer target: ${BUFFER_DAYS} days.`);
+  console.log(`Content Creator: pool has ${totalInPool}/${POOL_TARGET} articles.`);
 
-  // Determine how many days to draft
-  // Always draft at least 1 day (2-3 articles from calendar).
-  // If buffer is low, draft multiple days to fill it up.
+  // If pool is full, draft just 1 day to maintain it
+  // If pool is below target, draft enough to fill it
   let daysToDraft: number;
-  if (daysOfContent >= BUFFER_DAYS) {
-    // Buffer is full — draft 1 day to maintain it
+  if (totalInPool >= POOL_TARGET) {
     daysToDraft = 1;
   } else {
-    // Buffer is low — draft enough to fill it + 1 extra day
-    daysToDraft = BUFFER_DAYS - daysOfContent + 1;
-    console.log(`Content Creator: buffer low (${daysOfContent} days), drafting ${daysToDraft} days to catch up`);
+    const articlesNeeded = POOL_TARGET - totalInPool;
+    daysToDraft = Math.ceil(articlesNeeded / ARTICLES_PER_DAY);
+    console.log(`Content Creator: pool below target, need ${articlesNeeded} articles (~${daysToDraft} days to catch up)`);
   }
 
   // Load all used images once — shared across all articles in this run
