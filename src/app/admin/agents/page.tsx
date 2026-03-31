@@ -412,18 +412,21 @@ export default function AdminAgentsPage() {
                               const cl = task.checklist as Record<string, unknown> | null;
                               setEditingDraft(task.id);
                               setEditedSubject(String(cl?.subject || ""));
-                              setEditedBody(String(cl?.body_text || ""));
+                              // Use suggested_reply for response tasks, body_text for outreach drafts
+                              setEditedBody(String(cl?.suggested_reply || cl?.body_text || ""));
                             }}
                             onEditCancel={() => setEditingDraft(null)}
                             onEditSubject={setEditedSubject}
                             onEditBody={setEditedBody}
                             onEditSave={async () => {
                               const cl = task.checklist as Record<string, unknown> | null;
+                              const isReply = task.agent_type === "outreach_response" && !!cl?.suggested_reply;
+                              const updated = isReply
+                                ? { ...cl, suggested_reply: editedBody }
+                                : { ...cl, subject: editedSubject, body_text: editedBody };
                               const supabase = createClient();
-                              await supabase.from("agent_tasks").update({
-                                checklist: { ...cl, subject: editedSubject, body_text: editedBody },
-                              }).eq("id", task.id);
-                              setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, checklist: { ...cl, subject: editedSubject, body_text: editedBody } } : t));
+                              await supabase.from("agent_tasks").update({ checklist: updated }).eq("id", task.id);
+                              setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, checklist: updated } : t));
                               setEditingDraft(null);
                               toast.success("Draft updated");
                             }}
@@ -546,6 +549,7 @@ function TaskCard({
   const isAwaiting = task.status === "awaiting_owner";
   const checklist = task.checklist as Record<string, unknown> | null;
   const isOutreachEmail = task.agent_type === "outreach_research" && !!checklist?.body_text;
+  const isReplyTask = task.agent_type === "outreach_response" && !!checklist?.suggested_reply;
   const centerName = checklist?.center_name ? String(checklist.center_name) : null;
   const feedbackHistory = (checklist?.feedback_history as string[]) || [];
 
@@ -712,13 +716,92 @@ function TaskCard({
                 </div>
               )}
             </div>
+          ) : isReplyTask ? (
+            /* Reply editor for outreach responses */
+            <div className="bg-surface-container-lowest rounded-xl p-5">
+              {/* Reply context */}
+              <div className="space-y-2 text-sm mb-4">
+                {checklist?.reply_from && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground font-medium w-24 shrink-0">reply from:</span>
+                    <span className="text-foreground">{String(checklist.reply_from)}</span>
+                  </div>
+                )}
+                {checklist?.sentiment && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground font-medium w-24 shrink-0">sentiment:</span>
+                    <span className={`font-medium ${checklist.sentiment === "positive" ? "text-emerald-600" : checklist.sentiment === "negative" ? "text-red-600" : "text-amber-600"}`}>
+                      {String(checklist.sentiment)}
+                    </span>
+                  </div>
+                )}
+                {checklist?.summary && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground font-medium w-24 shrink-0">summary:</span>
+                    <span className="text-foreground">{String(checklist.summary)}</span>
+                  </div>
+                )}
+                {checklist?.key_points && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground font-medium w-24 shrink-0">key points:</span>
+                    <span className="text-foreground">{JSON.stringify(checklist.key_points)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Original reply */}
+              {checklist?.reply_body && (
+                <div className="mb-4 p-3 bg-surface-container-low rounded-lg border-l-2 border-muted-foreground/20">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">Their Reply</p>
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{String(checklist.reply_body)}</p>
+                </div>
+              )}
+
+              {/* Suggested reply — editable */}
+              <div className="border-t border-surface-container pt-4">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Your Reply (editable)</p>
+                {isEditing ? (
+                  <textarea
+                    value={editedBody}
+                    onChange={(e) => onEditBody(e.target.value)}
+                    className="w-full text-sm bg-white border rounded-lg p-3 ghost-border font-sans leading-relaxed min-h-[200px]"
+                  />
+                ) : (
+                  <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed font-sans">
+                    {String(checklist?.suggested_reply || "")}
+                  </pre>
+                )}
+              </div>
+
+              {isAwaiting && task.action_token && (
+                <div className="mt-4 pt-4 border-t border-surface-container">
+                  {isEditing ? (
+                    <div className="flex items-center gap-3">
+                      <button onClick={onEditSave} className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5">Save Changes</button>
+                      <button onClick={onEditCancel} className="text-xs font-medium text-muted-foreground hover:text-foreground rounded-full px-4 py-1.5">Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => onAction("approved")} disabled={actioning}
+                        className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-4 py-1.5 disabled:opacity-50">
+                        {actioning ? "Sending..." : "Approve & Send Reply"}
+                      </button>
+                      <button onClick={onEditStart}
+                        className="text-xs font-medium text-primary hover:text-primary/80 rounded-full px-4 py-1.5 border border-primary/20">Edit Reply</button>
+                      <button onClick={() => onAction("rejected")} disabled={actioning}
+                        className="text-xs font-medium text-red-600 hover:text-red-700 rounded-full px-4 py-1.5 disabled:opacity-50">Dismiss</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             /* Generic task detail */
             <div className="bg-surface-container-lowest rounded-xl p-4">
               {task.ai_summary && <p className="text-sm text-foreground leading-relaxed mb-3">{task.ai_summary}</p>}
               {checklist && (
                 <div className="space-y-1.5">
-                  {Object.entries(checklist).filter(([k]) => !["body_text", "subject", "from_email", "to_email", "persona", "feedback_history"].includes(k)).map(([key, val]) => (
+                  {Object.entries(checklist).filter(([k]) => !["body_text", "subject", "from_email", "to_email", "persona", "feedback_history", "suggested_reply", "reply_body"].includes(k)).map(([key, val]) => (
                     <div key={key} className="flex gap-2 text-xs">
                       <span className="text-muted-foreground font-medium min-w-[100px]">{key.replace(/_/g, " ")}:</span>
                       <span className="text-foreground">{typeof val === "object" ? JSON.stringify(val) : String(val || "—")}</span>

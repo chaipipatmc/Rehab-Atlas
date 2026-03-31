@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendLeadForwardEmail } from "@/lib/email/send";
 import { sendApprovedOutreach } from "@/lib/agents/outreach/research";
 import { sendApprovedAgreement } from "@/lib/agents/outreach/agreement";
+import { sendEmail as sendGmailReply } from "@/lib/agents/outreach/gmail";
 import { validateOrigin } from "@/lib/csrf";
 
 function escapeHtml(str: string): string {
@@ -345,6 +346,56 @@ async function executePostAction(
             entityId,
             agreementChecklist.agreement_details as Parameters<typeof sendApprovedAgreement>[1]
           );
+        }
+        break;
+      }
+
+      case "outreach_response": {
+        // Send the (possibly edited) reply via Gmail
+        const replyChecklist = task.checklist as Record<string, unknown> | null;
+        const replyText = replyChecklist?.suggested_reply as string | null;
+        const replyFrom = replyChecklist?.reply_from as string | null;
+        const centerName = replyChecklist?.center_name as string | null;
+
+        if (replyText && replyFrom) {
+          // Extract email from "Name <email>" format
+          const emailMatch = replyFrom.match(/<([^>]+)>/);
+          const toEmail = emailMatch ? emailMatch[1] : replyFrom;
+
+          // Find the original thread to reply in-thread
+          const { data: pipeline } = await admin
+            .from("outreach_pipeline")
+            .select("gmail_thread_id")
+            .eq("id", entityId)
+            .single();
+
+          try {
+            await sendGmailReply({
+              to: toEmail,
+              subject: `Re: ${centerName || "Partnership"} - Rehab-Atlas`,
+              bodyText: replyText,
+              threadId: pipeline?.gmail_thread_id || undefined,
+            });
+
+            // Log the reply in outreach_emails
+            await admin.from("outreach_emails").insert({
+              pipeline_id: entityId,
+              direction: "outbound",
+              from_email: "info@rehab-atlas.com",
+              to_email: toEmail,
+              subject: `Re: ${centerName || "Partnership"} - Rehab-Atlas`,
+              body_text: replyText,
+              email_type: "reply",
+            });
+
+            // Update pipeline stage
+            await admin
+              .from("outreach_pipeline")
+              .update({ stage: "responded", last_activity_at: new Date().toISOString() })
+              .eq("id", entityId);
+          } catch (replyErr) {
+            console.error("Gmail reply send failed:", replyErr);
+          }
         }
         break;
       }
