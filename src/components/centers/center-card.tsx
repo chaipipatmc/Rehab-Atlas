@@ -4,15 +4,15 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Star, Shield, Info } from "lucide-react";
 import type { Center, CenterPhoto } from "@/types/center";
 import { TrackingLink } from "./tracking-link";
+import { countryToSlug } from "@/lib/utils";
 
 interface CenterCardProps {
   center: Center & { photos?: CenterPhoto[] };
 }
 
 export function CenterCard({ center }: CenterCardProps) {
-  const location = [center.city, center.state_province, center.country]
-    .filter(Boolean)
-    .join(", ");
+  const cityParts = [center.city, center.state_province].filter(Boolean).join(", ");
+  const country = center.country;
 
   return (
     <div className="group rounded-2xl bg-surface-container-lowest overflow-hidden shadow-ambient hover:shadow-ambient-lg transition-all duration-300">
@@ -57,10 +57,17 @@ export function CenterCard({ center }: CenterCardProps) {
           </h3>
         </TrackingLink>
 
-        {location && (
+        {(cityParts || country) && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1.5">
             <MapPin className="h-3 w-3 flex-shrink-0" />
-            <span className="truncate">{location}</span>
+            <span className="truncate">
+              {cityParts}{cityParts && country ? ", " : ""}
+              {country && (
+                <Link href={`/rehab-in/${countryToSlug(country)}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                  {country}
+                </Link>
+              )}
+            </span>
           </p>
         )}
 

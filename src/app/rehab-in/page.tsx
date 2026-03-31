@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { countryToSlug } from "@/lib/utils";
 import { BreadcrumbJsonLd } from "@/components/shared/json-ld";
 import { Button } from "@/components/ui/button";
 import { Globe, Building2, ArrowRight, MapPin } from "lucide-react";
@@ -23,89 +24,41 @@ export const metadata: Metadata = {
   },
 };
 
-interface CountryInfo {
-  slug: string;
+interface CountryWithCount {
   name: string;
-  dbName: string;
-  tagline: string;
+  slug: string;
+  count: number;
 }
-
-const COUNTRIES: CountryInfo[] = [
-  {
-    slug: "thailand",
-    name: "Thailand",
-    dbName: "Thailand",
-    tagline: "Tropical healing with Eastern and Western therapies",
-  },
-  {
-    slug: "canada",
-    name: "Canada",
-    dbName: "Canada",
-    tagline: "Rigorous clinical standards in nature's embrace",
-  },
-  {
-    slug: "india",
-    name: "India",
-    dbName: "India",
-    tagline: "Affordable holistic recovery with Ayurvedic traditions",
-  },
-  {
-    slug: "bali",
-    name: "Bali",
-    dbName: "Bali",
-    tagline: "Mind-body-spirit healing on the Island of the Gods",
-  },
-  {
-    slug: "malaysia",
-    name: "Malaysia",
-    dbName: "Malaysia",
-    tagline: "Modern medical care in a multicultural setting",
-  },
-  {
-    slug: "australia",
-    name: "Australia",
-    dbName: "Australia",
-    tagline: "Evidence-based programs from coast to outback",
-  },
-  {
-    slug: "south-africa",
-    name: "South Africa",
-    dbName: "South Africa",
-    tagline: "World-class rehab amidst breathtaking landscapes",
-  },
-  {
-    slug: "japan",
-    name: "Japan",
-    dbName: "Japan",
-    tagline: "Discipline and tradition meet cutting-edge care",
-  },
-];
 
 export default async function RehabDestinationsPage() {
   const supabase = await createClient();
 
-  // Get center counts per country
+  // Get all published centers' countries
   const { data: centerData } = await supabase
     .from("centers")
     .select("country")
     .eq("status", "published");
 
-  const countsByDbName: Record<string, number> = {};
+  // Build unique countries with counts
+  const countsByName: Record<string, number> = {};
   if (centerData) {
     for (const c of centerData) {
       if (c.country) {
-        countsByDbName[c.country] = (countsByDbName[c.country] || 0) + 1;
+        countsByName[c.country] = (countsByName[c.country] || 0) + 1;
       }
     }
   }
 
+  const countries: CountryWithCount[] = Object.entries(countsByName)
+    .map(([name, count]) => ({
+      name,
+      slug: countryToSlug(name),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
   const BASE_URL =
     process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
-
-  // Sort by center count descending
-  const sortedCountries = [...COUNTRIES].sort(
-    (a, b) => (countsByDbName[b.dbName] || 0) - (countsByDbName[a.dbName] || 0)
-  );
 
   return (
     <div className="bg-surface min-h-screen">
@@ -155,10 +108,9 @@ export default async function RehabDestinationsPage() {
 
       {/* Countries Grid */}
       <section className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {sortedCountries.map((country) => {
-            const count = countsByDbName[country.dbName] || 0;
-            return (
+        {countries.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {countries.map((country) => (
               <Link
                 key={country.slug}
                 href={`/rehab-in/${country.slug}`}
@@ -174,20 +126,29 @@ export default async function RehabDestinationsPage() {
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-300" />
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                    {country.tagline}
-                  </p>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Building2 className="h-3.5 w-3.5" />
                     <span>
-                      {count} {count === 1 ? "center" : "centers"}
+                      {country.count}{" "}
+                      {country.count === 1 ? "center" : "centers"}
                     </span>
                   </div>
                 </div>
               </Link>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 rounded-2xl bg-surface-container-lowest shadow-ambient">
+            <Globe className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-serif text-foreground">
+              No destinations available yet
+            </p>
+            <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+              We are actively adding verified rehab centers worldwide. Check
+              back soon or contact us for recommendations.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* CTA */}

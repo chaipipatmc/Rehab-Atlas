@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countryToSlug } from "@/lib/utils";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com").trim();
 
@@ -45,31 +46,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  // Country landing pages
-  const countrySlugs = [
-    "thailand",
-    "canada",
-    "india",
-    "bali",
-    "malaysia",
-    "australia",
-    "south-africa",
-    "japan",
-  ];
-  const countryPages: MetadataRoute.Sitemap = [
+  // Country landing pages — dynamic from published centers
+  let countryPages: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/rehab-in`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
     },
-    ...countrySlugs.map((slug) => ({
-      url: `${BASE_URL}/rehab-in/${slug}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    })),
   ];
+
+  try {
+    const supabaseCountry = createAdminClient();
+    const { data: countryRows } = await supabaseCountry
+      .from("centers")
+      .select("country")
+      .eq("status", "published");
+
+    if (countryRows) {
+      const uniqueCountries = [
+        ...new Set(countryRows.map((c) => c.country).filter(Boolean)),
+      ] as string[];
+      countryPages = [
+        ...countryPages,
+        ...uniqueCountries.map((name) => ({
+          url: `${BASE_URL}/rehab-in/${countryToSlug(name)}`,
+          lastModified: new Date(),
+          changeFrequency: "weekly" as const,
+          priority: 0.8,
+        })),
+      ];
+    }
+  } catch {
+    // Supabase not configured — skip dynamic country pages
+  }
 
   // CMS pages
   const cmsPages: MetadataRoute.Sitemap = [

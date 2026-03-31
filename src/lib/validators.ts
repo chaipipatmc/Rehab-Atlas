@@ -8,21 +8,8 @@ const phoneSchema = z
   .optional()
   .or(z.literal(""));
 
-// Known values for assessment arrays
-const TREATMENT_ISSUES = [
-  "substance_use", "mental_health", "dual_diagnosis",
-  "eating_disorder", "behavioral",
-] as const;
-
-const SUBSTANCE_VALUES = [
-  "alcohol", "opioids", "heroin", "cocaine", "methamphetamine",
-  "benzodiazepines", "prescription_drugs", "cannabis", "co_occurring",
-] as const;
-
-const CONDITION_VALUES = [
-  "anxiety", "depression", "ptsd", "trauma", "eating_disorder",
-  "bipolar", "ocd", "personality_disorder",
-] as const;
+// Assessment arrays — use z.string() to accept expanded options + custom "Other" values
+// Constants in src/lib/constants.ts define the full option sets
 
 const AGE_RANGES = ["18-25", "26-35", "36-50", "51-65", "65+"] as const;
 
@@ -53,11 +40,11 @@ export const assessmentSchema = z.object({
   who_for: z.enum(["self", "loved_one", "professional"]),
   age_range: z.enum(AGE_RANGES, { message: "Please select an age range" }),
   primary_issue: z
-    .array(z.enum(TREATMENT_ISSUES))
+    .array(z.string().min(1))
     .min(1, "Please select at least one issue"),
-  substances: z.array(z.enum(SUBSTANCE_VALUES)).optional(),
+  substances: z.array(z.string().min(1)).optional(),
   severity: z.enum(["mild", "moderate", "severe"]),
-  co_occurring: z.array(z.enum(CONDITION_VALUES)).default([]),
+  co_occurring: z.array(z.string().min(1)).default([]),
   prior_treatment: z.boolean(),
   needs_detox: z.boolean(),
   budget: z.enum(["economy", "mid", "premium", "any"]),

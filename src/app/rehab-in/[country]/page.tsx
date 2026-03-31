@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { countryToSlug } from "@/lib/utils";
 import { CenterCard } from "@/components/centers/center-card";
 import { BreadcrumbJsonLd, MedicalWebPageJsonLd } from "@/components/shared/json-ld";
 import { Button } from "@/components/ui/button";
@@ -14,129 +16,9 @@ import {
   BookOpen,
 } from "lucide-react";
 import type { Center, CenterPhoto } from "@/types/center";
+import Anthropic from "@anthropic-ai/sdk";
 
-// ---------------------------------------------------------------------------
-// Country data mappings
-// ---------------------------------------------------------------------------
-
-interface CountryData {
-  name: string;
-  slug: string;
-  dbName: string;
-  description: string;
-  highlights: string[];
-}
-
-const COUNTRIES: Record<string, CountryData> = {
-  thailand: {
-    name: "Thailand",
-    slug: "thailand",
-    dbName: "Thailand",
-    description:
-      "Thailand has emerged as one of the world's leading destinations for rehabilitation and wellness retreats. With world-class facilities set against stunning tropical landscapes, centers here combine evidence-based Western therapies with traditional Eastern healing practices. The affordability of treatment, paired with warm hospitality and year-round sunshine, makes Thailand an exceptional choice for lasting recovery.",
-    highlights: [
-      "Affordable luxury treatment at a fraction of Western prices",
-      "Integration of mindfulness, yoga, and Thai wellness traditions",
-      "Tropical resort-style settings that promote holistic healing",
-      "Experienced international clinical teams with multilingual staff",
-    ],
-  },
-  canada: {
-    name: "Canada",
-    slug: "canada",
-    dbName: "Canada",
-    description:
-      "Canada offers some of the most reputable and well-regulated rehabilitation programs in the world. With a strong emphasis on evidence-based care and publicly funded healthcare infrastructure, Canadian rehab centers provide rigorous clinical standards. The country's vast natural landscapes — from the Rockies to coastal retreats — create serene environments ideally suited to recovery.",
-    highlights: [
-      "Strict regulatory standards ensuring high-quality clinical care",
-      "Wilderness and nature-based therapy programs",
-      "Comprehensive aftercare and community reintegration support",
-      "Multicultural, inclusive treatment environments",
-    ],
-  },
-  india: {
-    name: "India",
-    slug: "india",
-    dbName: "India",
-    description:
-      "India is a growing hub for holistic rehabilitation, blending modern psychiatric and addiction medicine with ancient Ayurvedic and yogic traditions. Treatment is remarkably affordable, and many centers are situated in peaceful rural or coastal settings. India's deep spiritual heritage provides a unique foundation for personal transformation and lasting sobriety.",
-    highlights: [
-      "Highly affordable treatment with world-class medical professionals",
-      "Ayurvedic detox and yoga-integrated recovery programs",
-      "Rich spiritual and meditation traditions supporting inner healing",
-      "Growing number of NABH-accredited treatment facilities",
-    ],
-  },
-  bali: {
-    name: "Bali",
-    slug: "bali",
-    dbName: "Bali",
-    description:
-      "Bali has become a sought-after destination for those seeking recovery in a deeply nurturing environment. The island's lush rice terraces, sacred temples, and warm Balinese culture create a naturally restorative atmosphere. Rehabilitation centers here focus on holistic mind-body-spirit healing, often incorporating surf therapy, breathwork, and traditional Balinese wellness rituals.",
-    highlights: [
-      "Stunning natural surroundings that inspire mindfulness and peace",
-      "Holistic programs blending Western clinical methods with local healing arts",
-      "Strong recovery community with ongoing peer support",
-      "Adventure and nature-based therapies including surf and equine therapy",
-    ],
-  },
-  malaysia: {
-    name: "Malaysia",
-    slug: "malaysia",
-    dbName: "Malaysia",
-    description:
-      "Malaysia offers a compelling combination of modern medical infrastructure and multicultural warmth. Rehabilitation centers here deliver professional, accredited treatment at competitive prices, with many facilities located in tropical settings. Malaysia's diverse cultural landscape fosters inclusive, respectful care environments for international clients.",
-    highlights: [
-      "Modern medical facilities with JCI-accredited hospitals",
-      "Competitive pricing with high-quality standards of care",
-      "Multicultural and multilingual treatment teams",
-      "Tropical climate and natural beauty supporting recovery",
-    ],
-  },
-  australia: {
-    name: "Australia",
-    slug: "australia",
-    dbName: "Australia",
-    description:
-      "Australia's rehabilitation sector is known for rigorous accreditation, evidence-based methodologies, and a strong community recovery culture. Centers range from beachside retreats to outback wilderness programs. Australia's emphasis on peer support, aftercare planning, and dual-diagnosis treatment makes it a world leader in long-term recovery outcomes.",
-    highlights: [
-      "Highly regulated, evidence-based treatment programs",
-      "Diverse settings from coastal retreats to outback wilderness",
-      "Strong emphasis on dual-diagnosis and co-occurring disorders",
-      "Robust aftercare networks and sober living communities",
-    ],
-  },
-  "south-africa": {
-    name: "South Africa",
-    slug: "south-africa",
-    dbName: "South Africa",
-    description:
-      "South Africa has gained international recognition for its high-quality rehabilitation programs offered at remarkably affordable rates. Centers are often set in breathtaking natural environments — from the Cape Winelands to Indian Ocean coastlines. The country's approach combines the 12-step model with innovative therapeutic techniques and strong community support.",
-    highlights: [
-      "Exceptional value with treatment costs well below Western averages",
-      "Spectacular natural settings that enhance the healing process",
-      "Experienced clinical teams with international training",
-      "Comprehensive programs combining multiple therapeutic modalities",
-    ],
-  },
-  japan: {
-    name: "Japan",
-    slug: "japan",
-    dbName: "Japan",
-    description:
-      "Japan offers a distinctive approach to rehabilitation that integrates cutting-edge clinical care with centuries-old wellness traditions. From forest bathing (shinrin-yoku) to mindful tea ceremonies, Japanese rehab centers emphasize discipline, routine, and inner harmony. The country's culture of respect and discretion provides an exceptionally private recovery experience.",
-    highlights: [
-      "Unique integration of Japanese wellness traditions with modern therapy",
-      "Exceptional privacy and discretion throughout treatment",
-      "Highly disciplined, structured therapeutic environments",
-      "Access to Japan's renowned healthcare infrastructure",
-    ],
-  },
-};
-
-const ALL_SLUGS = Object.keys(COUNTRIES);
-
-export const revalidate = 3600; // revalidate every hour
+export const revalidate = 3600;
 
 // ---------------------------------------------------------------------------
 // Helper functions
@@ -156,6 +38,180 @@ function estimateReadTime(content: string | null): string {
 }
 
 // ---------------------------------------------------------------------------
+// Dynamic country resolution
+// ---------------------------------------------------------------------------
+
+async function resolveCountry(slug: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data: countries } = await supabase
+    .from("centers")
+    .select("country")
+    .eq("status", "published");
+
+  if (!countries) return null;
+
+  // Get distinct country names
+  const uniqueCountries = [...new Set(countries.map((c) => c.country).filter(Boolean))] as string[];
+
+  // Find the country whose slugified name matches the URL slug
+  for (const name of uniqueCountries) {
+    if (countryToSlug(name) === slug) {
+      return name;
+    }
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// AI description generation + caching
+// ---------------------------------------------------------------------------
+
+interface CountryDescription {
+  description: string;
+  highlights: string[];
+}
+
+async function getOrGenerateDescription(
+  countryName: string,
+  countrySlug: string
+): Promise<CountryDescription> {
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  // Check cache first
+  const { data: cached } = await supabase
+    .from("country_descriptions")
+    .select("description, highlights")
+    .eq("country_slug", countrySlug)
+    .single();
+
+  if (cached?.description && cached?.highlights) {
+    return {
+      description: cached.description,
+      highlights: (cached.highlights as string[]) ?? [],
+    };
+  }
+
+  // Gather stats for the prompt
+  const { data: centers } = await supabase
+    .from("centers")
+    .select("treatment_focus, conditions_treated, price_from, price_to")
+    .eq("status", "published")
+    .eq("country", countryName);
+
+  const centerCount = centers?.length ?? 0;
+
+  const allFocus: string[] = [];
+  const allConditions: string[] = [];
+  let minPrice: number | null = null;
+  let maxPrice: number | null = null;
+
+  for (const c of centers ?? []) {
+    if (Array.isArray(c.treatment_focus)) allFocus.push(...c.treatment_focus);
+    if (Array.isArray(c.conditions_treated)) allConditions.push(...c.conditions_treated);
+    if (c.price_from != null && (minPrice === null || c.price_from < minPrice)) minPrice = c.price_from;
+    if (c.price_to != null && (maxPrice === null || c.price_to > maxPrice)) maxPrice = c.price_to;
+  }
+
+  // Count frequency and take top items
+  const topItems = (arr: string[], n: number) => {
+    const freq: Record<string, number> = {};
+    for (const item of arr) freq[item] = (freq[item] || 0) + 1;
+    return Object.entries(freq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n)
+      .map(([k]) => k);
+  };
+
+  const topFocus = topItems(allFocus, 5);
+  const topConditions = topItems(allConditions, 5);
+  const priceRange =
+    minPrice != null && maxPrice != null
+      ? `$${minPrice.toLocaleString()} - $${maxPrice.toLocaleString()}`
+      : "varies";
+
+  // Generate with Claude if API key is available
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const client = new Anthropic();
+      const message = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 600,
+        messages: [
+          {
+            role: "user",
+            content: `Write content for a rehab center directory page about ${countryName}.
+
+Stats: ${centerCount} centers, common specialties: ${topFocus.join(", ") || "various"}, common conditions: ${topConditions.join(", ") || "various"}, price range: ${priceRange}/month.
+
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  "description": "Two paragraphs about recovery and rehabilitation in ${countryName}. Focus on what makes this country unique for recovery, the therapeutic environment, and quality of care. Do not mention specific prices or center counts as they change.",
+  "highlights": ["highlight 1", "highlight 2", "highlight 3", "highlight 4"]
+}
+
+The highlights should be concise bullet points about why someone would choose ${countryName} for rehab. Keep a professional, compassionate tone.`,
+          },
+        ],
+      });
+
+      const text =
+        message.content[0].type === "text" ? message.content[0].text : "";
+      const parsed = JSON.parse(text);
+
+      if (parsed.description && Array.isArray(parsed.highlights)) {
+        // Cache in DB using admin client
+        await admin.from("country_descriptions").upsert(
+          {
+            country_slug: countrySlug,
+            country_name: countryName,
+            description: parsed.description,
+            highlights: parsed.highlights,
+            generated_at: new Date().toISOString(),
+          },
+          { onConflict: "country_slug" }
+        );
+
+        return {
+          description: parsed.description,
+          highlights: parsed.highlights,
+        };
+      }
+    } catch {
+      // Fall through to template
+    }
+  }
+
+  // Template fallback
+  const fallbackDescription = `${countryName} offers a diverse range of rehabilitation centers providing professional, evidence-based treatment programs. From residential facilities to outpatient programs, centers here combine clinical expertise with supportive recovery environments.\n\nWhether you are seeking treatment for substance use, mental health challenges, or behavioral conditions, ${countryName} has options to suit various needs and budgets. Explore verified facilities below to find your path to recovery.`;
+  const fallbackHighlights = [
+    `${centerCount > 0 ? centerCount : "Multiple"} verified rehabilitation facilities`,
+    topFocus.length > 0
+      ? `Specialties include ${topFocus.slice(0, 3).join(", ")}`
+      : "Wide range of treatment specialties",
+    topConditions.length > 0
+      ? `Treatment for ${topConditions.slice(0, 3).join(", ")}`
+      : "Comprehensive condition coverage",
+    "Professional clinical teams with international experience",
+  ];
+
+  // Cache the fallback too
+  await admin.from("country_descriptions").upsert(
+    {
+      country_slug: countrySlug,
+      country_name: countryName,
+      description: fallbackDescription,
+      highlights: fallbackHighlights,
+      generated_at: new Date().toISOString(),
+    },
+    { onConflict: "country_slug" }
+  );
+
+  return { description: fallbackDescription, highlights: fallbackHighlights };
+}
+
+// ---------------------------------------------------------------------------
 // Metadata
 // ---------------------------------------------------------------------------
 
@@ -163,17 +219,13 @@ interface PageProps {
   params: Promise<{ country: string }>;
 }
 
-export async function generateStaticParams() {
-  return ALL_SLUGS.map((slug) => ({ country: slug }));
-}
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { country: slug } = await params;
-  const countryData = COUNTRIES[slug];
-  if (!countryData) return {};
+  const countryName = await resolveCountry(slug);
+  if (!countryName) return {};
 
-  const title = `Rehab Centers in ${countryData.name} | Rehab-Atlas`;
-  const description = `Discover top-rated rehabilitation centers in ${countryData.name}. Compare programs, read reviews, and start your recovery journey with Rehab-Atlas.`;
+  const title = `Rehab Centers in ${countryName} | Rehab-Atlas`;
+  const description = `Discover top-rated rehabilitation centers in ${countryName}. Compare programs, read reviews, and start your recovery journey with Rehab-Atlas.`;
 
   return {
     title,
@@ -196,33 +248,39 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CountryRehabPage({ params }: PageProps) {
   const { country: slug } = await params;
-  const countryData = COUNTRIES[slug];
+  const countryName = await resolveCountry(slug);
 
-  if (!countryData) {
+  if (!countryName) {
     notFound();
   }
 
   const supabase = await createClient();
 
-  // Fetch published centers in this country
+  // Get AI-generated (or cached) description
+  const { description: countryDescription, highlights } =
+    await getOrGenerateDescription(countryName, slug);
+
+  // Fetch published centers in this country, sorted by trust level
   const { data: centers } = await supabase
     .from("centers")
     .select(
       "*, photos:center_photos(id, url, alt_text, sort_order, is_primary)"
     )
     .eq("status", "published")
-    .eq("country", countryData.dbName)
-    .order("is_featured", { ascending: false })
+    .eq("country", countryName)
+    .order("trusted_partner", { ascending: false })
+    .order("verified_profile", { ascending: false })
+    .order("is_unclaimed", { ascending: true })
     .order("editorial_overall", { ascending: false, nullsFirst: false });
 
-  // Fetch related blog posts — match by country name in tags or "International" tag
+  // Fetch related blog posts
   const { data: posts } = await supabase
     .from("pages")
     .select("slug, title, meta_description, published_at, content, tags")
     .eq("page_type", "blog")
     .eq("status", "published")
     .or(
-      `tags.cs.{${countryData.name}},tags.cs.{International},tags.cs.{international}`
+      `tags.cs.{${countryName}},tags.cs.{International},tags.cs.{international}`
     )
     .order("published_at", { ascending: false })
     .limit(6);
@@ -239,14 +297,14 @@ export default async function CountryRehabPage({ params }: PageProps) {
           { name: "Home", url: BASE_URL },
           { name: "Rehab Destinations", url: `${BASE_URL}/rehab-in` },
           {
-            name: countryData.name,
+            name: countryName,
             url: `${BASE_URL}/rehab-in/${slug}`,
           },
         ]}
       />
       <MedicalWebPageJsonLd
-        title={`Rehabilitation Centers in ${countryData.name}`}
-        description={countryData.description}
+        title={`Rehabilitation Centers in ${countryName}`}
+        description={countryDescription}
         url={`${BASE_URL}/rehab-in/${slug}`}
       />
 
@@ -273,7 +331,7 @@ export default async function CountryRehabPage({ params }: PageProps) {
               Destinations
             </Link>
             <span>/</span>
-            <span className="text-white/80">{countryData.name}</span>
+            <span className="text-white/80">{countryName}</span>
           </nav>
 
           <div className="max-w-3xl">
@@ -282,10 +340,10 @@ export default async function CountryRehabPage({ params }: PageProps) {
               <span>Rehab Destination</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-serif font-semibold text-white leading-tight">
-              Rehabilitation in {countryData.name}
+              Rehabilitation in {countryName}
             </h1>
             <p className="mt-4 text-base text-white/70 leading-relaxed max-w-2xl">
-              {countryData.description}
+              {countryDescription}
             </p>
             <div className="flex items-center gap-3 mt-6">
               <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-white/90 text-sm rounded-full px-4 py-1.5">
@@ -294,7 +352,7 @@ export default async function CountryRehabPage({ params }: PageProps) {
               </span>
               <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-white/90 text-sm rounded-full px-4 py-1.5">
                 <MapPin className="h-3.5 w-3.5" />
-                {countryData.name}
+                {countryName}
               </span>
             </div>
           </div>
@@ -302,33 +360,35 @@ export default async function CountryRehabPage({ params }: PageProps) {
       </section>
 
       {/* Why choose this country */}
-      <section className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-serif font-semibold text-foreground">
-            Why Choose {countryData.name} for Rehab?
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-4 mt-8">
-            {countryData.highlights.map((highlight, i) => (
-              <div
-                key={i}
-                className="flex gap-3 p-5 rounded-2xl bg-surface-container-lowest shadow-ambient"
-              >
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-foreground leading-relaxed">
-                  {highlight}
-                </p>
-              </div>
-            ))}
+      {highlights.length > 0 && (
+        <section className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-serif font-semibold text-foreground">
+              Why Choose {countryName} for Rehab?
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-4 mt-8">
+              {highlights.map((highlight, i) => (
+                <div
+                  key={i}
+                  className="flex gap-3 p-5 rounded-2xl bg-surface-container-lowest shadow-ambient"
+                >
+                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-foreground leading-relaxed">
+                    {highlight}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Centers Grid */}
       <section className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
         <div className="flex items-end justify-between mb-8">
           <div>
             <h2 className="text-2xl md:text-3xl font-serif font-semibold text-foreground">
-              Centers in {countryData.name}
+              Centers in {countryName}
             </h2>
             <p className="text-sm text-muted-foreground mt-2">
               {centerCount} verified{" "}
@@ -340,7 +400,7 @@ export default async function CountryRehabPage({ params }: PageProps) {
             className="rounded-full ghost-border border-0 text-sm hover:bg-surface-container transition-colors duration-300"
             asChild
           >
-            <Link href={`/centers?country=${countryData.dbName}`}>
+            <Link href={`/centers?country=${countryName}`}>
               View All
               <ArrowRight className="h-4 w-4 ml-1.5" />
             </Link>
@@ -364,7 +424,7 @@ export default async function CountryRehabPage({ params }: PageProps) {
             </p>
             <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
               We are actively adding verified rehab centers in{" "}
-              {countryData.name}. Check back soon or contact us for
+              {countryName}. Check back soon or contact us for
               recommendations.
             </p>
             <Button
@@ -386,7 +446,7 @@ export default async function CountryRehabPage({ params }: PageProps) {
                 Related Articles
               </h2>
               <p className="text-sm text-muted-foreground mt-2">
-                Insights and resources about recovery in {countryData.name}
+                Insights and resources about recovery in {countryName}
               </p>
             </div>
             <Button

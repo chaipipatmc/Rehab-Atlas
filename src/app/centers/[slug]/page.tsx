@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { countryToSlug } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -163,9 +164,9 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
     isSaved = !!savedRow;
   }
 
-  const location = [typedCenter.city, typedCenter.state_province, typedCenter.country]
-    .filter(Boolean)
-    .join(", ");
+  const cityParts = [typedCenter.city, typedCenter.state_province].filter(Boolean).join(", ");
+  const location = [cityParts, typedCenter.country].filter(Boolean).join(", ");
+  const countrySlug = typedCenter.country ? countryToSlug(typedCenter.country) : null;
 
   // Auto-generate FAQs from center data if none exist manually
   const autoFaqs: { question: string; answer: string }[] = [];
@@ -271,7 +272,12 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
               {location && (
                 <span className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" />
-                  {location}
+                  {cityParts}{cityParts && typedCenter.country ? ", " : ""}
+                  {typedCenter.country && countrySlug ? (
+                    <Link href={`/rehab-in/${countrySlug}`} className="text-primary hover:underline">
+                      {typedCenter.country}
+                    </Link>
+                  ) : typedCenter.country}
                 </span>
               )}
               {typedCenter.rating && (
