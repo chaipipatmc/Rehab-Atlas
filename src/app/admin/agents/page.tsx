@@ -720,40 +720,48 @@ function TaskCard({
             /* Reply editor for outreach responses */
             <div className="bg-surface-container-lowest rounded-xl p-5">
               {/* Reply context */}
-              <div className="space-y-2 text-sm mb-4">
-                {checklist?.reply_from && (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground font-medium w-24 shrink-0">reply from:</span>
-                    <span className="text-foreground">{String(checklist.reply_from)}</span>
+              {(() => {
+                const replyFrom = String(checklist?.reply_from || "");
+                const sentiment = String(checklist?.sentiment || "");
+                const summary = String(checklist?.summary || "");
+                const keyPoints = checklist?.key_points ? JSON.stringify(checklist.key_points) : "";
+                return (
+                  <div className="space-y-2 text-sm mb-4">
+                    {replyFrom && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground font-medium w-24 shrink-0">reply from:</span>
+                        <span className="text-foreground">{replyFrom}</span>
+                      </div>
+                    )}
+                    {sentiment && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground font-medium w-24 shrink-0">sentiment:</span>
+                        <span className={`font-medium ${sentiment === "positive" ? "text-emerald-600" : sentiment === "negative" ? "text-red-600" : "text-amber-600"}`}>
+                          {sentiment}
+                        </span>
+                      </div>
+                    )}
+                    {summary && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground font-medium w-24 shrink-0">summary:</span>
+                        <span className="text-foreground">{summary}</span>
+                      </div>
+                    )}
+                    {keyPoints && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground font-medium w-24 shrink-0">key points:</span>
+                        <span className="text-foreground">{keyPoints}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {checklist?.sentiment && (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground font-medium w-24 shrink-0">sentiment:</span>
-                    <span className={`font-medium ${checklist.sentiment === "positive" ? "text-emerald-600" : checklist.sentiment === "negative" ? "text-red-600" : "text-amber-600"}`}>
-                      {String(checklist.sentiment)}
-                    </span>
-                  </div>
-                )}
-                {checklist?.summary && (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground font-medium w-24 shrink-0">summary:</span>
-                    <span className="text-foreground">{String(checklist.summary)}</span>
-                  </div>
-                )}
-                {checklist?.key_points && (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground font-medium w-24 shrink-0">key points:</span>
-                    <span className="text-foreground">{JSON.stringify(checklist.key_points)}</span>
-                  </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Original reply */}
-              {checklist?.reply_body && (
+              {String(checklist?.reply_body || "") && (
                 <div className="mb-4 p-3 bg-surface-container-low rounded-lg border-l-2 border-muted-foreground/20">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">Their Reply</p>
-                  <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{String(checklist.reply_body)}</p>
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{String(checklist?.reply_body || "")}</p>
                 </div>
               )}
 
