@@ -75,7 +75,7 @@ export function generateAgreementNoticeEmail(params: {
     : `Hi there,`;
 
   return {
-    subject: `Partnership agreement for ${params.centerName} — ready for your signature`,
+    subject: `Partnership agreement for ${params.centerName} - ready for your signature`,
     bodyText: `${greeting}
 
 Great news — I've prepared our partnership agreement based on the terms we discussed. You should receive it via PandaDoc shortly.

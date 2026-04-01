@@ -77,7 +77,7 @@ export async function activateCenter(pipelineId: string): Promise<boolean> {
 
   await sendEmail({
     to: center.email || center.inquiry_email || "",
-    subject: `Welcome to Rehab-Atlas — ${center.name} is now live`,
+    subject: `Welcome to Rehab-Atlas -${center.name} is now live`,
     bodyText: `${greeting}
 
 Everything is set — ${center.name} is now officially part of the Rehab-Atlas network.
@@ -107,7 +107,7 @@ rehab-atlas.com`,
     gmail_thread_id: pipelineData.outreach_thread_id,
     from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
     to_email: center.email || center.inquiry_email || "",
-    subject: `Welcome to Rehab-Atlas — ${center.name} is now live`,
+    subject: `Welcome to Rehab-Atlas -${center.name} is now live`,
     body_text: "Welcome and activation confirmation",
     email_type: "confirmation",
   });

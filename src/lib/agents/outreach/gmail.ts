@@ -77,12 +77,22 @@ function buildRawEmail(params: {
 }): string {
   const boundary = `boundary_${Date.now()}`;
   const ccEmail = OUTREACH_EMAIL;
+
+  // Sanitize subject: replace common non-ASCII lookalikes with ASCII equivalents
+  const safeSubject = params.subject
+    .replace(/[\u2014\u2013]/g, "-")   // em dash, en dash → hyphen
+    .replace(/[\u00D7\u2715\u2716]/g, "x") // × multiplication → x
+    .replace(/[\u2018\u2019]/g, "'")   // smart quotes → apostrophe
+    .replace(/[\u201C\u201D]/g, '"')   // smart double quotes → quote
+    .replace(/[\u2026]/g, "...")        // ellipsis → three dots
+    .replace(/[^\x00-\x7F]/g, "");     // strip any remaining non-ASCII
+
   const headers = [
     `From: ${params.from}`,
     `To: ${params.to}`,
     // Always CC info@rehab-atlas.com so admin can track all outreach
     ...(params.to.toLowerCase() !== ccEmail.toLowerCase() ? [`Cc: ${ccEmail}`] : []),
-    `Subject: =?UTF-8?B?${Buffer.from(params.subject, "utf-8").toString("base64")}?=`,
+    `Subject: ${safeSubject}`,
     `MIME-Version: 1.0`,
   ];
 

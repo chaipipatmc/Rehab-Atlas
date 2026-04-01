@@ -429,7 +429,7 @@ rehab-atlas.com`;
 
   await sendEmail({
     to: contactEmail,
-    subject: `Re: Welcome to Rehab-Atlas — your partner account is ready`,
+    subject: `Re: Welcome to Rehab-Atlas - your partner account is ready`,
     bodyText: credentialsBody,
     threadId: pipeline.outreach_thread_id || undefined,
   });
@@ -442,7 +442,7 @@ rehab-atlas.com`;
     gmail_thread_id: pipeline.outreach_thread_id,
     from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
     to_email: contactEmail,
-    subject: "Re: Welcome to Rehab-Atlas — your partner account is ready",
+    subject: "Re: Welcome to Rehab-Atlas - your partner account is ready",
     body_text: credentialsBody,
     email_type: "negotiation",
   });

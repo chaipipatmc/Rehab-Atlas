@@ -343,7 +343,7 @@ export async function sendDailyDigest(): Promise<void> {
     .join("");
 
   await sendAgentEmail({
-    subject: `Outreach Pipeline Digest — ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}`,
+    subject: `Outreach Pipeline Digest - ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}`,
     agentLabel: "Outreach Orchestrator",
     bodyHtml: `
       <h2>Pipeline Overview</h2>
