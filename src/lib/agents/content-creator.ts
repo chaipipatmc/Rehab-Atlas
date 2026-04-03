@@ -436,15 +436,20 @@ const ARTICLES_PER_DAY = 3;
  * - If >= BUFFER_DAYS, draft only the next day's content
  * - This ensures there are always ~5 days of content ready for approval
  */
-export async function createArticleDraft(): Promise<boolean> {
+export async function createArticleDraft(options?: {
+  maxArticles?: number;
+  skipWeekendCheck?: boolean;
+}): Promise<{ written: number; poolSize: number }> {
   const enabled = await isAgentEnabled("content_creator");
-  if (!enabled) return false;
+  if (!enabled) return { written: 0, poolSize: 0 };
 
-  // Skip weekends
-  const day = new Date().getDay();
-  if (day === 0 || day === 6) {
-    console.log("Content Creator: skipping weekend");
-    return false;
+  // Skip weekends (unless overridden for pool fill)
+  if (!options?.skipWeekendCheck) {
+    const day = new Date().getDay();
+    if (day === 0 || day === 6) {
+      console.log("Content Creator: skipping weekend");
+      return { written: 0, poolSize: 0 };
+    }
   }
 
   const admin = createAdminClient();
@@ -467,16 +472,17 @@ export async function createArticleDraft(): Promise<boolean> {
 
   console.log(`Content Creator: pool has ${totalInPool}/${POOL_TARGET} articles.`);
 
-  // If pool is full, draft just 1 day to maintain it
-  // If pool is below target, draft enough to fill it
-  let daysToDraft: number;
-  if (totalInPool >= POOL_TARGET) {
-    daysToDraft = 1;
-  } else {
-    const articlesNeeded = POOL_TARGET - totalInPool;
-    daysToDraft = Math.ceil(articlesNeeded / ARTICLES_PER_DAY);
-    console.log(`Content Creator: pool below target, need ${articlesNeeded} articles (~${daysToDraft} days to catch up)`);
+  if (totalInPool >= POOL_TARGET && !options?.maxArticles) {
+    console.log("Content Creator: pool is full, skipping");
+    return { written: 0, poolSize: totalInPool };
   }
+
+  // Calculate how many articles to draft
+  const articlesNeeded = options?.maxArticles || (
+    totalInPool >= POOL_TARGET ? ARTICLES_PER_DAY : POOL_TARGET - totalInPool
+  );
+  const daysToDraft = Math.ceil(articlesNeeded / ARTICLES_PER_DAY);
+  console.log(`Content Creator: will draft up to ${articlesNeeded} articles (~${daysToDraft} days)`);
 
   // Load all used images once — shared across all articles in this run
   const usedImages = await getUsedImageUrls();
@@ -490,7 +496,7 @@ export async function createArticleDraft(): Promise<boolean> {
     // Find upcoming dates with approved calendar topics not yet written
     const today = new Date();
     const futureDate = new Date(today);
-    futureDate.setDate(futureDate.getDate() + daysToDraft + 7); // look ahead enough
+    futureDate.setDate(futureDate.getDate() + daysToDraft + 14); // look ahead enough
     const startStr = today.toISOString().split("T")[0];
     const endStr = futureDate.toISOString().split("T")[0];
 
@@ -504,13 +510,13 @@ export async function createArticleDraft(): Promise<boolean> {
         byDate.get(t.planned_date)!.push(t);
       });
 
-      // Draft up to daysToDraft worth of dates
-      let daysProcessed = 0;
+      // Draft articles across dates until we hit the limit
       for (const [date, topics] of byDate) {
-        if (daysProcessed >= daysToDraft) break;
+        if (articlesWritten >= articlesNeeded) break;
 
         console.log(`Content Creator: drafting ${topics.length} articles for ${date}`);
         for (const topic of topics) {
+          if (articlesWritten >= articlesNeeded) break;
           const success = await writeOneArticle(
             topic.topic,
             topic.category,
@@ -521,12 +527,11 @@ export async function createArticleDraft(): Promise<boolean> {
           );
           if (success) articlesWritten++;
         }
-        daysProcessed++;
       }
     } else {
-      // No calendar topics — fall back to topic pool for 1 day
+      // No calendar topics — fall back to topic pool
       console.log("Content Creator: no calendar topics, using topic pool");
-      for (let i = 0; i < ARTICLES_PER_DAY; i++) {
+      for (let i = 0; i < articlesNeeded; i++) {
         const topicInfo = await pickTopic();
         if (!topicInfo) break;
         const success = await writeOneArticle(topicInfo.topic, topicInfo.category, undefined, undefined, undefined, usedImages);
@@ -536,7 +541,7 @@ export async function createArticleDraft(): Promise<boolean> {
   } catch {
     // Content planner not available, use fallback
     console.log("Content Creator: planner unavailable, using topic pool");
-    for (let i = 0; i < ARTICLES_PER_DAY; i++) {
+    for (let i = 0; i < Math.min(articlesNeeded, ARTICLES_PER_DAY); i++) {
       const topicInfo = await pickTopic();
       if (!topicInfo) break;
       const success = await writeOneArticle(topicInfo.topic, topicInfo.category, undefined, undefined, undefined, usedImages);
@@ -545,7 +550,7 @@ export async function createArticleDraft(): Promise<boolean> {
   }
 
   console.log(`Content Creator: wrote ${articlesWritten} articles`);
-  return articlesWritten > 0;
+  return { written: articlesWritten, poolSize: totalInPool + articlesWritten };
 }
 
 /**
