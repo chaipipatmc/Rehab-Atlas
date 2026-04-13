@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Analytics, CookieConsent } from "@/components/shared/analytics";
 import { PageTracker } from "@/components/shared/page-tracker";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const inter = Inter({
@@ -65,6 +66,7 @@ export default function RootLayout({
         <Footer />
         <Toaster />
         <Analytics />
+        <SpeedInsights />
         <PageTracker />
         <CookieConsent />
       </body>
