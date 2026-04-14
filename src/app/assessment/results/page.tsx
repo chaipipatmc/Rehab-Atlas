@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { cookies } from "next/headers";
+import { createHmac } from "crypto";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,7 @@ export default async function ResultsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   if (!params.id) notFound();
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: assessment } = await supabase
     .from("assessments")
@@ -28,6 +30,15 @@ export default async function ResultsPage({ searchParams }: PageProps) {
     .single();
 
   if (!assessment) notFound();
+
+  // Verify the viewer owns this assessment via signed session cookie
+  const cookieStore = await cookies();
+  const signedSession = cookieStore.get("assessment_session")?.value;
+  const hmacKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!signedSession || !hmacKey) notFound();
+  const [sid, sig] = signedSession.split(".");
+  const expectedSig = createHmac("sha256", hmacKey).update(sid).digest("hex").slice(0, 16);
+  if (sig !== expectedSig || sid !== assessment.session_id) notFound();
 
   const matchedIds = assessment.matched_center_ids || [];
   const explanations = (assessment.explanations || []) as Array<{
