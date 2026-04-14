@@ -8,7 +8,7 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder_missing_key");
 const FROM_EMAIL = "Rehab-Atlas <onboarding@resend.dev>";
 
 export async function POST(req: Request) {
