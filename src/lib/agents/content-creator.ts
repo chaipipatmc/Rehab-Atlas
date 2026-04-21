@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { logClaudeUsage } from "@/lib/api-usage";
+import { autoLinkArticle } from "@/lib/agents/auto-linker";
 
 // --- Topic Categories ---
 
@@ -629,6 +630,12 @@ async function writeOneArticle(
     ? `${article.slug}-${Date.now().toString(36)}`
     : article.slug;
 
+  // Auto-insert internal links to condition + country landing pages for SEO.
+  const { content: linkedContent, linksAdded } = await autoLinkArticle(fullContent, {
+    currentHref: `/blog/${finalSlug}`,
+  });
+  fullContent = linkedContent;
+
   // Map category to user-friendly tags
   const CATEGORY_TAG_MAP: Record<string, string[]> = {
     "addiction-types": ["Addiction", "Substance Use", "Recovery", "Treatment"],
@@ -699,6 +706,8 @@ async function writeOneArticle(
       word_count: wordCount,
       has_image: !!featuredImage,
       total_images: images.length,
+      internal_links_added: linksAdded.length,
+      internal_links: linksAdded,
     },
   });
 

@@ -47,6 +47,6 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react` (NOT Radix). K
 
 9. **PandaDoc** — partnership agreements use template `Ctzua6xmeLzCVnMwsmYR9L` with tokens for center details
 
-10. **Content Creator** — auto-generates blog articles via Claude AI with Unsplash images. 70+ predefined SEO topics. Runs weekdays only. Drafts require admin approval before publishing
+10. **Content Creator** — auto-generates blog articles via Claude AI with Unsplash images. 70+ predefined SEO topics. Runs weekdays only. Drafts require admin approval before publishing. Before saving, `auto-linker.ts` injects internal links to `/rehab/[condition]` and `/rehab-in/[country]` hubs (first occurrence only, capped at 6 per article, skips existing links/images/headings/code)
 
 11. **Lead outcome tracking** — `lead_forwards.partner_status` (pending/admitted/not_admitted). Partners update at `/partner/leads`. Commission reports at `/partner/commission` and `/admin/commission`

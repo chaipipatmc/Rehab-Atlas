@@ -83,7 +83,7 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 ### Content Agent
 | Agent | Trigger | What It Does |
 |-------|---------|-------------|
-| **Content Creator** | Daily cron (weekdays, 1 PM Bangkok) | Auto-researches rehab topics, writes 1500-2000 word SEO articles with Unsplash images, saves as draft for admin approval |
+| **Content Creator** | Daily cron (weekdays, 1 PM Bangkok) | Auto-researches rehab topics, writes 1500-2000 word SEO articles with Unsplash images, auto-links to condition + country hubs, saves as draft for admin approval |
 
 Architecture: `src/lib/agents/` (logic) + `src/app/api/agents/` (routes) + `src/app/admin/agents/` (dashboard)
 
