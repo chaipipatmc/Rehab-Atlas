@@ -95,9 +95,9 @@ export default async function AdminAnalyticsPage() {
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <MetricCard icon={Eye} label="Page Views" value={viewsThisMonth || 0} sub="Last 30 days" />
-        <MetricCard icon={Users} label="Leads" value={totalLeads || 0} sub={`${leadsThisMonth || 0} this month`} />
-        <MetricCard icon={Brain} label="Assessments" value={totalAssessments || 0} sub={`${assessmentsThisMonth || 0} this month`} />
-        <MetricCard icon={FileText} label="Published Articles" value={publishedArticles || 0} sub="Total" />
+        <MetricCard icon={Users} label="Leads" value={totalLeads || 0} sub={`${leadsThisMonth || 0} this month`} href="/admin/leads" />
+        <MetricCard icon={Brain} label="Assessments" value={totalAssessments || 0} sub={`${assessmentsThisMonth || 0} this month`} href="/admin/assessments" />
+        <MetricCard icon={FileText} label="Published Articles" value={publishedArticles || 0} sub="Total" href="/admin/content" />
       </div>
 
       {/* Weekly Summary */}
@@ -199,14 +199,15 @@ export default async function AdminAnalyticsPage() {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, sub }: {
+function MetricCard({ icon: Icon, label, value, sub, href }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
   sub: string;
+  href?: string;
 }) {
-  return (
-    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-ambient">
+  const inner = (
+    <>
       <div className="flex items-center gap-3 mb-3">
         <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
           <Icon className="h-4 w-4 text-primary" />
@@ -215,6 +216,23 @@ function MetricCard({ icon: Icon, label, value, sub }: {
       </div>
       <p className="text-2xl font-semibold text-foreground">{value.toLocaleString()}</p>
       <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="bg-surface-container-lowest rounded-2xl p-5 shadow-ambient block hover:shadow-lg transition-shadow duration-300"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-ambient">
+      {inner}
     </div>
   );
 }

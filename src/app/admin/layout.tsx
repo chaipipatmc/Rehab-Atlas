@@ -16,6 +16,7 @@ import {
   Target,
   Receipt,
   CalendarDays,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import { Input } from "@/components/ui/input";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/leads", label: "Leads", icon: Users },
+  { href: "/admin/assessments", label: "Assessments", icon: Brain },
   { href: "/admin/centers", label: "Centers", icon: Building2 },
   { href: "/admin/users", label: "Users & Partners", icon: UserCog },
   { href: "/admin/content", label: "Content", icon: FileText },
