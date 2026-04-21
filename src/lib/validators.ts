@@ -53,6 +53,9 @@ export const assessmentSchema = z.object({
   insurance_provider: z.string().max(100).optional(),
   privacy_importance: z.enum(["low", "medium", "high"]),
   urgency: z.enum(["not_urgent", "soon", "urgent"]),
+  contact_email: z.string().email("Please enter a valid email").max(254),
+  contact_name: z.string().max(100).optional().or(z.literal("")),
+  contact_phone: phoneSchema,
 });
 
 export type AssessmentFormData = z.infer<typeof assessmentSchema>;

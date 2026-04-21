@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import type { AssessmentAnswers } from "@/types/assessment";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 const DEFAULT_ANSWERS: Partial<AssessmentAnswers> = {
   primary_issue: [],

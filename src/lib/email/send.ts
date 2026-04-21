@@ -185,3 +185,148 @@ export async function sendLeadForwardEmail(data: LeadForwardData) {
     console.error("Failed to send lead forward email:", e);
   }
 }
+
+// ── Assessment Confirmation (to user) ──
+interface AssessmentMatchPreview {
+  name: string;
+  location: string;
+  score: number | null;
+  fit_summary: string;
+}
+
+interface AssessmentConfirmationData {
+  to: string;
+  name?: string;
+  assessmentId: string;
+  matches: AssessmentMatchPreview[];
+  urgency: string;
+}
+
+export async function sendAssessmentConfirmation(data: AssessmentConfirmationData) {
+  const greeting = data.name ? `Hi ${escapeHtml(data.name)},` : "Hello,";
+  const resultsUrl = `${APP_URL}/assessment/results?id=${data.assessmentId}`;
+  const isUrgent = data.urgency === "urgent";
+
+  const matchesHtml = data.matches
+    .slice(0, 3)
+    .map((m, i) => {
+      const safeName = escapeHtml(m.name);
+      const safeLoc = escapeHtml(m.location);
+      const safeSummary = escapeHtml(m.fit_summary || "");
+      const scoreLabel = m.score != null ? `${m.score}% match` : "";
+      return `
+        <div style="background: #f4f6f7; border-radius: 12px; padding: 16px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <p style="margin: 0; font-weight: 600; color: #2b3437;">#${i + 1} · ${safeName}</p>
+            ${scoreLabel ? `<span style="font-size: 11px; color: #45636b;">${scoreLabel}</span>` : ""}
+          </div>
+          <p style="margin: 4px 0 0; font-size: 12px; color: #6b7d82;">${safeLoc}</p>
+          ${safeSummary ? `<p style="margin: 8px 0 0; font-size: 12px; color: #45636b;">${safeSummary}</p>` : ""}
+        </div>
+      `;
+    })
+    .join("");
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.to,
+      subject: isUrgent
+        ? "Your Rehab-Atlas matches — our team will be in touch"
+        : "Your personalized Rehab-Atlas matches",
+      html: `
+        <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #2b3437;">
+          <h2 style="color: #45636b; margin-bottom: 8px;">Your matches are ready</h2>
+          <p style="color: #6b7d82; font-size: 13px; margin-top: 0;">${greeting}</p>
+          <p style="font-size: 14px; line-height: 1.6;">
+            Based on your assessment, here are the treatment centers our clinical team identified as the strongest fits for you.
+          </p>
+
+          ${isUrgent ? `
+            <div style="background: #fef2f2; border-radius: 12px; padding: 14px; margin: 16px 0; border-left: 3px solid #9f403d;">
+              <p style="margin: 0; font-size: 13px; color: #9f403d; font-weight: 600;">You marked this as urgent.</p>
+              <p style="margin: 6px 0 0; font-size: 12px; color: #2b3437;">A Rehab-Atlas specialist will reach out to you shortly. If this is a medical emergency, please call your local emergency services immediately.</p>
+            </div>
+          ` : ""}
+
+          ${matchesHtml || '<p style="font-size: 13px; color: #6b7d82;">View your full match list on the website.</p>'}
+
+          <div style="margin-top: 24px;">
+            <a href="${resultsUrl}" style="display: inline-block; background: #45636b; color: white; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-size: 14px; font-weight: 500;">View all my matches</a>
+          </div>
+
+          <p style="margin-top: 28px; font-size: 13px; color: #6b7d82; line-height: 1.6;">
+            Want guidance? Reply to this email and our team will help you weigh your options privately. Your information is never shared with a center unless you explicitly submit an inquiry.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 28px 0 14px;" />
+          <p style="color: #6b7d82; font-size: 11px; margin: 0;">Rehab-Atlas — A Digital Sanctuary for Recovery</p>
+        </div>
+      `,
+    });
+    console.log("Email sent: assessment confirmation to", data.to);
+  } catch (e) {
+    console.error("Failed to send assessment confirmation:", e);
+  }
+}
+
+// ── New Assessment Notification (to admin) ──
+interface AssessmentAdminNotificationData {
+  assessmentId: string;
+  contactEmail: string;
+  contactName?: string;
+  contactPhone?: string;
+  urgency: string;
+  severity?: string;
+  whoFor?: string;
+  primaryIssue?: string[];
+  topMatchName?: string;
+  topMatchScore?: number | null;
+}
+
+export async function sendAssessmentAdminNotification(data: AssessmentAdminNotificationData) {
+  const urgencyLabel =
+    data.urgency === "urgent" ? "URGENT" : data.urgency === "soon" ? "Soon" : "Normal";
+
+  const safeEmail = escapeHtml(data.contactEmail);
+  const safeName = escapeHtml(data.contactName || "(not provided)");
+  const safePhone = escapeHtml(data.contactPhone || "(not provided)");
+  const safeSeverity = escapeHtml(data.severity || "—");
+  const safeWhoFor = escapeHtml((data.whoFor || "—").replace(/_/g, " "));
+  const safeIssues = escapeHtml(
+    (data.primaryIssue || []).map((i) => i.replace(/_/g, " ")).join(", ") || "—"
+  );
+  const safeTopMatch = data.topMatchName ? escapeHtml(data.topMatchName) : "";
+  const scoreLabel = data.topMatchScore != null ? ` (${data.topMatchScore}%)` : "";
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `[${urgencyLabel}] New Assessment — ${data.contactEmail}`,
+      html: `
+        <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #45636b; margin-bottom: 20px;">New Assessment Completed</h2>
+          <p style="color: #6b7d82; font-size: 13px; margin-top: 0;">
+            A user just completed the AI self-assessment. They have <strong>not yet submitted a formal inquiry</strong> — reach out proactively if warranted.
+          </p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+            <tr><td style="padding: 8px 0; color: #6b7d82; font-size: 12px; text-transform: uppercase;">Email</td><td style="padding: 8px 0; font-weight: 600;">${safeEmail}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7d82; font-size: 12px; text-transform: uppercase;">Name</td><td style="padding: 8px 0;">${safeName}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7d82; font-size: 12px; text-transform: uppercase;">Phone</td><td style="padding: 8px 0;">${safePhone}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7d82; font-size: 12px; text-transform: uppercase;">Urgency</td><td style="padding: 8px 0; color: ${data.urgency === 'urgent' ? '#9f403d' : '#45636b'}; font-weight: 600;">${urgencyLabel}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7d82; font-size: 12px; text-transform: uppercase;">Who for</td><td style="padding: 8px 0;">${safeWhoFor}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7d82; font-size: 12px; text-transform: uppercase;">Severity</td><td style="padding: 8px 0;">${safeSeverity}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7d82; font-size: 12px; text-transform: uppercase;">Primary issue</td><td style="padding: 8px 0;">${safeIssues}</td></tr>
+            ${safeTopMatch ? `<tr><td style="padding: 8px 0; color: #6b7d82; font-size: 12px; text-transform: uppercase;">Top match</td><td style="padding: 8px 0;">${safeTopMatch}${scoreLabel}</td></tr>` : ""}
+          </table>
+          <a href="${APP_URL}/admin/assessments/${data.assessmentId}" style="display: inline-block; background: #45636b; color: white; padding: 10px 24px; border-radius: 999px; text-decoration: none; margin-top: 20px; font-size: 14px;">View assessment</a>
+          <p style="color: #6b7d82; font-size: 11px; margin-top: 20px;">Rehab-Atlas — A Digital Sanctuary for Recovery</p>
+        </div>
+      `,
+    });
+    console.log("Email sent: new assessment notification for", data.contactEmail);
+  } catch (e) {
+    console.error("Failed to send assessment admin notification:", e);
+  }
+}

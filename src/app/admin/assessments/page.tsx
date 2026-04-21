@@ -37,6 +37,9 @@ type AssessmentRow = {
   urgency_level: string | null;
   completed: boolean | null;
   created_at: string;
+  contact_email: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
 };
 
 export default async function AdminAssessmentsPage({ searchParams }: PageProps) {
@@ -50,7 +53,7 @@ export default async function AdminAssessmentsPage({ searchParams }: PageProps) 
   let query = supabase
     .from("assessments")
     .select(
-      "id, session_id, answers, matched_center_ids, match_scores, urgency_level, completed, created_at",
+      "id, session_id, answers, matched_center_ids, match_scores, urgency_level, completed, created_at, contact_email, contact_name, contact_phone",
       { count: "exact" }
     )
     .eq("completed", true)
@@ -189,7 +192,7 @@ export default async function AdminAssessmentsPage({ searchParams }: PageProps) 
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Who For</TableHead>
+              <TableHead>Contact</TableHead>
               <TableHead>Primary Issue</TableHead>
               <TableHead>Severity</TableHead>
               <TableHead>Urgency</TableHead>
@@ -214,8 +217,32 @@ export default async function AdminAssessmentsPage({ searchParams }: PageProps) 
                   <TableCell className="text-sm text-slate-500 whitespace-nowrap">
                     {new Date(a.created_at).toLocaleDateString()}
                   </TableCell>
-                  <TableCell className="text-sm capitalize">
-                    {(answers.who_for || "—").replace(/_/g, " ")}
+                  <TableCell className="text-sm">
+                    {a.contact_email ? (
+                      <div className="min-w-0 max-w-[220px]">
+                        <p className="text-xs font-medium text-foreground truncate">
+                          {a.contact_name || (answers.who_for || "Anonymous").replace(/_/g, " ")}
+                        </p>
+                        <a
+                          href={`mailto:${a.contact_email}`}
+                          className="text-[11px] text-primary hover:underline truncate block"
+                        >
+                          {a.contact_email}
+                        </a>
+                        {a.contact_phone && (
+                          <a
+                            href={`tel:${a.contact_phone}`}
+                            className="text-[11px] text-muted-foreground hover:text-primary block"
+                          >
+                            {a.contact_phone}
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">
+                        Anonymous (pre-contact)
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">
                     {issues.length > 0 ? (

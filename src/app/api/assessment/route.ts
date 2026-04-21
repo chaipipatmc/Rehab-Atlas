@@ -8,6 +8,7 @@ import type { Center } from "@/types/center";
 import { randomUUID, createHmac } from "crypto";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { validateOrigin } from "@/lib/csrf";
+import { sendAssessmentConfirmation, sendAssessmentAdminNotification } from "@/lib/email/send";
 
 export async function POST(request: Request) {
   // CSRF check
@@ -116,7 +117,8 @@ export async function POST(request: Request) {
       matchScores[m.center_id] = m.score;
     });
 
-    // Save to database
+    // Save to database — store contact fields as dedicated columns
+    // (still kept inside answers JSON for full audit trail)
     const { data: assessment, error: insertError } = await supabase
       .from("assessments")
       .insert({
@@ -126,6 +128,9 @@ export async function POST(request: Request) {
         match_scores: matchScores,
         explanations,
         urgency_level: answers.urgency,
+        contact_email: answers.contact_email.trim().toLowerCase(),
+        contact_name: answers.contact_name?.trim() || null,
+        contact_phone: answers.contact_phone?.trim() || null,
         completed: true,
       })
       .select("id")
@@ -138,6 +143,40 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Fire-and-forget notifications — do not block response on email delivery
+    const topMatch = primary[0];
+    const topCenter = topMatch ? centersMap.get(topMatch.center_id) : null;
+    const matchesPreview = primary.slice(0, 3).map((m, i) => {
+      const center = centersMap.get(m.center_id);
+      return {
+        name: center?.name || "Match",
+        location: [center?.city, center?.country].filter(Boolean).join(", "),
+        score: m.score,
+        fit_summary: explanations[i]?.fit_summary || "",
+      };
+    });
+
+    void sendAssessmentConfirmation({
+      to: answers.contact_email.trim().toLowerCase(),
+      name: answers.contact_name?.trim() || undefined,
+      assessmentId: assessment.id,
+      matches: matchesPreview,
+      urgency: answers.urgency,
+    });
+
+    void sendAssessmentAdminNotification({
+      assessmentId: assessment.id,
+      contactEmail: answers.contact_email.trim().toLowerCase(),
+      contactName: answers.contact_name?.trim() || undefined,
+      contactPhone: answers.contact_phone?.trim() || undefined,
+      urgency: answers.urgency,
+      severity: answers.severity,
+      whoFor: answers.who_for,
+      primaryIssue: answers.primary_issue,
+      topMatchName: topCenter?.name,
+      topMatchScore: topMatch?.score ?? null,
+    });
 
     // Set session cookie
     const response = NextResponse.json({

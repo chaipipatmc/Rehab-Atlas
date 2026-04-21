@@ -27,11 +27,13 @@ import {
   PRIVACY_OPTIONS,
   URGENCY_OPTIONS,
 } from "@/lib/constants";
-import { ArrowLeft, ArrowRight, User, Users, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, ArrowRight, User, Users, AlertCircle, Mail, Phone, Lock } from "lucide-react";
 import { toast } from "sonner";
 import type { AssessmentAnswers } from "@/types/assessment";
 
-const STEP_LABELS = ["Personal Context", "Primary Concern", "Severity", "Preferences", "Urgency"];
+const STEP_LABELS = ["Personal Context", "Primary Concern", "Severity", "Preferences", "Urgency", "Your Matches"];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AssessmentPage() {
   const router = useRouter();
@@ -100,6 +102,14 @@ export default function AssessmentPage() {
     nextStep();
   }
 
+  function handleFinalSubmit() {
+    if (!answers.contact_email || !EMAIL_RE.test(answers.contact_email.trim())) {
+      toast.error("Please enter a valid email so we can send your matches");
+      return;
+    }
+    handleSubmit();
+  }
+
   function toggleArrayItem(key: keyof AssessmentAnswers, item: string) {
     const current = (answers[key] as string[]) || [];
     const updated = current.includes(item)
@@ -115,7 +125,7 @@ export default function AssessmentPage() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <span className="text-xs uppercase tracking-wider text-muted-foreground">
-              Step {step + 1} of 5
+              Step {step + 1} of 6
             </span>
             {/* Progress bar */}
             <div className="hidden sm:block w-48 h-1 bg-surface-container-high rounded-full overflow-hidden">
@@ -421,6 +431,79 @@ export default function AssessmentPage() {
             </div>
           )}
 
+          {/* Step 5: Contact — where to send matches */}
+          {step === 5 && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-headline-lg font-semibold text-foreground">
+                  Where should we send your personalized matches?
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  Your matches are ready. Give us your email so you can return to them anytime, and so our clinical team can follow up if you&apos;d like guidance.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="contact_email" className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Mail className="h-3 w-3" /> Email <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="contact_email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="you@example.com"
+                  value={answers.contact_email || ""}
+                  onChange={(e) => updateAnswer("contact_email", e.target.value)}
+                  className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border h-11"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="contact_name" className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <User className="h-3 w-3" /> First name <span className="text-[10px] normal-case tracking-normal text-muted-foreground/60">(optional)</span>
+                  </Label>
+                  <Input
+                    id="contact_name"
+                    autoComplete="given-name"
+                    placeholder="How should we address you?"
+                    value={answers.contact_name || ""}
+                    onChange={(e) => updateAnswer("contact_name", e.target.value)}
+                    className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border h-11"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contact_phone" className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <Phone className="h-3 w-3" /> Phone <span className="text-[10px] normal-case tracking-normal text-muted-foreground/60">(optional)</span>
+                  </Label>
+                  <Input
+                    id="contact_phone"
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    placeholder={answers.urgency === "urgent" ? "Recommended — faster response" : "+1 555 123 4567"}
+                    value={answers.contact_phone || ""}
+                    onChange={(e) => updateAnswer("contact_phone", e.target.value)}
+                    className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border h-11"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-primary/5 rounded-xl p-4 flex gap-3">
+                <Lock className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-foreground">
+                    Your information stays private.
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                    We only share with a center if you explicitly submit an inquiry. No marketing emails. Rehab-Atlas reviews every inquiry before routing it to a center.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex items-center justify-between mt-10 pt-6">
             <button
@@ -433,11 +516,11 @@ export default function AssessmentPage() {
             </button>
             {isLastStep ? (
               <Button
-                onClick={handleSubmit}
+                onClick={handleFinalSubmit}
                 disabled={isSubmitting}
                 className="rounded-full px-8 gradient-primary text-white hover:opacity-90 transition-opacity duration-300"
               >
-                {isSubmitting ? "Finding matches..." : "Get My Matches"}
+                {isSubmitting ? "Finding matches..." : "Show My Matches"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (

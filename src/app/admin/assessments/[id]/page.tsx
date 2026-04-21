@@ -12,6 +12,8 @@ import {
   Brain,
   AlertCircle,
   MapPin,
+  Mail,
+  Phone,
 } from "lucide-react";
 import AssessmentDeleteButton from "@/components/admin/AssessmentDeleteButton";
 
@@ -156,12 +158,61 @@ export default async function AdminAssessmentDetailPage({ params }: PageProps) {
             </p>
             {!linkedLead && (
               <p className="text-xs text-muted-foreground mt-1">
-                They did not submit a follow-up inquiry. Consider proactive outreach
-                if you have contact info.
+                They did not submit a follow-up inquiry. Consider proactive outreach.
               </p>
             )}
           </div>
         </div>
+      )}
+
+      {/* Contact card — always-visible at top when contact info is present */}
+      {assessment.contact_email && (
+        <Card className="mb-6 border-primary/20">
+          <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                Contact (collected at assessment)
+              </p>
+              <p className="font-medium text-foreground">
+                {assessment.contact_name || "(no name provided)"}
+              </p>
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-sm">
+                <a
+                  href={`mailto:${assessment.contact_email}`}
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <Mail className="h-3 w-3" />
+                  {assessment.contact_email}
+                </a>
+                {assessment.contact_phone && (
+                  <a
+                    href={`tel:${assessment.contact_phone}`}
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <Phone className="h-3 w-3" />
+                    {assessment.contact_phone}
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" asChild>
+                <a href={`mailto:${assessment.contact_email}`}>
+                  <Mail className="h-4 w-4 mr-1" />
+                  Email
+                </a>
+              </Button>
+              {assessment.contact_phone && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={`tel:${assessment.contact_phone}`}>
+                    <Phone className="h-4 w-4 mr-1" />
+                    Call
+                  </a>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

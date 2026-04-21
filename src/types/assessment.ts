@@ -13,6 +13,9 @@ export interface AssessmentAnswers {
   insurance_provider?: string;
   privacy_importance: "low" | "medium" | "high";
   urgency: "not_urgent" | "soon" | "urgent";
+  contact_email: string;
+  contact_name?: string;
+  contact_phone?: string;
 }
 
 export interface Assessment {
