@@ -1,6 +1,9 @@
 import { Suspense } from "react";
+import { cookies } from "next/headers";
+import { createHmac } from "crypto";
 import { createClient } from "@/lib/supabase/server";
-import { InquiryForm } from "@/components/leads/inquiry-form";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { InquiryForm, type InquiryPrefill } from "@/components/leads/inquiry-form";
 import { Shield, Users, Eye } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -11,10 +14,100 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ center?: string }>;
+  searchParams: Promise<{ center?: string; assessment?: string }>;
 }
 
-async function InquiryFormLoader({ centerId }: { centerId?: string }) {
+// Build a prose "concern" field from structured assessment answers so the user
+// doesn't have to retype it. They can still edit before submitting.
+function buildConcernFromAssessment(answers: Record<string, unknown>): string {
+  const parts: string[] = [];
+  const whoFor = typeof answers.who_for === "string" ? answers.who_for.replace(/_/g, " ") : null;
+  const issues = Array.isArray(answers.primary_issue)
+    ? (answers.primary_issue as string[]).map((s) => s.replace(/_/g, " "))
+    : [];
+  const severity = typeof answers.severity === "string" ? answers.severity : null;
+  const coOccurring = Array.isArray(answers.co_occurring)
+    ? (answers.co_occurring as string[]).map((s) => s.replace(/_/g, " "))
+    : [];
+  const substances = Array.isArray(answers.substances)
+    ? (answers.substances as string[]).map((s) => s.replace(/_/g, " "))
+    : [];
+  const needsDetox = answers.needs_detox === true;
+  const priorTreatment = answers.prior_treatment === true;
+
+  if (whoFor === "self") parts.push("Seeking help for myself.");
+  else if (whoFor === "loved_one") parts.push("Seeking help for a loved one.");
+  else if (whoFor === "professional") parts.push("Inquiring in a professional capacity.");
+
+  if (issues.length > 0) {
+    parts.push(`Primary concern: ${issues.join(", ")}.`);
+  }
+  if (substances.length > 0) {
+    parts.push(`Substances involved: ${substances.join(", ")}.`);
+  }
+  if (severity) {
+    parts.push(`Severity: ${severity}.`);
+  }
+  if (coOccurring.length > 0) {
+    parts.push(`Co-occurring: ${coOccurring.join(", ")}.`);
+  }
+  if (needsDetox) parts.push("Medical detox is needed.");
+  if (priorTreatment) parts.push("There is prior treatment history.");
+
+  return parts.join(" ");
+}
+
+async function loadAssessmentPrefill(
+  assessmentId: string | undefined
+): Promise<InquiryPrefill | undefined> {
+  if (!assessmentId) return undefined;
+
+  const hmacKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!hmacKey) return undefined;
+
+  const cookieStore = await cookies();
+  const signedSession = cookieStore.get("assessment_session")?.value;
+  if (!signedSession) return undefined;
+
+  const [sid, sig] = signedSession.split(".");
+  const expectedSig = createHmac("sha256", hmacKey).update(sid).digest("hex").slice(0, 16);
+  if (sig !== expectedSig) return undefined;
+
+  const admin = createAdminClient();
+  const { data: assessment } = await admin
+    .from("assessments")
+    .select("id, session_id, answers, urgency_level, contact_email, contact_name, contact_phone")
+    .eq("id", assessmentId)
+    .maybeSingle();
+
+  if (!assessment) return undefined;
+  // Must match the user who created this assessment
+  if (assessment.session_id !== sid) return undefined;
+
+  const answers = (assessment.answers || {}) as Record<string, unknown>;
+  return {
+    assessment_id: assessment.id,
+    name: assessment.contact_name || undefined,
+    email: assessment.contact_email || undefined,
+    phone: assessment.contact_phone || undefined,
+    who_for: typeof answers.who_for === "string" ? answers.who_for : undefined,
+    age_range: typeof answers.age_range === "string" ? answers.age_range : undefined,
+    urgency:
+      (typeof assessment.urgency_level === "string" && assessment.urgency_level) ||
+      (typeof answers.urgency === "string" ? answers.urgency : undefined) ||
+      undefined,
+    budget: typeof answers.budget === "string" ? answers.budget : undefined,
+    concern: buildConcernFromAssessment(answers),
+  };
+}
+
+async function InquiryFormLoader({
+  centerId,
+  assessmentId,
+}: {
+  centerId?: string;
+  assessmentId?: string;
+}) {
   let centerName: string | undefined;
 
   if (centerId) {
@@ -27,7 +120,9 @@ async function InquiryFormLoader({ centerId }: { centerId?: string }) {
     centerName = data?.name;
   }
 
-  return <InquiryForm centerId={centerId} centerName={centerName} />;
+  const prefill = await loadAssessmentPrefill(assessmentId);
+
+  return <InquiryForm centerId={centerId} centerName={centerName} prefill={prefill} />;
 }
 
 export default async function InquiryPage({ searchParams }: PageProps) {
@@ -62,7 +157,7 @@ export default async function InquiryPage({ searchParams }: PageProps) {
 
             <div className="mt-8">
               <Suspense fallback={<div className="h-96 animate-pulse bg-surface-container rounded-2xl" />}>
-                <InquiryFormLoader centerId={params.center} />
+                <InquiryFormLoader centerId={params.center} assessmentId={params.assessment} />
               </Suspense>
             </div>
           </div>

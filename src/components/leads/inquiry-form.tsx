@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -16,17 +15,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WHO_FOR_OPTIONS, AGE_RANGE_OPTIONS, URGENCY_OPTIONS, BUDGET_OPTIONS } from "@/lib/constants";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
+
+export interface InquiryPrefill {
+  name?: string;
+  email?: string;
+  phone?: string;
+  who_for?: string;
+  age_range?: string;
+  urgency?: string;
+  budget?: string;
+  concern?: string;
+  assessment_id?: string;
+}
 
 interface InquiryFormProps {
   centerId?: string;
   centerName?: string;
+  prefill?: InquiryPrefill;
 }
 
-export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
+export function InquiryForm({ centerId, centerName, prefill }: InquiryFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hasPrefill = Boolean(prefill?.email || prefill?.concern);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -37,15 +50,15 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
     const data = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
-      phone: formData.get("phone") as string || undefined,
-      country: formData.get("country") as string || undefined,
-      who_for: formData.get("who_for") as string || undefined,
-      age_range: formData.get("age_range") as string || undefined,
+      phone: (formData.get("phone") as string) || undefined,
+      country: (formData.get("country") as string) || undefined,
+      who_for: (formData.get("who_for") as string) || undefined,
+      age_range: (formData.get("age_range") as string) || undefined,
       concern: formData.get("concern") as string,
-      urgency: formData.get("urgency") as string || undefined,
+      urgency: (formData.get("urgency") as string) || undefined,
       preferred_center_id: centerId || undefined,
-      budget: formData.get("budget") as string || undefined,
-      message: formData.get("message") as string || undefined,
+      budget: (formData.get("budget") as string) || undefined,
+      message: (formData.get("message") as string) || undefined,
       consent: formData.get("consent") === "on",
       request_call: formData.get("request_call") === "on",
     };
@@ -73,6 +86,20 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {hasPrefill && (
+        <div className="bg-primary/5 rounded-xl p-4 flex gap-3">
+          <Sparkles className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              We&apos;ve pre-filled this form from your assessment.
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+              Review below, edit anything that&apos;s changed, and submit when ready.
+            </p>
+          </div>
+        </div>
+      )}
+
       {centerName && (
         <div className="bg-primary/5 rounded-xl p-3">
           <p className="text-sm text-foreground">
@@ -85,22 +112,48 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground">Full Name</Label>
-          <Input id="name" name="name" required className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border" />
+          <Input
+            id="name"
+            name="name"
+            required
+            defaultValue={prefill?.name || ""}
+            autoComplete="name"
+            className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border"
+          />
         </div>
         <div>
           <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
-          <Input id="email" name="email" type="email" required className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border" />
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            required
+            defaultValue={prefill?.email || ""}
+            autoComplete="email"
+            className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border"
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="phone" className="text-xs uppercase tracking-wider text-muted-foreground">Phone / WhatsApp</Label>
-          <Input id="phone" name="phone" className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border" />
+          <Input
+            id="phone"
+            name="phone"
+            defaultValue={prefill?.phone || ""}
+            autoComplete="tel"
+            className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border"
+          />
         </div>
         <div>
           <Label htmlFor="country" className="text-xs uppercase tracking-wider text-muted-foreground">Country</Label>
-          <Input id="country" name="country" className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border" />
+          <Input
+            id="country"
+            name="country"
+            autoComplete="country-name"
+            className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border"
+          />
         </div>
       </div>
 
@@ -108,7 +161,7 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label className="text-xs uppercase tracking-wider text-muted-foreground">Who needs help?</Label>
-          <Select name="who_for">
+          <Select name="who_for" defaultValue={prefill?.who_for || undefined}>
             <SelectTrigger className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border">
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
@@ -121,7 +174,7 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
         </div>
         <div>
           <Label className="text-xs uppercase tracking-wider text-muted-foreground">Age Range</Label>
-          <Select name="age_range">
+          <Select name="age_range" defaultValue={prefill?.age_range || undefined}>
             <SelectTrigger className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border">
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
@@ -141,6 +194,7 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
           name="concern"
           required
           minLength={10}
+          defaultValue={prefill?.concern || ""}
           placeholder="Please describe the situation and how we can best support you..."
           className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border min-h-[100px]"
           rows={4}
@@ -149,8 +203,8 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Preference (if any)</Label>
-          <Select name="urgency">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Urgency</Label>
+          <Select name="urgency" defaultValue={prefill?.urgency || undefined}>
             <SelectTrigger className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border">
               <SelectValue placeholder="Select urgency..." />
             </SelectTrigger>
@@ -163,7 +217,7 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
         </div>
         <div>
           <Label className="text-xs uppercase tracking-wider text-muted-foreground">Monthly Budget Range</Label>
-          <Select name="budget">
+          <Select name="budget" defaultValue={prefill?.budget || undefined}>
             <SelectTrigger className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border">
               <SelectValue placeholder="Select range..." />
             </SelectTrigger>
@@ -212,7 +266,7 @@ export function InquiryForm({ centerId, centerName }: InquiryFormProps) {
         className="w-full rounded-full h-12 gradient-primary text-white hover:opacity-90 transition-opacity duration-300"
         disabled={loading}
       >
-        {loading ? "Submitting..." : "Submit Inquiry"}
+        {loading ? "Submitting..." : hasPrefill ? "Confirm & Submit" : "Submit Inquiry"}
         <ArrowRight className="ml-2 h-4 w-4" />
       </Button>
     </form>

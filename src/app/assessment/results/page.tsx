@@ -103,7 +103,7 @@ export default async function ResultsPage({ searchParams }: PageProps) {
             </p>
             <div className="mt-6">
               <Button className="rounded-full gradient-primary text-white hover:opacity-90" asChild>
-                <Link href="/inquiry">Contact a Specialist</Link>
+                <Link href={`/inquiry?assessment=${assessment.id}`}>Contact a Specialist</Link>
               </Button>
             </div>
           </div>
@@ -182,7 +182,7 @@ export default async function ResultsPage({ searchParams }: PageProps) {
                   {/* CTAs */}
                   <div className="flex gap-2 mt-4">
                     <Button className="flex-1 rounded-full text-xs gradient-primary text-white hover:opacity-90 transition-opacity duration-300" size="sm" asChild>
-                      <Link href={`/inquiry?center=${center.id}`}>
+                      <Link href={`/inquiry?center=${center.id}&assessment=${assessment.id}`}>
                         Inquire
                         <ArrowRight className="ml-1 h-3 w-3" />
                       </Link>
@@ -260,7 +260,7 @@ export default async function ResultsPage({ searchParams }: PageProps) {
           </p>
           <div className="flex gap-3 justify-center mt-6">
             <Button className="rounded-full bg-white text-primary hover:bg-white/90" asChild>
-              <Link href="/inquiry">Talk to a specialist</Link>
+              <Link href={`/inquiry?assessment=${assessment.id}`}>Talk to a specialist</Link>
             </Button>
             <Button variant="outline" className="rounded-full border-white/30 text-white hover:bg-white/10" asChild>
               <Link href="/centers">
