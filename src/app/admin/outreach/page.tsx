@@ -493,6 +493,7 @@ export default function OutreachDashboard() {
               <th className="text-left px-6 py-3 font-medium">Center</th>
               <th className="text-left px-6 py-3 font-medium">Location</th>
               <th className="text-left px-6 py-3 font-medium">Stage</th>
+              <th className="text-left px-6 py-3 font-medium">Publish</th>
               <th className="text-left px-6 py-3 font-medium">Profile</th>
               <th className="text-left px-6 py-3 font-medium">Last Update</th>
               <th className="text-left px-6 py-3 font-medium">Days</th>
@@ -517,7 +518,7 @@ export default function OutreachDashboard() {
 
               return (
                 <tr key={p.id} className="border-t border-surface-container-low hover:bg-surface-container-low/50 transition-colors duration-200 group">
-                  <td className="px-6 py-4" colSpan={isExpanded ? 7 : 1}>
+                  <td className="px-6 py-4" colSpan={isExpanded ? 8 : 1}>
                     {isExpanded && task?.checklist ? (
                       /* Expanded email preview */
                       <div className="space-y-4">
@@ -607,6 +608,21 @@ export default function OutreachDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
+                        {p.centers?.status === "published" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 bg-emerald-100 text-emerald-700">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Published
+                          </span>
+                        ) : p.centers?.status === "draft" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 bg-gray-100 text-gray-600">
+                            <Clock className="h-3 w-3" />
+                            Draft
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
                         {(() => {
                           const pct = quickCompleteness(p.centers);
                           return (
@@ -652,7 +668,7 @@ export default function OutreachDashboard() {
             })}
             {pipelines.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="px-6 py-12 text-center text-sm text-muted-foreground">
                   No centers in the pipeline yet. Click &quot;Add Centers&quot; to get started.
                 </td>
               </tr>
