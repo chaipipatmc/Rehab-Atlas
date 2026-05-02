@@ -102,11 +102,12 @@ async function fetchUnsplashImages(
 // ---------------------------------------------------------------------------
 
 async function resolveCountry(slug: string): Promise<string | null> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("centers")
-    .select("country")
-    .eq("status", "published");
+  // Resolve for any country that has at least one center (draft OR published).
+  // The directory grid is still gated to status='published', so unreviewed
+  // drafts won't appear publicly — but the hub page exists for SEO + the
+  // assessment/inquiry CTA works as soon as any center is imported.
+  const admin = createAdminClient();
+  const { data } = await admin.from("centers").select("country");
   if (!data) return null;
 
   const unique = [
@@ -148,11 +149,11 @@ async function getOrGenerateContent(
     }
   }
 
-  // 2. Gather center stats for AI prompt
-  const { data: centers } = await supabase
+  // 2. Gather center stats for AI prompt — count all centers (including
+  // drafts) so the hub still feels populated for newly imported countries.
+  const { data: centers } = await admin
     .from("centers")
     .select("treatment_focus, conditions, price_min, price_max")
-    .eq("status", "published")
     .eq("country", countryName);
 
   const centerCount = centers?.length ?? 0;

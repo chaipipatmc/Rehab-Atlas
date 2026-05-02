@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { countryToSlug } from "@/lib/utils";
 import { BreadcrumbJsonLd } from "@/components/shared/json-ld";
 import { Button } from "@/components/ui/button";
-import { Globe, Building2, ArrowRight, MapPin } from "lucide-react";
+import { Globe, Building2, ArrowRight, MapPin, Clock } from "lucide-react";
 
 export const revalidate = 3600;
 
@@ -28,34 +29,47 @@ interface CountryWithCount {
   name: string;
   slug: string;
   count: number;
+  comingSoon: boolean;
 }
 
 export default async function RehabDestinationsPage() {
-  const supabase = await createClient();
+  void createClient; // server client kept available for future filters
+  const admin = createAdminClient();
 
-  // Get all published centers' countries
-  const { data: centerData } = await supabase
+  // Pull all centers and bucket by country, splitting verified (published)
+  // counts from coming-soon (draft-only) ones so newly imported countries
+  // still appear in the directory.
+  const { data: centerData } = await admin
     .from("centers")
-    .select("country")
-    .eq("status", "published");
+    .select("country, status");
 
-  // Build unique countries with counts
-  const countsByName: Record<string, number> = {};
+  const publishedByName: Record<string, number> = {};
+  const draftOnlyNames = new Set<string>();
+  const allNames = new Set<string>();
   if (centerData) {
     for (const c of centerData) {
-      if (c.country) {
-        countsByName[c.country] = (countsByName[c.country] || 0) + 1;
+      if (!c.country) continue;
+      allNames.add(c.country);
+      if (c.status === "published") {
+        publishedByName[c.country] = (publishedByName[c.country] || 0) + 1;
       }
+    }
+    for (const name of allNames) {
+      if (!publishedByName[name]) draftOnlyNames.add(name);
     }
   }
 
-  const countries: CountryWithCount[] = Object.entries(countsByName)
-    .map(([name, count]) => ({
+  const countries: CountryWithCount[] = Array.from(allNames)
+    .map((name) => ({
       name,
       slug: countryToSlug(name),
-      count,
+      count: publishedByName[name] || 0,
+      comingSoon: draftOnlyNames.has(name),
     }))
-    .sort((a, b) => b.count - a.count);
+    .sort((a, b) => {
+      if (a.comingSoon !== b.comingSoon) return a.comingSoon ? 1 : -1;
+      return b.count - a.count;
+    });
 
   const BASE_URL =
     process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
@@ -127,11 +141,20 @@ export default async function RehabDestinationsPage() {
                     <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-300" />
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Building2 className="h-3.5 w-3.5" />
-                    <span>
-                      {country.count}{" "}
-                      {country.count === 1 ? "center" : "centers"}
-                    </span>
+                    {country.comingSoon ? (
+                      <>
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Coming soon</span>
+                      </>
+                    ) : (
+                      <>
+                        <Building2 className="h-3.5 w-3.5" />
+                        <span>
+                          {country.count}{" "}
+                          {country.count === 1 ? "center" : "centers"}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </Link>
