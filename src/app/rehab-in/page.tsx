@@ -1,12 +1,15 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { countryToSlug } from "@/lib/utils";
 import { BreadcrumbJsonLd } from "@/components/shared/json-ld";
 import { Button } from "@/components/ui/button";
 import { Globe, Building2, ArrowRight, MapPin, Clock } from "lucide-react";
 
+// Force dynamic rendering — the admin client requires SUPABASE_SERVICE_ROLE_KEY
+// which isn't available during static prerender at build time. ISR cache stays
+// effective via the route segment cache.
+export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -33,7 +36,6 @@ interface CountryWithCount {
 }
 
 export default async function RehabDestinationsPage() {
-  void createClient; // server client kept available for future filters
   const admin = createAdminClient();
 
   // Pull all centers and bucket by country, splitting verified (published)
