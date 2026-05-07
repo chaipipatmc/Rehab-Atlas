@@ -81,3 +81,106 @@ export async function setAgentEnabled(agentType: AgentType, enabled: boolean): P
     { onConflict: "key" }
   );
 }
+
+// ─── Per-agent settings (beyond the on/off toggle) ─────────────────────────
+//
+// Each agent can store arbitrary key/value config in site_settings under the
+// pattern `agent_<type>_setting_<key>`. Helpers below read/write these with
+// type coercion + sensible defaults so agent code can opt in without
+// breaking when a setting is unset.
+
+function settingKey(agentType: AgentType, key: string): string {
+  return `agent_${agentType}_setting_${key}`;
+}
+
+export async function getAgentSettingRaw(
+  agentType: AgentType,
+  key: string
+): Promise<string | null> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("site_settings")
+      .select("value")
+      .eq("key", settingKey(agentType, key))
+      .maybeSingle();
+    return (data?.value as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getAgentSettingNumber(
+  agentType: AgentType,
+  key: string,
+  fallback: number
+): Promise<number> {
+  const raw = await getAgentSettingRaw(agentType, key);
+  if (raw === null || raw === "") return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+export async function getAgentSettingString(
+  agentType: AgentType,
+  key: string,
+  fallback: string
+): Promise<string> {
+  const raw = await getAgentSettingRaw(agentType, key);
+  return raw ?? fallback;
+}
+
+export async function getAgentSettingNumberArray(
+  agentType: AgentType,
+  key: string,
+  fallback: number[]
+): Promise<number[]> {
+  const raw = await getAgentSettingRaw(agentType, key);
+  if (!raw) return fallback;
+  const parts = raw
+    .split(",")
+    .map((p) => Number(p.trim()))
+    .filter((n) => Number.isFinite(n));
+  return parts.length > 0 ? parts : fallback;
+}
+
+export async function setAgentSetting(
+  agentType: AgentType,
+  key: string,
+  value: string
+): Promise<void> {
+  const admin = createAdminClient();
+  await admin
+    .from("site_settings")
+    .upsert(
+      { key: settingKey(agentType, key), value },
+      { onConflict: "key" }
+    );
+}
+
+/**
+ * Read all per-agent settings as a nested map: { [agent]: { [key]: value } }.
+ * Used by the admin UI to render configuration panels.
+ */
+export async function getAllAgentSettings(): Promise<
+  Record<string, Record<string, string>>
+> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("site_settings")
+      .select("key, value")
+      .like("key", "agent_%_setting_%");
+    const out: Record<string, Record<string, string>> = {};
+    for (const row of data || []) {
+      const m = (row.key as string).match(/^agent_(.+)_setting_(.+)$/);
+      if (!m) continue;
+      const [, agent, key] = m;
+      if (!out[agent]) out[agent] = {};
+      out[agent][key] = row.value as string;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}

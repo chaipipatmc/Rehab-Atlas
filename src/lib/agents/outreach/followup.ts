@@ -17,15 +17,32 @@ import {
 } from "./templates/follow-up-emails";
 import type { OutreachPipeline, CenterResearch } from "@/types/agent";
 
-const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+// Persona + follow-up cadence — admin can override via /admin/agents → settings.
+const DEFAULT_PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+const DEFAULT_FOLLOW_UP_DAYS = [3, 7, 14];
+
+async function resolvePersona(): Promise<string> {
+  const { getAgentSettingString } = await import("../config");
+  // Persona is shared with research; read from outreach_research key first,
+  // then fall back to outreach_followup, then to env var/Sarah.
+  const fromResearch = await getAgentSettingString(
+    "outreach_research",
+    "persona_name",
+    ""
+  );
+  if (fromResearch) return fromResearch;
+  return getAgentSettingString("outreach_followup", "persona_name", DEFAULT_PERSONA);
+}
+
+async function resolveFollowUpDays(): Promise<number[]> {
+  const { getAgentSettingNumberArray } = await import("../config");
+  return getAgentSettingNumberArray("outreach_followup", "follow_up_days", DEFAULT_FOLLOW_UP_DAYS);
+}
 
 const followUpEmailSchema = z.object({
   subject: z.string(),
   body_text: z.string(),
 });
-
-// Follow-up intervals in days after initial outreach
-const FOLLOW_UP_DAYS = [3, 7, 14];
 
 /**
  * Process all pending follow-ups.
@@ -151,9 +168,13 @@ async function sendFollowUp(pipeline: OutreachPipeline): Promise<boolean> {
   const research = pipeline.research_data as CenterResearch | null;
   const contactPerson = research?.contact_person_name || null;
 
+  // Resolve admin-configurable knobs
+  const persona = await resolvePersona();
+  const followUpDays = await resolveFollowUpDays();
+
   // Try Claude for personalized follow-up
   const aiDraft = await analyzeWithClaude<{ subject: string; body_text: string }>({
-    systemPrompt: getFollowUpSystemPrompt(attemptNumber, PERSONA),
+    systemPrompt: getFollowUpSystemPrompt(attemptNumber, persona),
     userPrompt: `Write follow-up #${attemptNumber} for ${center.name}. Contact: ${contactPerson || "unknown"}. Their specialties: ${research?.specialties?.join(", ") || "rehabilitation"}.`,
     responseSchema: followUpEmailSchema,
     maxTokens: 500,
@@ -176,7 +197,7 @@ async function sendFollowUp(pipeline: OutreachPipeline): Promise<boolean> {
   });
 
   // Calculate next follow-up
-  const nextFollowUpDays = FOLLOW_UP_DAYS[attemptNumber] || null;
+  const nextFollowUpDays = followUpDays[attemptNumber] || null;
   let nextFollowUp: string | null = null;
   if (nextFollowUpDays && attemptNumber < 3) {
     const next = new Date();

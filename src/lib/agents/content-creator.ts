@@ -423,10 +423,10 @@ Return a JSON object with:
   }
 }
 
-// Target number of articles in the content pool (drafts + approved)
-const POOL_TARGET = 20;
-// How many articles per day (matching the content calendar plan)
-const ARTICLES_PER_DAY = 3;
+// Default knobs — admin can override these via /admin/agents → settings,
+// stored in site_settings under agent_content_creator_setting_*.
+const DEFAULT_POOL_TARGET = 20;
+const DEFAULT_ARTICLES_PER_DAY = 3;
 
 /**
  * Main function: write articles from the content calendar.
@@ -443,6 +443,19 @@ export async function createArticleDraft(options?: {
 }): Promise<{ written: number; poolSize: number }> {
   const enabled = await isAgentEnabled("content_creator");
   if (!enabled) return { written: 0, poolSize: 0 };
+
+  // Read knobs from site_settings (with defaults)
+  const { getAgentSettingNumber } = await import("./config");
+  const POOL_TARGET = await getAgentSettingNumber(
+    "content_creator",
+    "pool_target",
+    DEFAULT_POOL_TARGET
+  );
+  const ARTICLES_PER_DAY = await getAgentSettingNumber(
+    "content_creator",
+    "articles_per_run",
+    DEFAULT_ARTICLES_PER_DAY
+  );
 
   // Skip weekends (unless overridden for pool fill)
   if (!options?.skipWeekendCheck) {

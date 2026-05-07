@@ -11,6 +11,7 @@ import {
   Bot, Zap, Search, Send, MessageSquare, FileSignature,
   Activity, Target, PenTool, CalendarClock,
   ChevronDown, ChevronUp, Settings2, ListTodo, RefreshCw,
+  Sliders, Save,
 } from "lucide-react";
 
 interface AgentConfig {
@@ -84,6 +85,67 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   expired: { label: "Expired", color: "bg-gray-100 text-gray-800", icon: Clock },
 };
 
+// ─── Per-agent editable knobs ───────────────────────────────────────────────
+//
+// Only knobs listed here are exposed in the UI. They are persisted to
+// site_settings via /api/agents/settings and read by agent code at runtime.
+// See src/lib/agents/config.ts and the corresponding agent .ts files.
+
+interface AgentKnob {
+  key: string;
+  label: string;
+  description: string;
+  type: "number" | "text" | "csv-numbers";
+  default: string;
+  unit?: string;
+  min?: number;
+  max?: number;
+}
+
+const AGENT_KNOBS: Record<string, AgentKnob[]> = {
+  content_creator: [
+    {
+      key: "pool_target",
+      label: "Pool target",
+      description: "Stop drafting once this many articles are in the pool (drafts + approved, not yet published).",
+      type: "number",
+      default: "20",
+      min: 5,
+      max: 100,
+      unit: "articles",
+    },
+    {
+      key: "articles_per_run",
+      label: "Articles per run",
+      description: "How many new articles to draft each weekday execution.",
+      type: "number",
+      default: "3",
+      min: 1,
+      max: 10,
+      unit: "/day",
+    },
+  ],
+  outreach_research: [
+    {
+      key: "persona_name",
+      label: "Persona first name",
+      description: "First name used in outreach email signatures and AI tone.",
+      type: "text",
+      default: "Sarah",
+    },
+  ],
+  outreach_followup: [
+    {
+      key: "follow_up_days",
+      label: "Follow-up cadence",
+      description: "Comma-separated days after initial outreach when follow-ups go out.",
+      type: "csv-numbers",
+      default: "3,7,14",
+      unit: "days",
+    },
+  ],
+};
+
 // Agent type → task group label
 const TASK_GROUP_LABELS: Record<string, string> = {
   outreach_research: "Outreach Emails",
@@ -115,6 +177,10 @@ export default function AdminAgentsPage() {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [bulkActioning, setBulkActioning] = useState(false);
   const [agentStats, setAgentStats] = useState<Record<string, { pending: number; recent: number; detail: string }>>({});
+  const [agentSettings, setAgentSettings] = useState<Record<string, Record<string, string>>>({});
+  const [draftSettings, setDraftSettings] = useState<Record<string, Record<string, string>>>({});
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [savingSetting, setSavingSetting] = useState<string | null>(null);
   const TASKS_PER_PAGE = 50;
 
   async function loadTasks(filter?: string, page?: number) {
@@ -218,16 +284,90 @@ export default function AdminAgentsPage() {
     setAgentStats(stats);
   }
 
+  async function loadSettings() {
+    const res = await fetch("/api/agents/settings");
+    if (res.ok) {
+      const json = await res.json();
+      setAgentSettings(json.settings || {});
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const configRes = await fetch("/api/agents/config");
       if (configRes.ok) setConfig(await configRes.json());
-      await Promise.all([loadTasks("awaiting_owner", 1), loadAgentStats()]);
+      await Promise.all([
+        loadTasks("awaiting_owner", 1),
+        loadAgentStats(),
+        loadSettings(),
+      ]);
       setLoading(false);
     }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function getSettingValue(agent: string, key: string): string {
+    const draft = draftSettings[agent]?.[key];
+    if (draft !== undefined) return draft;
+    const saved = agentSettings[agent]?.[key];
+    if (saved !== undefined) return saved;
+    const knob = AGENT_KNOBS[agent]?.find((k) => k.key === key);
+    return knob?.default ?? "";
+  }
+
+  function setDraftValue(agent: string, key: string, value: string) {
+    setDraftSettings((prev) => ({
+      ...prev,
+      [agent]: { ...(prev[agent] || {}), [key]: value },
+    }));
+  }
+
+  function isDirty(agent: string, key: string): boolean {
+    const draft = draftSettings[agent]?.[key];
+    if (draft === undefined) return false;
+    const saved = agentSettings[agent]?.[key] ?? AGENT_KNOBS[agent]?.find((k) => k.key === key)?.default ?? "";
+    return draft !== saved;
+  }
+
+  async function saveSetting(agent: string, key: string) {
+    const value = getSettingValue(agent, key);
+    setSavingSetting(`${agent}:${key}`);
+    try {
+      const res = await fetch("/api/agents/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent, key, value }),
+      });
+      if (res.ok) {
+        setAgentSettings((prev) => ({
+          ...prev,
+          [agent]: { ...(prev[agent] || {}), [key]: value },
+        }));
+        setDraftSettings((prev) => {
+          const next = { ...prev };
+          if (next[agent]) {
+            const inner = { ...next[agent] };
+            delete inner[key];
+            next[agent] = inner;
+          }
+          return next;
+        });
+        toast.success("Setting saved");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Save failed");
+      }
+    } catch {
+      toast.error("Save failed");
+    }
+    setSavingSetting(null);
+  }
+
+  function resetSetting(agent: string, key: string) {
+    const knob = AGENT_KNOBS[agent]?.find((k) => k.key === key);
+    setDraftValue(agent, key, knob?.default ?? "");
+  }
 
   async function toggleAgent(agent: string, enabled: boolean) {
     setToggling(agent);
@@ -556,68 +696,213 @@ export default function AdminAgentsPage() {
 
       {/* Config Tab */}
       {activeTab === "config" && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {AGENT_GROUPS.map((group) => (
-            <div key={group.title}>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{group.title}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <section key={group.title}>
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                {group.title}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {group.agents.map((key) => {
                   const info = AGENT_INFO[key];
                   if (!info) return null;
                   const enabled = config?.[key as keyof AgentConfig] || false;
                   const Icon = info.icon;
+                  const knobs = AGENT_KNOBS[key] || [];
+                  const hasKnobs = knobs.length > 0;
+                  const isExpanded = expandedAgent === key;
+                  const stats = agentStats[key];
 
                   return (
                     <div
                       key={key}
-                      className={`bg-surface-container-lowest rounded-2xl p-5 shadow-ambient transition-all duration-300 ${
-                        enabled ? "ring-2 ring-primary/20" : ""
-                      }`}
+                      className={`bg-surface-container-lowest rounded-2xl shadow-ambient transition-all duration-300 ${
+                        enabled ? "ring-1 ring-primary/15" : ""
+                      } ${isExpanded ? "md:col-span-2" : ""}`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${enabled ? "bg-primary/10" : "bg-surface-container"}`}>
-                            <Icon className={`h-4 w-4 ${enabled ? info.color : "text-muted-foreground"}`} />
+                      {/* Header row */}
+                      <div className="p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                enabled ? "bg-primary/10" : "bg-surface-container"
+                              }`}
+                            >
+                              <Icon className={`h-4 w-4 ${enabled ? info.color : "text-muted-foreground"}`} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-sm font-semibold text-foreground">{info.label}</h3>
+                                {hasKnobs && (
+                                  <span className="text-[9px] font-medium text-primary bg-primary/10 rounded-full px-1.5 py-0.5">
+                                    {knobs.length} setting{knobs.length === 1 ? "" : "s"}
+                                  </span>
+                                )}
+                              </div>
+                              {enabled ? (
+                                <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium mt-0.5">
+                                  <Zap className="h-3 w-3" /> Active
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground mt-0.5 inline-block">
+                                  Off — manual mode
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-sm font-semibold text-foreground">{info.label}</h3>
-                            {enabled ? (
-                              <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
-                                <Zap className="h-3 w-3" /> Active
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground">Off</span>
-                            )}
-                          </div>
+                          <Switch
+                            checked={enabled}
+                            onCheckedChange={(v) => toggleAgent(key, v)}
+                            disabled={toggling === key}
+                          />
                         </div>
-                        <Switch checked={enabled} onCheckedChange={(v) => toggleAgent(key, v)} disabled={toggling === key} />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-3 leading-relaxed">{info.description}</p>
 
-                      {/* Agent status details */}
-                      {agentStats[key] && (
-                        <div className="mt-3 pt-3 border-t border-surface-container">
-                          <p className="text-xs text-foreground leading-relaxed">{agentStats[key].detail}</p>
-                          <div className="flex items-center gap-3 mt-2">
-                            {agentStats[key].pending > 0 && (
-                              <span className="text-[10px] font-medium bg-amber-100 text-amber-800 rounded-full px-2 py-0.5">
-                                {agentStats[key].pending} pending
-                              </span>
-                            )}
-                            {agentStats[key].recent > 0 && (
-                              <span className="text-[10px] text-muted-foreground">
-                                {agentStats[key].recent} tasks in 24h
-                              </span>
-                            )}
+                        <p className="text-xs text-muted-foreground mt-3 leading-relaxed">{info.description}</p>
+
+                        {/* Stats line */}
+                        {stats && (
+                          <div className="mt-3 pt-3 border-t border-surface-container-low">
+                            <p className="text-xs text-foreground leading-relaxed">{stats.detail}</p>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              {stats.pending > 0 && (
+                                <span className="text-[10px] font-medium bg-amber-50 text-amber-700 rounded-full px-2 py-0.5">
+                                  {stats.pending} pending
+                                </span>
+                              )}
+                              {stats.recent > 0 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {stats.recent} task{stats.recent === 1 ? "" : "s"} in 24h
+                                </span>
+                              )}
+                            </div>
                           </div>
+                        )}
+
+                        {/* Configure toggle */}
+                        {hasKnobs && (
+                          <button
+                            onClick={() => setExpandedAgent(isExpanded ? null : key)}
+                            className="mt-3 flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                          >
+                            <Sliders className="h-3.5 w-3.5" />
+                            {isExpanded ? "Hide settings" : "Configure"}
+                            {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Expanded settings panel */}
+                      {isExpanded && hasKnobs && (
+                        <div className="px-5 pb-5 pt-1 border-t border-surface-container-low bg-surface-container/20">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-3 mt-3">
+                            Configuration
+                          </p>
+                          <div className="space-y-4">
+                            {knobs.map((knob) => {
+                              const value = getSettingValue(key, knob.key);
+                              const dirty = isDirty(key, knob.key);
+                              const saving = savingSetting === `${key}:${knob.key}`;
+                              const inputId = `${key}-${knob.key}`;
+
+                              return (
+                                <div key={knob.key} className="rounded-xl bg-surface-container-lowest p-3 shadow-ambient">
+                                  <label
+                                    htmlFor={inputId}
+                                    className="block text-xs font-semibold text-foreground"
+                                  >
+                                    {knob.label}
+                                    {knob.unit && (
+                                      <span className="text-muted-foreground font-normal ml-1">
+                                        ({knob.unit})
+                                      </span>
+                                    )}
+                                  </label>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                                    {knob.description}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <input
+                                      id={inputId}
+                                      type={knob.type === "number" ? "number" : "text"}
+                                      min={knob.min}
+                                      max={knob.max}
+                                      value={value}
+                                      onChange={(e) => setDraftValue(key, knob.key, e.target.value)}
+                                      placeholder={knob.default}
+                                      className="flex-1 text-sm bg-white border border-surface-container-high rounded-lg px-3 py-1.5 ghost-border focus:outline-none focus:ring-1 focus:ring-primary/40 tabular-nums"
+                                    />
+                                    {dirty ? (
+                                      <>
+                                        <button
+                                          onClick={() => saveSetting(key, knob.key)}
+                                          disabled={saving}
+                                          className="text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-full px-3 py-1.5 transition-colors disabled:opacity-50 flex items-center gap-1"
+                                        >
+                                          {saving ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            <Save className="h-3 w-3" />
+                                          )}
+                                          Save
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setDraftSettings((prev) => {
+                                              const next = { ...prev };
+                                              if (next[key]) {
+                                                const inner = { ...next[key] };
+                                                delete inner[knob.key];
+                                                next[key] = inner;
+                                              }
+                                              return next;
+                                            });
+                                          }}
+                                          className="text-xs text-muted-foreground hover:text-foreground"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        onClick={() => resetSetting(key, knob.key)}
+                                        className="text-[10px] text-muted-foreground hover:text-foreground"
+                                        title={`Reset to default (${knob.default})`}
+                                      >
+                                        Default: {knob.default}
+                                      </button>
+                                    )}
+                                  </div>
+                                  {dirty && (
+                                    <p className="text-[10px] text-amber-600 mt-1.5 flex items-center gap-1">
+                                      <AlertCircle className="h-2.5 w-2.5" />
+                                      Unsaved change — applies to next agent run after Save
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
+                            Settings are persisted in <code className="text-foreground bg-surface-container px-1 rounded">site_settings</code>.
+                            Agents pick up new values on their next scheduled run.
+                          </p>
                         </div>
                       )}
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </section>
           ))}
+
+          {/* Footer hint */}
+          <div className="text-center text-[11px] text-muted-foreground pt-2">
+            Need a knob that&apos;s not here yet? Settings are extensible —
+            add a key to <code className="text-foreground bg-surface-container px-1 rounded">AGENT_KNOBS</code> in{" "}
+            <code className="text-foreground bg-surface-container px-1 rounded">/admin/agents/page.tsx</code> and wire the
+            agent code to read from <code className="text-foreground bg-surface-container px-1 rounded">getAgentSetting*</code>.
+          </div>
         </div>
       )}
     </div>

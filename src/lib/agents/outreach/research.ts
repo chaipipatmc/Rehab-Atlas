@@ -17,7 +17,13 @@ import {
 } from "./templates/outreach-email";
 import type { CenterResearch, OutreachPipeline } from "@/types/agent";
 
-const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+// Persona name — admin can override via /admin/agents → settings, falling
+// back to env var, then to "Sarah".
+const DEFAULT_PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+async function resolvePersona(): Promise<string> {
+  const { getAgentSettingString } = await import("../config");
+  return getAgentSettingString("outreach_research", "persona_name", DEFAULT_PERSONA);
+}
 
 // --- Zod schemas for Claude responses ---
 
@@ -269,9 +275,12 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
     }
   }
 
+  // Resolve persona (settings override → env var → "Sarah")
+  const persona = await resolvePersona();
+
   // Try Claude for personalized email
   const aiDraft = await analyzeWithClaude<{ subject: string; body_text: string; personalization_points: string[] }>({
-    systemPrompt: getOutreachSystemPrompt(PERSONA),
+    systemPrompt: getOutreachSystemPrompt(persona),
     userPrompt: getOutreachUserPrompt({
       centerName: center.name,
       contactPerson: research.contact_person_name,
@@ -299,7 +308,7 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
   // Update pipeline stage
   await admin
     .from("outreach_pipeline")
-    .update({ stage: "outreach_drafted", outreach_persona: PERSONA })
+    .update({ stage: "outreach_drafted", outreach_persona: persona })
     .eq("center_id", centerId);
 
   // Create agent task for super admin approval
@@ -312,7 +321,7 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
       to_email: toEmail,
       subject: draft.subject,
       body_text: draft.bodyText,
-      persona: PERSONA,
+      persona,
       personalization_points: aiDraft?.personalization_points || [],
     },
     ai_summary: `Outreach email drafted for ${center.name} (${toEmail}). Subject: "${draft.subject}"`,
