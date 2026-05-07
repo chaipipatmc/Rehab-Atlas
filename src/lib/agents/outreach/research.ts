@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { analyzeWithClaude } from "@/lib/agents/claude";
+import { countryToSlug } from "@/lib/utils";
 import { sendEmail } from "./gmail";
 import {
   generateInitialOutreach,
@@ -241,7 +242,7 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
   // Get center email
   const { data: center } = await admin
     .from("centers")
-    .select("name, email, inquiry_email")
+    .select("name, email, inquiry_email, country")
     .eq("id", centerId)
     .single();
 
@@ -252,6 +253,22 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
 
   const toEmail = center.email || center.inquiry_email;
 
+  // Verify the country has a public hub before sending the link (avoid linking to a 404)
+  let countrySlug: string | null = null;
+  let countryName: string | null = null;
+  if (center.country) {
+    const candidateSlug = countryToSlug(center.country as string);
+    const { count: hubCount } = await admin
+      .from("centers")
+      .select("id", { count: "exact", head: true })
+      .eq("country", center.country)
+      .eq("status", "published");
+    if (hubCount && hubCount > 0) {
+      countrySlug = candidateSlug;
+      countryName = center.country as string;
+    }
+  }
+
   // Try Claude for personalized email
   const aiDraft = await analyzeWithClaude<{ subject: string; body_text: string; personalization_points: string[] }>({
     systemPrompt: getOutreachSystemPrompt(PERSONA),
@@ -259,6 +276,8 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
       centerName: center.name,
       contactPerson: research.contact_person_name,
       research,
+      countrySlug,
+      countryName,
     }),
     responseSchema: emailDraftSchema,
     maxTokens: 1000,
@@ -273,6 +292,8 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
         centerName: center.name,
         contactPerson: research.contact_person_name,
         research,
+        countrySlug,
+        countryName,
       });
 
   // Update pipeline stage

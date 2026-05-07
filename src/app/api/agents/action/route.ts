@@ -12,6 +12,7 @@ import { sendApprovedOutreach } from "@/lib/agents/outreach/research";
 import { sendApprovedAgreement } from "@/lib/agents/outreach/agreement";
 import { sendEmail as sendGmailReply } from "@/lib/agents/outreach/gmail";
 import { validateOrigin } from "@/lib/csrf";
+import { pingIndexNow } from "@/lib/seo/indexnow";
 
 function escapeHtml(str: string): string {
   return str
@@ -248,10 +249,13 @@ async function executePostAction(
       }
 
       case "content_admin": {
-        await admin.from("pages").update({
+        const { data: page } = await admin.from("pages").update({
           status: "published",
           published_at: new Date().toISOString(),
-        }).eq("id", entityId);
+        }).eq("id", entityId).select("slug, page_type").maybeSingle();
+        if (page?.slug && page.page_type === "blog") {
+          await pingIndexNow(["/blog", "/sitemap.xml", `/blog/${page.slug}`]);
+        }
         break;
       }
 

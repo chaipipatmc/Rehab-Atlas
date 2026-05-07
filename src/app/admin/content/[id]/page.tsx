@@ -105,6 +105,13 @@ export default function AdminContentEditPage() {
       toast.error("Failed to publish");
     } else {
       toast.success("Published!");
+      if (page.page_type === "blog" && page.slug) {
+        fetch("/api/seo/indexnow-publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: page.slug }),
+        }).catch(() => {});
+      }
       router.refresh();
     }
     setSaving(false);

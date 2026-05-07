@@ -13,6 +13,8 @@ interface TemplateParams {
   contactPerson: string | null;
   research: CenterResearch;
   persona?: string;
+  countrySlug?: string | null;
+  countryName?: string | null;
 }
 
 /**
@@ -33,6 +35,10 @@ export function generateInitialOutreach(params: TemplateParams): {
 
   const subject = `Partnership with Rehab-Atlas - featuring ${params.centerName}`;
 
+  const countryParagraph = params.countrySlug && params.countryName
+    ? `\n\nIf you're curious, here's how centers in ${params.countryName} currently appear on the platform: https://rehab-atlas.com/rehab-in/${params.countrySlug} — that's roughly what your listing would look like once it's live.`
+    : "";
+
   const bodyText = `${greeting}
 
 I came across ${params.centerName} while researching ${specialty} providers, and I was genuinely impressed by ${usp}.
@@ -43,7 +49,7 @@ We believe that many people who need help simply don't know where to look, and g
 
 We'd love to invite ${params.centerName} to be part of Rehab-Atlas. Joining is free and straightforward — you'd set up your center profile on our platform, share details about your programs and approach, and optionally contribute educational articles that help people understand treatment options. Every article you publish includes a backlink to your website and credits you as the author, which is great for your online visibility and SEO.
 
-When someone is searching for rehab and their needs match what you offer, they can send an inquiry directly to your center through our platform. It's another channel for potential clients to find you.
+When someone is searching for rehab and their needs match what you offer, they can send an inquiry directly to your center through our platform. It's another channel for potential clients to find you.${countryParagraph}
 
 There's no cost and no strings attached. We're focused on building a trusted directory where people in need can find quality care, and your center would be a valuable addition.
 
@@ -79,6 +85,7 @@ CRITICAL RULES:
 4. Frame this as a community mission — helping people find the care they need.
 5. Mention the blog/article opportunity naturally — it's good for their SEO (backlinks + author credit).
 6. Mention the inquiry benefit: when someone searches for rehab and their conditions match the center's services, they can send an inquiry directly to the center through our platform. This brings potential clients to them.
+7. INCLUDE A CLICK-DRIVER LINK to https://rehab-atlas.com/rehab-in/[country-slug] when a country slug is provided. Frame it naturally — e.g. "you can see how centers in [Country] currently appear on our platform here: [link]" or "here's what the [Country] hub looks like today: [link]". Do NOT make it the primary call-to-action (that's still the reply). Place it as a soft side-mention in the second-to-last paragraph. If no country slug is provided, omit the link entirely — never invent a URL.
 
 You write emails that sound natural and human — like a real person typing at their desk. Never use:
 - Corporate jargon ("leverage", "synergize", "maximize", "optimize", "empower")
@@ -93,6 +100,7 @@ Your emails should:
 - Reference something specific about their center from the research
 - Frame the invitation around helping more people find quality care
 - Keep it concise — 4-5 short paragraphs max
+- Soft-place the country hub link (if provided) as a glance-worthy side-mention, not the headline ask
 - End with: if they're interested in being part of this journey, reply and we'll send them login credentials and walk them through getting their center profile to 100% completeness
 - Use the signature: "${persona}\\nPartnerships, Rehab-Atlas\\ninfo@rehab-atlas.com\\nrehab-atlas.com"
 
@@ -109,6 +117,10 @@ Return a JSON object with:
  */
 export function getOutreachUserPrompt(params: TemplateParams): string {
   const research = params.research;
+  const countryLine = params.countrySlug && params.countryName
+    ? `https://rehab-atlas.com/rehab-in/${params.countrySlug} (this is the live ${params.countryName} hub — INCLUDE this URL naturally in the body so they can glance at how centers in their country appear today)`
+    : "(no country hub link available — do NOT invent a URL)";
+
   return `Write a personalized introduction email to ${params.centerName}, inviting them to join Rehab-Atlas.
 
 Contact person: ${params.contactPerson || "Unknown (use generic greeting like 'Hi there')"}
@@ -120,6 +132,9 @@ DEEP RESEARCH FINDINGS (from scraping their website — use these to make the em
 - What they're about: ${research.website_summary}
 - What makes them stand out: ${research.unique_selling_points.join("; ")}
 - Their brand voice/tone: ${research.tone_analysis}
+
+CLICK-DRIVER LINK:
+${countryLine}
 
 IMPORTANT — PERSONALIZATION:
 - Pick 1-2 SPECIFIC details from the research that show you actually looked at their website
@@ -135,6 +150,7 @@ RULES:
 - Frame it as: we want to help more people find quality care
 - Mention blog opportunity naturally: they can publish articles with backlinks to their site + author credit (SEO benefit)
 - Mention the inquiry benefit: people searching for rehab who match the center's services can send inquiries directly through our platform — potential clients coming to them
+- If a country hub link was provided above, place it naturally in the second-to-last paragraph as a soft side-mention — e.g. "if you're curious, here's how centers in [Country] currently appear on the platform: [link]". The PRIMARY call-to-action is still the reply, NOT the click. Never make the link the headline.
 - End with: if interested, reply and we'll send login credentials + walk them through getting their profile to 100% completeness
 - Keep it short — 4-5 paragraphs max
 - Make it sound like a real person who genuinely spent time learning about their center

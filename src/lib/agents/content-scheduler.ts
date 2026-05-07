@@ -16,6 +16,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { sendAgentEmail } from "@/lib/agents/notify";
+import { pingIndexNow } from "@/lib/seo/indexnow";
 
 // How many articles to publish per day
 const DAILY_PUBLISH_COUNT = 3;
@@ -75,6 +76,7 @@ export async function publishFromPool(): Promise<boolean> {
   const usedCategories = new Set((recent || []).map((p) => categorizeArticle(p.title as string)));
   const remaining = [...pool];
   let published = 0;
+  const publishedSlugs: string[] = [];
 
   for (let i = 0; i < DAILY_PUBLISH_COUNT && remaining.length > 0; i++) {
     // Pick best article: prefer different category from what we've already published today + recent
@@ -104,6 +106,7 @@ export async function publishFromPool(): Promise<boolean> {
     }
 
     published++;
+    publishedSlugs.push(picked.slug as string);
     const authorLabel = picked.author_type === "partner" ? "Partner article" : "Editorial";
 
     await logAgentAction({
@@ -121,6 +124,15 @@ export async function publishFromPool(): Promise<boolean> {
     });
 
     console.log(`Content Scheduler: [${i + 1}/${DAILY_PUBLISH_COUNT}] published "${picked.title}" (${category}, ${authorLabel})`);
+  }
+
+  // Notify Bing/Yandex/Naver via IndexNow (Google ignores; submit sitemap.xml to GSC instead)
+  if (publishedSlugs.length > 0) {
+    await pingIndexNow([
+      "/blog",
+      "/sitemap.xml",
+      ...publishedSlugs.map((s) => `/blog/${s}`),
+    ]);
   }
 
   // Single summary notification

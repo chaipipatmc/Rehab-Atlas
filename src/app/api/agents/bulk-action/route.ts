@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logAgentAction } from "@/lib/agents/base";
 import { sendEmail } from "@/lib/agents/outreach/gmail";
 import { validateOrigin } from "@/lib/csrf";
+import { pingIndexNow } from "@/lib/seo/indexnow";
 
 export const maxDuration = 300; // 5 minutes for bulk sends
 
@@ -86,11 +87,24 @@ export async function POST(request: Request) {
   );
 
   // Publish approved content
+  const publishedSlugs: string[] = [];
   for (const task of contentTasks) {
-    await admin
+    const { data: page } = await admin
       .from("pages")
       .update({ status: "published", published_at: new Date().toISOString() })
-      .eq("id", task.entity_id);
+      .eq("id", task.entity_id)
+      .select("slug, page_type")
+      .maybeSingle();
+    if (page?.slug && page.page_type === "blog") {
+      publishedSlugs.push(page.slug as string);
+    }
+  }
+  if (publishedSlugs.length > 0) {
+    await pingIndexNow([
+      "/blog",
+      "/sitemap.xml",
+      ...publishedSlugs.map((s) => `/blog/${s}`),
+    ]);
   }
 
   // Handle rejected outreach — mark pipeline as declined
