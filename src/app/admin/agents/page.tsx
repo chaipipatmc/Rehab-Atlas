@@ -29,6 +29,8 @@ interface AgentConfig {
   content_scheduler: boolean;
   content_planner: boolean;
   content_auto_approve: boolean;
+  content_orchestrator: boolean;
+  system_orchestrator: boolean;
 }
 
 interface AgentTaskRow {
@@ -46,6 +48,10 @@ interface AgentTaskRow {
 
 const AGENT_GROUPS = [
   {
+    title: "System",
+    agents: ["system_orchestrator"],
+  },
+  {
     title: "Internal Agents",
     agents: ["center_admin", "content_admin", "lead_verify", "follow_up"],
   },
@@ -55,7 +61,7 @@ const AGENT_GROUPS = [
   },
   {
     title: "Content Agents",
-    agents: ["content_planner", "content_creator", "content_auto_approve", "content_scheduler"],
+    agents: ["content_orchestrator", "content_planner", "content_creator", "content_auto_approve", "content_scheduler"],
   },
 ];
 
@@ -74,6 +80,8 @@ const AGENT_INFO: Record<string, { label: string; description: string; icon: typ
   content_scheduler: { label: "Scheduler", description: "Publishes 1 approved article per day at optimal time.", icon: CalendarClock, color: "text-indigo-600" },
   content_planner: { label: "Planner", description: "Plans monthly editorial calendar with 2-3 topics per weekday.", icon: CalendarClock, color: "text-violet-600" },
   content_auto_approve: { label: "Auto-Approve", description: "Automatically approves draft articles that pass quality checks (word count, images, SEO, tags). When OFF, you review manually.", icon: CheckCircle, color: "text-emerald-600" },
+  content_orchestrator: { label: "Content Orchestrator", description: "Domain supervisor for the content pillar. Detects stalls (no calendar for next month, pool below target, nothing published today) and triggers the right leaf agent. Runs every 30 min.", icon: Target, color: "text-violet-600" },
+  system_orchestrator: { label: "System Orchestrator", description: "Top-level health watcher. Compares each agent's last run to its expected interval and surfaces stale agents on the dashboard. Read-only — does not coordinate work between agents (each pillar still has its own orchestrator). Runs every 10 min.", icon: Activity, color: "text-primary" },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
@@ -142,6 +150,30 @@ const AGENT_KNOBS: Record<string, AgentKnob[]> = {
       type: "csv-numbers",
       default: "3,7,14",
       unit: "days",
+    },
+  ],
+  content_orchestrator: [
+    {
+      key: "creator_stall_hours",
+      label: "Creator stall threshold",
+      description: "If the content pool is below target and the creator hasn't run in this many hours, the orchestrator will kick it off itself.",
+      type: "number",
+      default: "24",
+      min: 1,
+      max: 168,
+      unit: "hours",
+    },
+  ],
+  system_orchestrator: [
+    {
+      key: "stale_threshold_multiplier",
+      label: "Stale threshold multiplier",
+      description: "An agent is flagged stale when its last run is older than (expected interval × this multiplier). Set higher to be more lenient.",
+      type: "number",
+      default: "2",
+      min: 1,
+      max: 10,
+      unit: "x",
     },
   ],
 };
@@ -280,6 +312,18 @@ export default function AdminAgentsPage() {
     stats.content_scheduler = { pending: 0, recent: 0, detail: "Publishes 1 approved article per day" };
     stats.content_planner = { pending: pending.content_planner || 0, recent: recent.content_planner || 0, detail: "Plans 2-3 topics per weekday" };
     stats.content_auto_approve = { pending: 0, recent: 0, detail: `${draftsCount || 0} drafts in queue for review` };
+
+    // Orchestrators
+    stats.content_orchestrator = {
+      pending: 0,
+      recent: recent.content_orchestrator || 0,
+      detail: `Supervises planner → creator → scheduler. Runs every 30 min.`,
+    };
+    stats.system_orchestrator = {
+      pending: 0,
+      recent: recent.system_orchestrator || 0,
+      detail: `Health watcher across all agents. Snapshot updated every 10 min.`,
+    };
 
     setAgentStats(stats);
   }

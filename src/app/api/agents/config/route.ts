@@ -12,6 +12,7 @@ const VALID_AGENTS: AgentType[] = [
   "outreach_research", "outreach_followup", "outreach_response",
   "outreach_agreement", "outreach_activation", "outreach_orchestrator",
   "content_creator", "content_scheduler", "content_planner", "content_auto_approve",
+  "content_orchestrator", "system_orchestrator",
 ];
 
 // GET: Return current agent config

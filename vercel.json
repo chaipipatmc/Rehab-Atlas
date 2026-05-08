@@ -35,6 +35,14 @@
     {
       "path": "/api/agents/content-planner",
       "schedule": "0 7 25 * *"
+    },
+    {
+      "path": "/api/agents/content-orchestrator",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/agents/system-orchestrator",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

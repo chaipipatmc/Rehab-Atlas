@@ -26,6 +26,8 @@ const VALID_AGENTS: AgentType[] = [
   "content_scheduler",
   "content_planner",
   "content_auto_approve",
+  "content_orchestrator",
+  "system_orchestrator",
 ];
 
 // Allowlist of editable keys per agent. Anything not in this map is rejected
@@ -36,6 +38,8 @@ const ALLOWED_KEYS: Partial<Record<AgentType, string[]>> = {
   content_planner: ["topics_per_day"],
   outreach_research: ["persona_name", "max_drafts_per_run"],
   outreach_followup: ["follow_up_days"],
+  content_orchestrator: ["creator_stall_hours"],
+  system_orchestrator: ["stale_threshold_multiplier"],
 };
 
 async function requireAdmin() {
