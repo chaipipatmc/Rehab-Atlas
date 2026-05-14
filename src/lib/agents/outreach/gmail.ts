@@ -296,3 +296,48 @@ export async function canSendToday(dailyLimit: number): Promise<boolean> {
   const sent = await getDailySendCount();
   return sent < dailyLimit;
 }
+
+/**
+ * Look up a Gmail message and return its thread id.
+ * Used by the backfill script when outreach_pipeline.outreach_thread_id is
+ * null but we still have outreach_emails.gmail_message_id.
+ * Returns null on any failure (auth, 404, network).
+ */
+export async function getMessageThreadId(messageId: string): Promise<string | null> {
+  const token = await getAccessToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(
+      `${GMAIL_API}/messages/${encodeURIComponent(messageId)}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data?.threadId as string) || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Search Gmail for the most recent thread matching `query` (Gmail search
+ * syntax). Useful as a last-ditch fallback when we have no message_id —
+ * e.g. search by `to:<email> subject:"<subject>"`. Returns the threadId of
+ * the newest match or null.
+ */
+export async function searchThreadIdByQuery(query: string): Promise<string | null> {
+  const token = await getAccessToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(
+      `${GMAIL_API}/messages?q=${encodeURIComponent(query)}&maxResults=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const first = data?.messages?.[0];
+    return (first?.threadId as string) || null;
+  } catch {
+    return null;
+  }
+}
