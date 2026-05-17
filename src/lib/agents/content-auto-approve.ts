@@ -54,6 +54,21 @@ function checkQuality(page: Record<string, unknown>): QualityResult {
   const h2Count = (content.match(/^## /gm) || []).length;
   if (h2Count < 2) reasons.push(`Only ${h2Count} H2 headings (min 2)`);
 
+  // FAQ section check — required for FAQPage JSON-LD eligibility. Render layer
+  // emits FAQPage schema only when the article has a "## Frequently Asked
+  // Questions" section with ### items, so articles missing it never get the
+  // SEO benefit and should not auto-approve.
+  const faqSectionRegex = /##\s+(?:Frequently\s+Asked\s+Questions|FAQs?)\s*\n([\s\S]+?)(?=\n##\s|$)/i;
+  const faqSection = content.match(faqSectionRegex);
+  if (!faqSection) {
+    reasons.push("Missing FAQ section (## Frequently Asked Questions)");
+  } else {
+    const faqItems = (faqSection[1].match(/^###\s+.+/gm) || []).length;
+    if (faqItems < 3) {
+      reasons.push(`FAQ section has only ${faqItems} questions (min 3 for FAQPage schema)`);
+    }
+  }
+
   return {
     passed: reasons.length === 0,
     reasons,

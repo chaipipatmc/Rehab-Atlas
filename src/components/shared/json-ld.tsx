@@ -230,6 +230,56 @@ export function MedicalWebPageJsonLd({
   );
 }
 
+/* ─── HowTo Schema for Step-by-Step Guides ─── */
+
+interface HowToStep {
+  name: string;
+  text: string;
+  /** Anchor on the page (e.g. "#step-1"). Combined with the page url for Google's HowTo step links. */
+  anchor?: string;
+}
+
+interface HowToJsonLdProps {
+  name: string;
+  description?: string;
+  url: string;
+  image?: string;
+  totalTimeISO?: string;
+  steps: HowToStep[];
+}
+
+export function HowToJsonLd({
+  name,
+  description,
+  url,
+  image,
+  totalTimeISO,
+  steps,
+}: HowToJsonLdProps) {
+  const data: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name,
+    ...(description ? { description } : {}),
+    ...(image ? { image } : {}),
+    ...(totalTimeISO ? { totalTime: totalTimeISO } : {}),
+    step: steps.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+      ...(s.anchor ? { url: `${url}${s.anchor.startsWith("#") ? s.anchor : `#${s.anchor}`}` } : {}),
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
 export function BreadcrumbJsonLd({ items }: BreadcrumbJsonLdProps) {
   const data = {
     "@context": "https://schema.org",

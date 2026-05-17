@@ -5,23 +5,28 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { isValidElement, type ReactNode } from "react";
 import type { Metadata } from "next";
 import type { Components } from "react-markdown";
-import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd, FAQJsonLd } from "@/components/shared/json-ld";
+import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd, FAQJsonLd, HowToJsonLd } from "@/components/shared/json-ld";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-function extractFeaturedImage(content: string | null): string | null {
+// Featured image marker: `![featured](url)` or `![featured](url "Alt text")`.
+// The optional title attribute carries descriptive alt text for accessibility
+// + image SEO; older articles without a title fall back to the article title.
+function extractFeaturedImage(content: string | null): { url: string; alt: string | null } | null {
   if (!content) return null;
-  const match = content.match(/!\[featured\]\(([^)]+)\)/);
-  return match ? match[1] : null;
+  const match = content.match(/!\[featured\]\(([^\s)]+)(?:\s+"([^"]*)")?\)/);
+  if (!match) return null;
+  return { url: match[1], alt: match[2] || null };
 }
 
 function stripFeaturedImage(content: string | null): string {
   if (!content) return "";
-  return content.replace(/!\[featured\]\([^)]+\)\n?\n?/, "");
+  return content.replace(/!\[featured\]\([^\s)]+(?:\s+"[^"]*")?\)\n?\n?/, "");
 }
 
 function estimateReadTime(content: string | null): string {
@@ -74,6 +79,64 @@ function extractFaqs(content: string | null): { question: string; answer: string
   return faqs.slice(0, 8);
 }
 
+/**
+ * Heuristic check: is this article a step-by-step "how to" guide that should
+ * emit HowTo JSON-LD? Triggers when the title starts with "how to" or when the
+ * body has explicit step-pattern H2s ("Step 1:", "Step 2:", …).
+ */
+function isHowToArticle(title: string, content: string | null): boolean {
+  if (/^how\s+to\b/i.test(title)) return true;
+  if (!content) return false;
+  const stepHeadings = (content.match(/^##\s+step\s+\d+/gim) || []).length;
+  return stepHeadings >= 3;
+}
+
+/**
+ * Extract steps for HowTo schema. We treat every H2 between the intro and the
+ * FAQ section as a step, taking the first paragraph under each as the step
+ * text. Step names mirror the heading slug so the JSON-LD step `url` lines up
+ * with the page's anchor IDs.
+ */
+function extractHowToSteps(
+  content: string | null,
+): { name: string; text: string; anchor: string }[] {
+  if (!content) return [];
+
+  // Strip the FAQ tail so its ### questions aren't treated as step bodies.
+  const faqIdx = content.search(/##\s+(?:Frequently\s+Asked\s+Questions|FAQs?)\b/i);
+  const body = faqIdx > -1 ? content.slice(0, faqIdx) : content;
+
+  const steps: { name: string; text: string; anchor: string }[] = [];
+  const h2Regex = /^##\s+(.+?)\n([\s\S]+?)(?=\n##\s|$)/gm;
+  let match;
+  while ((match = h2Regex.exec(body)) !== null) {
+    const name = match[1].trim();
+    if (!name) continue;
+    // First non-empty paragraph in the section becomes the step text.
+    const firstPara = match[2]
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .find((p) => p && !/^!\[/.test(p) && !/^###/.test(p));
+    if (!firstPara) continue;
+    const text = firstPara
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (text.length < 30) continue;
+    const anchor = name
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 60);
+    steps.push({ name, text, anchor });
+  }
+
+  return steps.slice(0, 12);
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
@@ -87,7 +150,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!post) return { title: "Article Not Found" };
 
-  const image = extractFeaturedImage(post.content);
+  const featured = extractFeaturedImage(post.content);
 
   return {
     title: post.meta_title || post.title,
@@ -96,25 +159,52 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: "article",
       ...(post.published_at ? { publishedTime: post.published_at } : {}),
       authors: ["Rehab-Atlas Editorial Team"],
-      ...(image ? { images: [{ url: image }] } : {}),
+      ...(featured
+        ? { images: [{ url: featured.url, alt: featured.alt || post.title }] }
+        : {}),
     },
   };
+}
+
+// Flatten a React children tree to plain text so we can derive a stable
+// anchor slug for each heading. Needed for jump-links, table-of-contents, and
+// featured-snippet eligibility.
+function flattenChildren(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(flattenChildren).join("");
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return flattenChildren(node.props.children);
+  }
+  return "";
+}
+
+function headingSlug(node: ReactNode): string {
+  return flattenChildren(node)
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 60);
 }
 
 // Custom markdown components for premium rendering
 const blogMdComponents: Components = {
   h1: ({ children }) => (
-    <h1 className="font-serif text-2xl md:text-3xl font-semibold text-foreground leading-snug mt-0 mb-6 pb-4 border-b border-[#e0e4e6]">
+    <h1 id={headingSlug(children)} className="font-serif text-2xl md:text-3xl font-semibold text-foreground leading-snug mt-0 mb-6 pb-4 border-b border-[#e0e4e6] scroll-mt-24">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="font-serif text-xl md:text-2xl font-semibold text-foreground leading-snug mt-10 mb-4 pl-4 border-l-4 border-[#45636b]">
+    <h2 id={headingSlug(children)} className="font-serif text-xl md:text-2xl font-semibold text-foreground leading-snug mt-10 mb-4 pl-4 border-l-4 border-[#45636b] scroll-mt-24">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="font-serif text-lg md:text-xl font-semibold text-[#45636b] leading-snug mt-8 mb-3">
+    <h3 id={headingSlug(children)} className="font-serif text-lg md:text-xl font-semibold text-[#45636b] leading-snug mt-8 mb-3 scroll-mt-24">
       {children}
     </h3>
   ),
@@ -172,9 +262,14 @@ export default async function BlogPostPage({ params }: PageProps) {
   const authorCenter = post.author_center as { name: string; slug: string } | null;
   const isPartnerArticle = post.author_type === "partner";
 
-  const featuredImage = extractFeaturedImage(post.content);
+  const featured = extractFeaturedImage(post.content);
+  const featuredImage = featured?.url ?? null;
+  const featuredAlt = featured?.alt ?? null;
   const cleanContent = stripFeaturedImage(post.content);
   const faqs = extractFaqs(post.content);
+  const howToSteps = isHowToArticle(post.title, post.content)
+    ? extractHowToSteps(post.content)
+    : [];
 
   // Fetch related articles
   const { data: related } = await supabase
@@ -228,6 +323,15 @@ export default async function BlogPostPage({ params }: PageProps) {
         dateModified={post.updated_at ?? undefined}
       />
       {faqs.length > 0 && <FAQJsonLd faqs={faqs} />}
+      {howToSteps.length >= 3 && (
+        <HowToJsonLd
+          name={post.title}
+          description={post.meta_description ?? undefined}
+          url={`${BASE_URL}/blog/${post.slug}`}
+          image={featuredImage ?? undefined}
+          steps={howToSteps}
+        />
+      )}
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: BASE_URL },
@@ -241,7 +345,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="relative w-full aspect-[2/1] max-h-[320px] rounded-2xl overflow-hidden">
             <img
               src={featuredImage}
-              alt={post.title}
+              alt={featuredAlt || post.title}
               className="w-full h-full object-cover object-center"
             />
           </div>
@@ -397,7 +501,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                   >
                     {relImage && (
                       <div className="aspect-[16/9] overflow-hidden">
-                        <img src={relImage} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={relImage.url} alt={relImage.alt || r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       </div>
                     )}
                     <div className="p-4">

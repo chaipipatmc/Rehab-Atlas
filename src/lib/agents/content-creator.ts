@@ -645,48 +645,67 @@ async function writeOneArticle(
     return false;
   }
 
-  // Use article-specific image queries from Claude, fall back to topic-based
+  // Use article-specific image queries from Claude, fall back to topic-based.
+  // Track each image alongside the descriptive query that produced it so we
+  // can use it as alt text for accessibility and image SEO.
   const articleQueries = article.image_queries || [];
-  const images: string[] = [];
+  const imagePairs: Array<{ url: string; alt: string }> = [];
 
-  // Search with each specific query to get diverse, relevant images
   if (articleQueries.length > 0) {
     for (const q of articleQueries.slice(0, 5)) {
-      if (images.length >= 5) break;
+      if (imagePairs.length >= 5) break;
       const found = await searchImages(q, 1, usedImages);
       if (found.length > 0) {
-        images.push(found[0]);
-        usedImages?.add(found[0]); // Prevent duplicates within same article
+        imagePairs.push({ url: found[0], alt: q });
+        usedImages?.add(found[0]);
       }
     }
   }
 
-  // Fallback: if not enough specific images, use topic-based search
-  if (images.length < 5) {
+  // Fallback: any remaining slots get topic-based search and a generic alt
+  // derived from the article topic.
+  if (imagePairs.length < 5) {
     const fallbackQuery = topic.replace(/[^a-zA-Z ]/g, "").slice(0, 60);
-    const fallback = await searchImages(fallbackQuery, 5 - images.length, usedImages);
-    images.push(...fallback);
+    const fallback = await searchImages(fallbackQuery, 5 - imagePairs.length, usedImages);
+    for (const url of fallback) {
+      imagePairs.push({ url, alt: topic });
+    }
   }
-  const featuredImage = images[0] || null;
-  const inlineImages = images.slice(1);
+
+  const featured = imagePairs[0] || null;
+  const inline = imagePairs.slice(1);
+
+  // Sanitize alt text: strip characters that would break markdown image syntax.
+  function altSafe(s: string, fallback: string): string {
+    const cleaned = (s || "")
+      .replace(/[\[\]()\n\r"]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120);
+    return cleaned || fallback;
+  }
 
   // Build content with featured image and inline images
   let fullContent = article.content;
 
-  // Replace image placeholders with real Unsplash images
+  // Replace image placeholders with real Unsplash images + descriptive alt text
   for (let i = 0; i < 4; i++) {
     const placeholder = `{{IMAGE_${i + 1}}}`;
-    if (fullContent.includes(placeholder) && inlineImages[i]) {
-      fullContent = fullContent.replace(placeholder, `\n![](${inlineImages[i]})\n`);
+    if (fullContent.includes(placeholder) && inline[i]) {
+      const alt = altSafe(inline[i].alt, topic);
+      fullContent = fullContent.replace(placeholder, `\n![${alt}](${inline[i].url})\n`);
     } else {
       // Remove unused placeholders
       fullContent = fullContent.replace(placeholder, "");
     }
   }
 
-  // Prepend featured image
-  if (featuredImage) {
-    fullContent = `![featured](${featuredImage})\n\n${fullContent}`;
+  // Prepend featured image. The "featured" alt is a marker the renderer uses
+  // to extract+strip the hero image; the descriptive text rides as the
+  // markdown title attribute so it can be promoted to img@alt at render time.
+  if (featured) {
+    const alt = altSafe(featured.alt, topic);
+    fullContent = `![featured](${featured.url} "${alt}")\n\n${fullContent}`;
   }
 
   // Ensure unique slug
@@ -758,9 +777,9 @@ async function writeOneArticle(
       slug: finalSlug,
       category,
       word_count: wordCount,
-      has_featured_image: !!featuredImage,
-      image_url: featuredImage,
-      inline_images: inlineImages.length,
+      has_featured_image: !!featured,
+      image_url: featured?.url ?? null,
+      inline_images: inline.length,
       meta_title: article.meta_title,
       meta_description: article.meta_description,
     },
@@ -778,8 +797,8 @@ async function writeOneArticle(
       slug: finalSlug,
       category,
       word_count: wordCount,
-      has_image: !!featuredImage,
-      total_images: images.length,
+      has_image: !!featured,
+      total_images: imagePairs.length,
       internal_links_added: linksAdded.length,
       internal_links: linksAdded,
     },
