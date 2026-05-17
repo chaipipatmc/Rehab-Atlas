@@ -9,12 +9,31 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Menu, LogOut, User, Shield, LayoutDashboard, ChevronDown,
   Building2, MessageCircle, Heart, BookOpen, ClipboardList, MapPin,
+  HeartPulse,
 } from "lucide-react";
 import { countryToSlug } from "@/lib/utils";
+
+// Treatment landing pages — match the 10 conditions defined in
+// src/app/rehab/[condition]/page.tsx (keep in sync). Each page lists
+// matching centers + related articles, so the dropdown is the navigation
+// entry point for condition-specific SEO landing pages.
+const TREATMENTS: { slug: string; label: string }[] = [
+  { slug: "alcohol-addiction", label: "Alcohol Addiction" },
+  { slug: "drug-addiction", label: "Drug Addiction" },
+  { slug: "opioid-addiction", label: "Opioid Addiction" },
+  { slug: "prescription-drug-abuse", label: "Prescription Drugs" },
+  { slug: "dual-diagnosis", label: "Dual Diagnosis" },
+  { slug: "mental-health", label: "Mental Health" },
+  { slug: "trauma-ptsd", label: "Trauma & PTSD" },
+  { slug: "eating-disorders", label: "Eating Disorders" },
+  { slug: "gambling-addiction", label: "Gambling Addiction" },
+  { slug: "behavioral-addiction", label: "Behavioral Addiction" },
+];
 
 // Role-specific nav links
 const PUBLIC_NAV = [
   { href: "/centers", label: "Centers" },
+  { href: "/rehab", label: "Treatments" },
   { href: "/blog", label: "Articles" },
   { href: "/about", label: "About" },
   { href: "/inquiry", label: "Inquiry" },
@@ -22,6 +41,7 @@ const PUBLIC_NAV = [
 
 const USER_NAV = [
   { href: "/centers", label: "Centers" },
+  { href: "/rehab", label: "Treatments" },
   { href: "/blog", label: "Articles" },
   { href: "/assessment", label: "Assessment" },
   { href: "/about", label: "About" },
@@ -29,6 +49,7 @@ const USER_NAV = [
 
 const PARTNER_NAV = [
   { href: "/centers", label: "Centers" },
+  { href: "/rehab", label: "Treatments" },
   { href: "/blog", label: "Articles" },
   { href: "/about", label: "About" },
   { href: "/inquiry", label: "Inquiry" },
@@ -52,6 +73,7 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [centersMenuOpen, setCentersMenuOpen] = useState(false);
+  const [treatmentsMenuOpen, setTreatmentsMenuOpen] = useState(false);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [countries, setCountries] = useState<string[]>([]);
@@ -59,6 +81,7 @@ export function Header() {
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
   const centersMenuRef = useRef<HTMLDivElement>(null);
+  const treatmentsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -118,10 +141,13 @@ export function Header() {
       if (centersMenuRef.current && !centersMenuRef.current.contains(e.target as Node)) {
         setCentersMenuOpen(false);
       }
+      if (treatmentsMenuRef.current && !treatmentsMenuRef.current.contains(e.target as Node)) {
+        setTreatmentsMenuOpen(false);
+      }
     }
-    if (userMenuOpen || centersMenuOpen) document.addEventListener("mousedown", handleClick);
+    if (userMenuOpen || centersMenuOpen || treatmentsMenuOpen) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [userMenuOpen, centersMenuOpen]);
+  }, [userMenuOpen, centersMenuOpen, treatmentsMenuOpen]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -172,6 +198,56 @@ export function Header() {
         <nav className="hidden md:flex items-center gap-6 lg:gap-8">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+
+            // Treatments link gets a dropdown with 10 condition landing pages
+            if (link.href === "/rehab") {
+              return (
+                <div key={link.href} className="relative" ref={treatmentsMenuRef}>
+                  <button
+                    className={`text-sm transition-colors duration-300 inline-flex items-center gap-1 ${
+                      isActive || pathname.startsWith("/rehab/") ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => { router.push("/rehab"); setTreatmentsMenuOpen(false); }}
+                    onMouseEnter={() => setTreatmentsMenuOpen(true)}
+                  >
+                    {link.label}
+                    <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${treatmentsMenuOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {treatmentsMenuOpen && (
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50"
+                      onMouseLeave={() => setTreatmentsMenuOpen(false)}
+                    >
+                      <div className="bg-surface-container-lowest rounded-xl shadow-ambient-lg py-2 ghost-border min-w-[240px] max-h-[400px] overflow-y-auto">
+                        <Link
+                          href="/rehab"
+                          onClick={() => setTreatmentsMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-foreground font-medium hover:bg-surface-container transition-colors duration-200"
+                        >
+                          All Treatments
+                        </Link>
+                        <div className="border-t border-surface-container my-1" />
+                        <p className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                          By Condition
+                        </p>
+                        {TREATMENTS.map((t) => (
+                          <Link
+                            key={t.slug}
+                            href={`/rehab/${t.slug}`}
+                            onClick={() => setTreatmentsMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container transition-colors duration-200"
+                          >
+                            <HeartPulse className="h-3 w-3 flex-shrink-0 text-primary" />
+                            {t.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             // Centers link gets a dropdown with countries (for non-admin nav)
             if (link.href === "/centers" && countries.length > 0) {
@@ -387,6 +463,22 @@ export function Header() {
                               >
                                 <MapPin className="h-3 w-3 flex-shrink-0" />
                                 {country}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                        {/* Treatment sub-links under Treatments */}
+                        {link.href === "/rehab" && (
+                          <div className="ml-4 mt-0.5 space-y-0.5">
+                            {TREATMENTS.map((t) => (
+                              <Link
+                                key={t.slug}
+                                href={`/rehab/${t.slug}`}
+                                onClick={() => setOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-surface-container rounded-lg transition-colors duration-200"
+                              >
+                                <HeartPulse className="h-3 w-3 flex-shrink-0 text-primary" />
+                                {t.label}
                               </Link>
                             ))}
                           </div>
