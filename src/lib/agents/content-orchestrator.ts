@@ -35,7 +35,19 @@ export interface ContentOrchestratorResult {
 }
 
 const DEFAULT_POOL_TARGET = 20;
-const DEFAULT_CREATOR_STALL_HOURS = 24;
+// Default stall windows when the pool is under target. The original 24h
+// default created an equilibrium at zero: scheduler drained 3/day, creator
+// drafted 2/day, and the orchestrator's 24h stall prevented top-ups because
+// the daily creator cron always counted as "ran recently."
+const DEFAULT_CREATOR_STALL_HOURS = 2;
+// When pool drops to or below this fraction of target, treat as critical and
+// short-circuit the stall window further so the orchestrator can actively refill.
+const CRITICAL_POOL_FRACTION = 0.25;
+const CRITICAL_STALL_HOURS = 0.5;
+// Per-tick cap when refilling. Creator API route batches internally; this is
+// just the orchestrator's nudge size to bound cost per tick.
+const CRITICAL_REFILL_BATCH = 5;
+const NORMAL_REFILL_BATCH = 3;
 
 export async function runContentOrchestrator(): Promise<ContentOrchestratorResult> {
   const enabled = await isAgentEnabled("content_orchestrator");
@@ -105,13 +117,19 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
   const poolSize = (draftCount || 0) + (approvedCount || 0);
 
   if (poolSize < poolTarget) {
-    // Check when content_creator last ran
-    const stallHours = await getAgentSettingNumber(
+    // Pool critically low → tighten stall window and draft a larger batch so
+    // the orchestrator can actually catch up with the scheduler. Without this,
+    // the daily creator cron drafts 2/day while the scheduler publishes 3/day
+    // and the pool drains to 0, where it then sits because the creator's
+    // daily-log entry counts as "ran recently" under the 24h stall.
+    const criticallyLow = poolSize <= Math.floor(poolTarget * CRITICAL_POOL_FRACTION);
+    const normalStallHours = await getAgentSettingNumber(
       "content_orchestrator",
       "creator_stall_hours",
       DEFAULT_CREATOR_STALL_HOURS
     );
-    const stallCutoff = new Date(now.getTime() - stallHours * 3600_000).toISOString();
+    const effectiveStallHours = criticallyLow ? CRITICAL_STALL_HOURS : normalStallHours;
+    const stallCutoff = new Date(now.getTime() - effectiveStallHours * 3600_000).toISOString();
 
     const { data: lastCreatorRun } = await admin
       .from("agent_log")
@@ -125,8 +143,9 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
       !lastCreatorRun || (lastCreatorRun.created_at as string) < stallCutoff;
 
     if (creatorIsStale) {
+      const batchSize = criticallyLow ? CRITICAL_REFILL_BATCH : NORMAL_REFILL_BATCH;
       const creatorResult = await createArticleDraft({
-        maxArticles: 2,
+        maxArticles: batchSize,
         skipWeekendCheck: true,
       });
       // Auto-approve any drafts that pass quality gates
@@ -135,20 +154,23 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
         step: "creator",
         triggered: creatorResult.written > 0,
         reason: creatorResult.written > 0
-          ? `Drafted ${creatorResult.written} articles, pool now ${creatorResult.poolSize}`
+          ? `${criticallyLow ? "Critical refill: " : ""}Drafted ${creatorResult.written} articles, pool now ${creatorResult.poolSize}/${poolTarget}`
           : `No new drafts (pool at ${creatorResult.poolSize}/${poolTarget})`,
         detail: {
           drafted: creatorResult.written,
           autoApproved: approveResult.approved,
           autoSkipped: approveResult.skipped,
           poolSize: creatorResult.poolSize,
+          mode: criticallyLow ? "critical" : "normal",
+          batchSize,
         },
       });
     } else {
       result.steps.push({
         step: "creator",
         triggered: false,
-        reason: `Pool below target (${poolSize}/${poolTarget}) but creator ran recently`,
+        reason: `Pool below target (${poolSize}/${poolTarget}) but creator ran within ${effectiveStallHours}h`,
+        detail: { mode: criticallyLow ? "critical" : "normal" },
       });
     }
   } else {
