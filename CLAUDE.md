@@ -22,11 +22,11 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 
 1. **ALL inquiries go to RehabAtlas admin only** — never directly to centers
 2. **Admin controls lead routing** — must review before forwarding
-3. **Commission tracking** — tiered: 12% base, 10% with 3 blogs/month, 8% with 5 blogs/month. Launch campaign: 0% for first 2 months with 3 blogs/month for 3 months
-4. **Commission basis** — calculated from treatment fee listed on platform. Price changes require agreement amendment
+3. **No commission / pricing in partner-facing comms (current policy, as of 2026-05-17)** — do **not** mention commission, referral fees, pricing tiers, or launch-campaign discounts in any outreach, follow-up, onboarding, or agreement messaging to centers. Platform is pre-traffic; partnership is positioned as free listing + admin-vetted leads + author backlinks only. Commission structure will be re-introduced later in writing once real referral volume exists; any future fees are forward-only, never retroactive.
+4. **Commission DB schema retained but dormant** — `centers.commission_*`, `lead_forwards.commission_*`, and the `commission_reports` table stay in place for future use. Do not drop these columns or populate them in new flows for now.
 5. **Partner edits require admin approval** — partners cannot directly modify their listing (including staff changes)
 6. **Blog has two sources** — RehabAtlas editorial (AI-generated) + partner-submitted (with backlink to center profile)
-7. **Lead outcome tracking** — partners mark forwarded leads as admitted/not_admitted. Commission applies to admitted clients only
+7. **Lead outcome tracking** — partners mark forwarded leads as admitted/not_admitted (operational signal only; no commission attached at this stage)
 
 ## User Roles
 
@@ -45,6 +45,8 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 - Middleware skips auth when Supabase URL is not configured
 - Photos stored in Supabase Storage `center-photos` bucket
 - Blog featured images embedded as `![featured](url)` in markdown content
+- **Comparison pages:** SEO-friendly slug routing at `/compare/[a]-vs-[b]` (separator `-vs-`, supports 2-3 centers). Top 100 pairs pre-rendered via `generateStaticParams`, rest served via ISR (24h revalidate). Legacy `/compare?ids=` retained for saved-list flow. Each page emits FAQPage + ItemList JSON-LD for AI search citation.
+- **Family-first content default:** Content Creator agent writes for the family member doing the research by default (~70% of rehab inquiries come from families, not patients themselves). Categories `family-recognition`, `family-decision`, `family-during-after` are explicit family-perspective queues.
 
 ## Security
 
@@ -67,7 +69,7 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 |-------|---------|-------------|
 | **Center Admin** | DB webhook on `centers` + `center_edit_requests` | Checks completeness (15-point checklist), AI reviews quality |
 | **Content Admin** | DB webhook on `pages` (draft) | Reviews word count, SEO, medical accuracy, promotion level |
-| **Lead Verify** | DB webhook on `leads` (new) | Validates lead, checks commission agreement, AI match analysis |
+| **Lead Verify** | DB webhook on `leads` (new) | Validates lead, AI match analysis (commission check disabled while pricing is deferred) |
 | **Follow-up** | Daily cron (09:00 Bangkok) | Sends reminders for stale drafts/incomplete profiles |
 
 ### Outreach Pipeline Agents (`src/lib/agents/outreach/`)
@@ -77,7 +79,7 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 | **Follow-up** | Daily cron | Auto-sends Day 3/7/14 follow-ups to unresponsive centers |
 | **Response Handler** | Every 15 min cron | Detects Gmail replies, analyzes sentiment, auto-onboards positive responses |
 | **Agreement** | Pipeline stage | Prepares PandaDoc agreements for admin approval before e-signature |
-| **Activation** | PandaDoc webhook | Updates commission in DB after both parties sign |
+| **Activation** | PandaDoc webhook | Activates partner in DB after both parties sign (commission fields not written under current pricing-deferred policy) |
 | **Master Orchestrator** | Every 30 min cron | Coordinates all outreach agents, advances pipeline stages |
 
 ### Content Agent
@@ -95,9 +97,9 @@ Notifications: Email (Resend) + LINE Notify (urgent items) + Gmail API (outreach
 
 Tables: `centers`, `center_photos`, `center_faqs`, `profiles`, `center_edit_requests`, `assessments`, `leads`, `lead_forwards`, `pages`, `site_faqs`, `center_staff`, `center_analytics`, `agent_tasks`, `agent_follow_ups`, `agent_log`, `site_settings`, `outreach_pipeline`, `outreach_emails`, `outreach_blog_counts`, `commission_reports`
 
-Key center fields: `commission_type`, `commission_rate`, `commission_fixed_amount`, `agreement_status`, `contract_start`, `contract_end`, `account_manager`
+Key center fields: `commission_type`, `commission_rate`, `commission_fixed_amount` *(dormant — see business rule 3)*, `agreement_status`, `contract_start`, `contract_end`, `account_manager`
 
-Lead forward fields: `partner_status` (pending/admitted/not_admitted), `treatment_fee`, `commission_rate`, `commission_amount`
+Lead forward fields: `partner_status` (pending/admitted/not_admitted), `treatment_fee`, `commission_rate`, `commission_amount` *(commission_* fields dormant — see business rule 3)*
 
 Blog author fields on `pages`: `author_type` (rehabatlas/partner), `author_name`, `author_center_id`, `submitted_by`
 

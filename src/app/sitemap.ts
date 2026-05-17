@@ -91,6 +91,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let centerPages: MetadataRoute.Sitemap = [];
   let blogPages: MetadataRoute.Sitemap = [];
+  let comparePages: MetadataRoute.Sitemap = [];
 
   try {
     const supabase = createAdminClient();
@@ -98,7 +99,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Fetch all published center slugs
     const { data: centers } = await supabase
       .from("centers")
-      .select("slug, updated_at")
+      .select("slug, country, is_featured, editorial_overall, rating, updated_at")
       .eq("status", "published");
 
     if (centers) {
@@ -107,6 +108,59 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: center.updated_at ? new Date(center.updated_at) : new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.8,
+      }));
+
+      // Generate top comparison pairs (same-country pairs of top centers)
+      // Mirrors the logic in /compare/[slug]/generateStaticParams so SEO crawlers
+      // discover the pre-rendered comparison URLs.
+      type Row = { slug: string; country: string | null; is_featured: boolean; editorial_overall: number | null; rating: number | null };
+      const ranked = (centers as Row[])
+        .slice()
+        .sort((a, b) => {
+          if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
+          const ae = a.editorial_overall ?? -1;
+          const be = b.editorial_overall ?? -1;
+          if (ae !== be) return be - ae;
+          const ar = a.rating ?? -1;
+          const br = b.rating ?? -1;
+          return br - ar;
+        })
+        .slice(0, 40);
+
+      const byCountry = new Map<string, string[]>();
+      for (const c of ranked) {
+        const key = c.country || "_other";
+        if (!byCountry.has(key)) byCountry.set(key, []);
+        byCountry.get(key)!.push(c.slug);
+      }
+
+      const seen = new Set<string>();
+      const pairs: string[] = [];
+      for (const slugs of byCountry.values()) {
+        for (let i = 0; i < slugs.length && pairs.length < 80; i++) {
+          for (let j = i + 1; j < slugs.length && pairs.length < 80; j++) {
+            const key = [slugs[i], slugs[j]].sort().join("-vs-");
+            if (seen.has(key)) continue;
+            seen.add(key);
+            pairs.push(key);
+          }
+        }
+      }
+      const topSlugs = ranked.slice(0, 12).map((c) => c.slug);
+      for (let i = 0; i < topSlugs.length && pairs.length < 100; i++) {
+        for (let j = i + 1; j < topSlugs.length && pairs.length < 100; j++) {
+          const key = [topSlugs[i], topSlugs[j]].sort().join("-vs-");
+          if (seen.has(key)) continue;
+          seen.add(key);
+          pairs.push(key);
+        }
+      }
+
+      comparePages = pairs.map((slug) => ({
+        url: `${BASE_URL}/compare/${slug}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
       }));
     }
 
@@ -133,5 +187,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Supabase not configured — return static pages only
   }
 
-  return [...staticPages, ...rehabPages, ...countryPages, ...cmsPages, ...centerPages, ...blogPages];
+  return [...staticPages, ...rehabPages, ...countryPages, ...cmsPages, ...centerPages, ...comparePages, ...blogPages];
 }

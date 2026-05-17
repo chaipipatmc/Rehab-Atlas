@@ -120,6 +120,53 @@ const TOPIC_CATEGORIES = [
       "Rebuilding Trust After Addiction: A Guide for Families",
     ],
   },
+  // Family-first additions — written explicitly for the family member doing the research
+  // (per Hills-style insight: ~70% of rehab inquiries come from family, not patients themselves)
+  {
+    category: "family-recognition",
+    topics: [
+      "How to Tell If Your Adult Child Is Using Meth",
+      "Signs Your Spouse Has a Drinking Problem (Not Just Heavy Drinking)",
+      "Is My Parent an Alcoholic? Honest Questions to Ask Yourself",
+      "Catching Prescription Drug Abuse in a Family Member",
+      "When 'Functional Addiction' Stops Being Functional: What Families Notice First",
+      "Hidden Signs of Cocaine Use in a Partner or Roommate",
+      "Recognizing Ketamine or Party Drug Use in Your Teenager",
+      "Is Your Loved One Using Kratom? What Families Should Know",
+      "Spotting an Eating Disorder in Your Daughter or Sister",
+      "When Anxiety Becomes Self-Medication: Signs a Family Member Is Hiding It",
+    ],
+  },
+  {
+    category: "family-decision",
+    topics: [
+      "How to Choose a Rehab for Your Loved One: A Family's Step-by-Step Guide",
+      "Convincing Your Adult Child to Enter Rehab Without Forcing Them",
+      "Should You Send Your Loved One to Rehab Abroad? A Family Cost-Benefit Guide",
+      "Inpatient vs. Outpatient for a Loved One Who Won't Leave Town",
+      "How to Pay for a Family Member's Rehab Without Going Bankrupt",
+      "What to Look for When Touring a Rehab Center (Or Asking Questions Remotely)",
+      "Should You Tell Extended Family Your Loved One Is in Rehab?",
+      "Choosing Between Local Rehab and Sending Your Loved One Far Away",
+      "Red Flags When Vetting a Rehab Center for a Family Member",
+      "How to Handle a Loved One Who Refuses Rehab",
+    ],
+  },
+  {
+    category: "family-during-after",
+    topics: [
+      "What to Expect While Your Loved One Is in Rehab: A Family Timeline",
+      "How to Support Recovery Without Becoming the Sober Police",
+      "Welcoming Your Loved One Home from Rehab: The First Two Weeks",
+      "When Your Spouse Comes Home from Rehab: Repairing the Marriage",
+      "How to Spot Relapse Warning Signs in a Family Member",
+      "What to Do the First Time Your Loved One Relapses",
+      "Talking to Children About a Parent's Addiction and Recovery",
+      "Holidays After Rehab: How Families Can Make Them Easier",
+      "When a Sibling's Addiction Affects the Whole Family",
+      "Grieving the Loved One You Thought You Had — and Accepting Who They Are Now",
+    ],
+  },
 ];
 
 function slugify(title: string): string {
@@ -320,6 +367,9 @@ async function pickTopic(): Promise<{ category: string; topic: string; imageQuer
     "practical-guides": "planning notebook organized calm",
     "international-treatment": "travel wellness tropical healing",
     "family-support": "family support together caring",
+    "family-recognition": "concerned parent thoughtful worried family",
+    "family-decision": "family conversation home decision discussion",
+    "family-during-after": "family reunion welcome home embrace",
   };
 
   return {
@@ -350,11 +400,19 @@ async function generateArticle(topic: string, category: string, brief?: string, 
       max_tokens: 4000,
       system: `You are a senior health journalist and clinical editor writing for Rehab-Atlas, a global platform connecting people with rehabilitation centers. You have 15+ years of experience covering addiction, mental health, and recovery.
 
+PRIMARY AUDIENCE — READ THIS FIRST:
+- Roughly 70% of readers are family members searching for help on behalf of a loved one — not patients themselves. Adult children worried about a parent. Spouses watching a marriage erode. Parents whose adult child has relapsed.
+- Default to writing for the family member. Use "your loved one", "your son", "your daughter", "your spouse", "your parent" naturally. Address the reader as the person doing the research — not the person who needs treatment.
+- When a topic could plausibly be written for either the patient or the family, choose the family lens by default. (e.g., "Signs of Meth Addiction" → "How to Tell If Your Adult Child Has a Meth Problem".)
+- Patient-direct articles are still valid for recovery topics ("First 30 Days of Recovery", "Returning to Work After Rehab") — but even there, acknowledge family stakes (boundaries, relapse signals, how to communicate).
+- Never moralize at the family. They are exhausted, scared, and often blamed by people who don't understand addiction. Treat them as the capable adults they are.
+
 VOICE & TONE — THIS IS CRITICAL:
 - Write like a seasoned journalist, NOT like an AI. Your writing must feel like it was crafted by a real person with genuine expertise.
-- Open with a compelling hook — a surprising statistic, an expert quote, or a thought-provoking question. NEVER start with a fictional character scenario (no "Sarah stared at her phone", no "John walked into the clinic"). NEVER start with a generic definition.
+- Open with a compelling hook — a surprising statistic, an expert quote, a piercing question, or a single observation about what families actually experience. NEVER start with a fictional character scenario (no "Sarah stared at her phone", no "John walked into the clinic"). NEVER start with a generic definition.
+- Family-perspective hooks work well: "Most people don't recognize the early signs of meth use in someone they love." / "By the time a family decides to look up rehab options, they've usually been worrying for eighteen months."
 - Use varied sentence structure. Mix short punchy sentences with longer flowing ones. Avoid repetitive patterns.
-- Write in third-person professional voice. Do NOT use first-person ("I", "my experience", "In my years"). Write like a medical journal article made accessible, not like a personal blog.
+- Write in second-person ("you", "your loved one") when speaking to the family member directly. Use third-person ("families often find", "research shows") for context and evidence. Avoid first-person ("I", "my experience").
 - Use specific data and research instead of fictional anecdotes. Reference real studies, real statistics, real treatment approaches.
 - Avoid AI-giveaway phrases: "In today's world", "It's important to note", "This comprehensive guide", "Let's dive in", "In this article we will explore", "It's worth noting", "journey", "landscape", "navigate", "crucial", "empower", "game-changer", "holistic approach"
 - NEVER use fictional character names or scenarios to open an article
@@ -658,6 +716,9 @@ async function writeOneArticle(
     "practical-guides": ["Guides", "Resources", "Treatment", "Recovery"],
     "international-treatment": ["International", "Medical Tourism", "Treatment", "Rehabilitation"],
     "family-support": ["Family Support", "Relationships", "Recovery", "Wellness"],
+    "family-recognition": ["For Families", "Warning Signs", "Addiction", "Family Support"],
+    "family-decision": ["For Families", "Choosing Rehab", "Family Support", "Guides"],
+    "family-during-after": ["For Families", "Recovery", "Family Support", "Relapse Prevention"],
   };
   const tags = CATEGORY_TAG_MAP[category] || [category.replace(/-/g, " "), "Recovery", "Treatment", "Wellness"];
 

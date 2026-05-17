@@ -37,9 +37,9 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react` (NOT Radix). K
 
 4. **Blog author tracking** — `author_type` field: 'rehabatlas' or 'partner', with `author_center_id` for backlinks
 
-5. **Commission fields** — check before forwarding leads: `commission_type`, `commission_rate`, `commission_fixed_amount`
+5. **Commission fields are dormant** — `commission_type`, `commission_rate`, `commission_fixed_amount` on `centers` and `lead_forwards` remain in the schema but are not populated or referenced in active flows under current pricing-deferred policy (see CLAUDE.md business rule 3). Do not gate lead forwarding on them.
 
-6. **Commission tiers** — 12% base, 10% with 3 blogs/month, 8% with 5 blogs/month. Launch campaign: 0% for first 2 months with 3 blogs/month
+6. **No pricing/commission in partner-facing comms (as of 2026-05-17)** — outreach emails, follow-ups, response-handler replies, onboarding messages, and partnership agreements must **not** mention commission, referral fees, tier discounts, or launch-campaign pricing. Position partnership as free listing + admin-vetted leads + author backlinks only. Any future fees will be agreed in writing later and applied forward-only.
 
 7. **Outreach pipeline** — `outreach_pipeline` table tracks center recruitment stages (new → researching → outreach_drafted → outreach_sent → responded → terms_agreed → agreement_sent → active)
 
@@ -47,6 +47,9 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react` (NOT Radix). K
 
 9. **PandaDoc** — partnership agreements use template `Ctzua6xmeLzCVnMwsmYR9L` with tokens for center details
 
-10. **Content Creator** — auto-generates blog articles via Claude AI with Unsplash images. 70+ predefined SEO topics. Runs weekdays only. Drafts require admin approval before publishing. Before saving, `auto-linker.ts` injects internal links to `/rehab/[condition]` and `/rehab-in/[country]` hubs (first occurrence only, capped at 6 per article, skips existing links/images/headings/code)
+10. **Content Creator** — auto-generates blog articles via Claude AI with Unsplash images. 100+ predefined SEO topics across 10 categories. Runs weekdays only. Drafts require admin approval before publishing. Before saving, `auto-linker.ts` injects internal links to `/rehab/[condition]` and `/rehab-in/[country]` hubs (first occurrence only, capped at 6 per article, skips existing links/images/headings/code).
+    - **Family-first voice (default):** System prompt instructs Claude to write for the family member doing the research (~70% of inquiries come from families, not patients). Use second-person "you/your loved one" by default. Three dedicated family categories: `family-recognition` (warning signs), `family-decision` (choosing rehab), `family-during-after` (during stay + post-discharge).
 
-11. **Lead outcome tracking** — `lead_forwards.partner_status` (pending/admitted/not_admitted). Partners update at `/partner/leads`. Commission reports at `/partner/commission` and `/admin/commission`
+11. **Lead outcome tracking** — `lead_forwards.partner_status` (pending/admitted/not_admitted). Partners update at `/partner/leads`. `/partner/commission` and `/admin/commission` pages remain in the codebase for future use but are not promoted to partners while pricing is deferred (see rule 6)
+
+12. **Comparison pages** — `/compare/[slug]` where slug = `center-a-vs-center-b` (separator `-vs-`, supports 2-3 centers). Top ~100 same-country pairs pre-rendered via `generateStaticParams` at build time; other valid combos served via ISR (`revalidate = 86400`). Each page emits `FAQPage` + `ItemList` JSON-LD for AI search citation. Center detail pages auto-link to 3 same-country comparisons as "Compare with Similar" section. Legacy `/compare?ids=` route still active for the saved-list compare flow.

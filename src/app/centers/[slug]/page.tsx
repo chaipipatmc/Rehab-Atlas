@@ -165,6 +165,23 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
     siblingCenters = (siblings || []) as typeof siblingCenters;
   }
 
+  // Load similar centers for comparison links (same country, different center, prefer featured)
+  // Used to seed crawl-friendly internal links to /compare/[a]-vs-[b] pages
+  let similarForComparison: Array<{ id: string; name: string; slug: string; city: string | null; country: string | null }> = [];
+  if (center.country) {
+    const { data: similar } = await supabase
+      .from("centers")
+      .select("id, name, slug, city, country, is_featured, editorial_overall, rating")
+      .eq("country", center.country)
+      .eq("status", "published")
+      .neq("id", center.id)
+      .order("is_featured", { ascending: false })
+      .order("editorial_overall", { ascending: false, nullsFirst: false })
+      .order("rating", { ascending: false, nullsFirst: false })
+      .limit(3);
+    similarForComparison = (similar || []) as typeof similarForComparison;
+  }
+
   // Check if user has saved this center
   let isSaved = false;
   const { data: { user } } = await supabase.auth.getUser();
@@ -715,6 +732,43 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                     src={`https://www.google.com/maps?q=${typedCenter.latitude},${typedCenter.longitude}&z=14&output=embed`}
                     title="Center location"
                   />
+                </div>
+              </section>
+            )}
+
+            {/* Compare with Similar Centers — internal links to /compare/[a]-vs-[b] for SEO */}
+            {similarForComparison.length > 0 && (
+              <section>
+                <h2 className="text-headline-lg font-semibold text-foreground mb-2">
+                  Compare {typedCenter.name}
+                </h2>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Side-by-side comparisons with other rehab centers in {typedCenter.country}.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {similarForComparison.map((other) => {
+                    const pairSlug = [typedCenter.slug, other.slug].sort().join("-vs-");
+                    return (
+                      <Link
+                        key={other.id}
+                        href={`/compare/${pairSlug}`}
+                        className="flex items-center justify-between gap-3 p-4 rounded-xl bg-surface-container-lowest shadow-ambient hover:shadow-ambient-lg transition-all duration-300 group"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                            Compare
+                          </p>
+                          <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                            {typedCenter.name} <span className="text-muted-foreground">vs</span> {other.name}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {[other.city, other.country].filter(Boolean).join(", ")}
+                          </p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-primary flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    );
+                  })}
                 </div>
               </section>
             )}
