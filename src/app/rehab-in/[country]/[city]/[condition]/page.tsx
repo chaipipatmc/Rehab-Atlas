@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -94,27 +95,30 @@ interface ResolvedLocation {
   cityName: string;
 }
 
-async function resolveLocation(
-  countrySlug: string,
-  citySlug: string,
-): Promise<ResolvedLocation | null> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("centers")
-    .select("country, city")
-    .eq("status", "published");
-  if (!data) return null;
-  for (const row of data) {
-    if (!row.country || !row.city) continue;
-    if (
-      countryToSlug(row.country) === countrySlug &&
-      cityToSlug(row.city) === citySlug
-    ) {
-      return { countryName: row.country, cityName: row.city };
+// Cached so generateMetadata + page render share a single fetch per request
+const resolveLocation = cache(
+  async (
+    countrySlug: string,
+    citySlug: string,
+  ): Promise<ResolvedLocation | null> => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("centers")
+      .select("country, city")
+      .eq("status", "published");
+    if (!data) return null;
+    for (const row of data) {
+      if (!row.country || !row.city) continue;
+      if (
+        countryToSlug(row.country) === countrySlug &&
+        cityToSlug(row.city) === citySlug
+      ) {
+        return { countryName: row.country, cityName: row.city };
+      }
     }
-  }
-  return null;
-}
+    return null;
+  },
+);
 
 export async function generateStaticParams(): Promise<
   { country: string; city: string; condition: string }[]

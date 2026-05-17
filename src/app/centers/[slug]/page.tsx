@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { countryToSlug } from "@/lib/utils";
+import { countryToSlug, cityToSlug } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,7 +69,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   // Fetch center with its primary photo in one query
   let query = supabase
     .from("centers")
-    .select("id, name, short_description, city, country, photos:center_photos(url, alt_text)")
+    .select("id, name, short_description, city, country, is_unclaimed, photos:center_photos(url, alt_text)")
     .eq("slug", slug);
   if (!isPreview) query = query.eq("status", "published");
   const { data: center } = await query
@@ -85,7 +85,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     `Learn about ${center.name} rehab center in ${location}. View treatment programs, pricing, and more.`;
 
   const photos = center.photos as Array<{ url: string; alt_text: string | null }> | null;
-  const primaryPhoto = photos?.[0] ?? null;
+  const isUnclaimedMeta = Boolean((center as unknown as Record<string, unknown>).is_unclaimed);
+  // Suppress scraped photos in OpenGraph for unclaimed listings — they're
+  // not curated and can include logos/badges/decorative images.
+  const primaryPhoto = isUnclaimedMeta ? null : (photos?.[0] ?? null);
 
   return {
     title: `${center.name} — ${location}`,
@@ -165,21 +168,45 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
     siblingCenters = (siblings || []) as typeof siblingCenters;
   }
 
-  // Load similar centers for comparison links (same country, different center, prefer featured)
-  // Used to seed crawl-friendly internal links to /compare/[a]-vs-[b] pages
-  let similarForComparison: Array<{ id: string; name: string; slug: string; city: string | null; country: string | null }> = [];
+  // Load similar centers for comparison links — prefer same city, then top up
+  // with same-country centers so we always show 3 suggestions when available.
+  // Used to seed crawl-friendly internal links to /compare/[a]-vs-[b] pages.
+  type SimilarCenter = { id: string; name: string; slug: string; city: string | null; country: string | null };
+  let similarForComparison: SimilarCenter[] = [];
   if (center.country) {
-    const { data: similar } = await supabase
-      .from("centers")
-      .select("id, name, slug, city, country, is_featured, editorial_overall, rating")
-      .eq("country", center.country)
-      .eq("status", "published")
-      .neq("id", center.id)
-      .order("is_featured", { ascending: false })
-      .order("editorial_overall", { ascending: false, nullsFirst: false })
-      .order("rating", { ascending: false, nullsFirst: false })
-      .limit(3);
-    similarForComparison = (similar || []) as typeof similarForComparison;
+    if (center.city) {
+      const { data: sameCity } = await supabase
+        .from("centers")
+        .select("id, name, slug, city, country")
+        .eq("country", center.country)
+        .eq("city", center.city)
+        .eq("status", "published")
+        .neq("id", center.id)
+        .order("is_featured", { ascending: false })
+        .order("editorial_overall", { ascending: false, nullsFirst: false })
+        .order("rating", { ascending: false, nullsFirst: false })
+        .limit(3);
+      similarForComparison = (sameCity || []) as SimilarCenter[];
+    }
+    if (similarForComparison.length < 3) {
+      const seenIds = new Set(similarForComparison.map((c) => c.id));
+      seenIds.add(center.id);
+      const { data: sameCountry } = await supabase
+        .from("centers")
+        .select("id, name, slug, city, country")
+        .eq("country", center.country)
+        .eq("status", "published")
+        .neq("id", center.id)
+        .order("is_featured", { ascending: false })
+        .order("editorial_overall", { ascending: false, nullsFirst: false })
+        .order("rating", { ascending: false, nullsFirst: false })
+        .limit(6);
+      for (const c of (sameCountry || []) as SimilarCenter[]) {
+        if (similarForComparison.length >= 3) break;
+        if (seenIds.has(c.id)) continue;
+        similarForComparison.push(c);
+      }
+    }
   }
 
   // Check if user has saved this center
@@ -198,6 +225,7 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
   const cityParts = [typedCenter.city, typedCenter.state_province].filter(Boolean).join(", ");
   const location = [cityParts, typedCenter.country].filter(Boolean).join(", ");
   const countrySlug = typedCenter.country ? countryToSlug(typedCenter.country) : null;
+  const citySlug = typedCenter.city ? cityToSlug(typedCenter.city) : null;
 
   // Auto-generate FAQs from center data if none exist manually
   const autoFaqs: { question: string; answer: string }[] = [];
@@ -279,10 +307,26 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
       />
       {/* Breadcrumb */}
       <div className="container mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
-        <nav className="flex items-center gap-2 text-xs text-muted-foreground">
+        <nav className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
           <Link href="/centers" className="hover:text-foreground transition-colors duration-300">
             Centers
           </Link>
+          {typedCenter.country && countrySlug && (
+            <>
+              <span>/</span>
+              <Link href={`/rehab-in/${countrySlug}`} className="hover:text-foreground transition-colors duration-300">
+                {typedCenter.country}
+              </Link>
+            </>
+          )}
+          {typedCenter.city && countrySlug && citySlug && (
+            <>
+              <span>/</span>
+              <Link href={`/rehab-in/${countrySlug}/${citySlug}`} className="hover:text-foreground transition-colors duration-300">
+                {typedCenter.city}
+              </Link>
+            </>
+          )}
           <span>/</span>
           <span className="text-foreground">{typedCenter.name}</span>
         </nav>
@@ -303,12 +347,28 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
               {location && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" />
-                  <span>{cityParts}{cityParts && typedCenter.country ? ", " : ""}</span>
-                  {typedCenter.country && countrySlug ? (
-                    <Link href={`/rehab-in/${countrySlug}`} className="text-primary hover:underline">
-                      {typedCenter.country}
+                  {typedCenter.city && countrySlug && citySlug ? (
+                    <Link href={`/rehab-in/${countrySlug}/${citySlug}`} className="text-primary hover:underline">
+                      {typedCenter.city}
                     </Link>
-                  ) : <span>{typedCenter.country}</span>}
+                  ) : typedCenter.city ? (
+                    <span>{typedCenter.city}</span>
+                  ) : null}
+                  {typedCenter.state_province && (
+                    <span>{typedCenter.city ? ", " : ""}{typedCenter.state_province}</span>
+                  )}
+                  {typedCenter.country && (
+                    <>
+                      <span>{cityParts ? ", " : ""}</span>
+                      {countrySlug ? (
+                        <Link href={`/rehab-in/${countrySlug}`} className="text-primary hover:underline">
+                          {typedCenter.country}
+                        </Link>
+                      ) : (
+                        <span>{typedCenter.country}</span>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
               {typedCenter.rating && (
@@ -345,12 +405,31 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                 </Link>
               </Button>
             </div>
+
+            {(typedCenter as unknown as Record<string, unknown>).is_unclaimed ? (
+              <div className="mt-6 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ghost-border">
+                <p className="font-medium">This listing is unclaimed.</p>
+                <p className="mt-1 text-amber-800/90">
+                  {((typedCenter as unknown as Record<string, unknown>).unclaimed_note as string | null) ||
+                    "RehabAtlas has compiled this listing from public sources. The center has not yet partnered with us directly."}
+                </p>
+                <p className="mt-2">
+                  Are you from {typedCenter.name}?{" "}
+                  <Link
+                    href={`mailto:info@rehab-atlas.com?subject=${encodeURIComponent(`Claim listing: ${typedCenter.name}`)}&body=${encodeURIComponent(`Hi RehabAtlas team,\n\nI represent ${typedCenter.name} and would like to claim our listing on Rehab-Atlas.\n\nMy name:\nMy role:\nBest contact email:\n\nThank you.`)}`}
+                    className="underline font-medium hover:text-amber-950"
+                  >
+                    Claim this listing
+                  </Link>
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
 
-      {/* Image Gallery */}
-      {photos && photos.length > 0 && (
+      {/* Image Gallery — hidden on unclaimed listings (scraped photos aren't curated) */}
+      {photos && photos.length > 0 && !(typedCenter as unknown as Record<string, unknown>).is_unclaimed && (
         <PhotoGallery
           photos={(photos as Array<{ id: string; url: string; alt_text: string | null }>)}
           centerName={typedCenter.name}

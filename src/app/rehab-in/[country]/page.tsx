@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { countryToSlug } from "@/lib/utils";
+import { countryToSlug, cityToSlug } from "@/lib/utils";
 import { CenterCard } from "@/components/centers/center-card";
 import {
   BreadcrumbJsonLd,
@@ -384,6 +384,17 @@ export default async function CountryRehabPage({ params }: PageProps) {
   const centerCount = centers?.length ?? 0;
   const heroImage = images[0] ?? null;
 
+  // Build city list for the Cities section — counts how many centers per city
+  // so visitors (and crawlers) discover the /rehab-in/[country]/[city] hub pages.
+  const cityCounts = new Map<string, number>();
+  for (const c of centers || []) {
+    const row = c as { city: string | null };
+    if (!row.city) continue;
+    cityCounts.set(row.city, (cityCounts.get(row.city) || 0) + 1);
+  }
+  const citiesByCount = [...cityCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
   return (
     <div className="bg-surface min-h-screen">
       <BreadcrumbJsonLd
@@ -613,6 +624,45 @@ export default async function CountryRehabPage({ params }: PageProps) {
           </div>
         )}
       </section>
+
+      {/* ── Cities — internal links to /rehab-in/[country]/[city] hubs ── */}
+      {citiesByCount.length > 0 && (
+        <section className="bg-surface-container-low">
+          <div className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex items-end justify-between mb-8">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-serif font-semibold text-foreground">
+                    Cities with Rehab Centers in {countryName}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Browse by city for location-specific programs and pricing.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {citiesByCount.map(([cityName, count]) => (
+                  <Link
+                    key={cityName}
+                    href={`/rehab-in/${slug}/${cityToSlug(cityName)}`}
+                    className="flex items-center justify-between p-4 rounded-xl bg-surface-container-lowest shadow-ambient hover:shadow-ambient-lg transition-all duration-300 group"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                        {cityName}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {count} {count === 1 ? "center" : "centers"}
+                      </p>
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Related Blog Posts ── */}
       {posts && posts.length > 0 && (

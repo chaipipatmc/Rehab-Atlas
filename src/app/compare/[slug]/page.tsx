@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { countryToSlug } from "@/lib/utils";
+import { countryToSlug, cityToSlug } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   MapPin,
@@ -705,6 +705,30 @@ export default async function CompareSlugPage({ params }: PageProps) {
             Related Resources
           </h2>
           <div className="flex flex-wrap gap-2">
+            {/* Same-city link — only if all centers share a city (high-value internal link) */}
+            {(() => {
+              const cities = centers.map((c) => c.city).filter(Boolean) as string[];
+              const countries = centers.map((c) => c.country).filter(Boolean) as string[];
+              const allSameCity =
+                cities.length === centers.length &&
+                new Set(cities.map((s) => s.toLowerCase())).size === 1;
+              const allSameCountry =
+                countries.length === centers.length &&
+                new Set(countries.map((s) => s.toLowerCase())).size === 1;
+              if (allSameCity && allSameCountry) {
+                const city = cities[0];
+                const country = countries[0];
+                return (
+                  <Link
+                    href={`/rehab-in/${countryToSlug(country)}/${cityToSlug(city)}`}
+                    className="text-xs bg-primary/10 text-primary font-medium rounded-full px-3 py-1.5 hover:bg-primary/20 transition-colors"
+                  >
+                    All rehabs in {city}
+                  </Link>
+                );
+              }
+              return null;
+            })()}
             {[
               ...new Set(centers.map((c) => c.country).filter(Boolean)),
             ].map((country) => (
