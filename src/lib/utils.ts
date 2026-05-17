@@ -13,3 +13,6 @@ export function countryToSlug(name: string): string {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+// Cities use the same slug rules as countries — handles "Chiang Mai" → "chiang-mai", "Ko Samui" → "ko-samui"
+export const cityToSlug = countryToSlug;

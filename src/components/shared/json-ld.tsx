@@ -31,7 +31,16 @@ interface ArticleJsonLdProps {
   description?: string;
   image?: string;
   datePublished?: string;
+  dateModified?: string;
   author?: string;
+  authorType?: "Person" | "Organization";
+  authorUrl?: string;
+  // Medical reviewer (boosts E-E-A-T + AISO citation likelihood for health YMYL content)
+  reviewedBy?: {
+    name: string;
+    jobTitle?: string;
+    url?: string;
+  };
   url: string;
 }
 
@@ -40,26 +49,50 @@ export function ArticleJsonLd({
   description,
   image,
   datePublished,
+  dateModified,
   author = "Rehab-Atlas Editorial Team",
+  authorType = "Organization",
+  authorUrl,
+  reviewedBy,
   url,
 }: ArticleJsonLdProps) {
-  const data = {
+  const data: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: title,
     ...(description ? { description } : {}),
     ...(image ? { image } : {}),
     ...(datePublished ? { datePublished } : {}),
+    ...(dateModified ? { dateModified } : {}),
     author: {
-      "@type": "Person",
+      "@type": authorType,
       name: author,
+      ...(authorUrl ? { url: authorUrl } : {}),
     },
     publisher: {
       "@type": "Organization",
       name: "Rehab-Atlas",
       url: BASE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${BASE_URL}/icon.svg`,
+      },
     },
     url,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": url,
+    },
+    ...(reviewedBy
+      ? {
+          reviewedBy: {
+            "@type": "Person",
+            name: reviewedBy.name,
+            ...(reviewedBy.jobTitle ? { jobTitle: reviewedBy.jobTitle } : {}),
+            ...(reviewedBy.url ? { url: reviewedBy.url } : {}),
+          },
+        }
+      : {}),
   };
 
   return (

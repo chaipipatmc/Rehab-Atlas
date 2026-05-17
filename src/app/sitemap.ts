@@ -1,6 +1,20 @@
 import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { countryToSlug } from "@/lib/utils";
+import { countryToSlug, cityToSlug } from "@/lib/utils";
+
+// Keep in sync with /rehab-in/[country]/[city]/[condition]/page.tsx
+const CITY_CONDITION_DEFS: { slug: string; filters: string[] }[] = [
+  { slug: "alcohol-addiction", filters: ["alcohol", "alcohol_addiction", "substance_abuse", "detox"] },
+  { slug: "drug-addiction", filters: ["drug_addiction", "substance_abuse", "drugs"] },
+  { slug: "opioid-addiction", filters: ["opioid_addiction", "opioids", "substance_abuse", "detox"] },
+  { slug: "dual-diagnosis", filters: ["dual_diagnosis", "co_occurring", "mental_health"] },
+  { slug: "mental-health", filters: ["mental_health", "depression", "anxiety", "psychiatric"] },
+  { slug: "gambling-addiction", filters: ["gambling", "behavioral_addiction", "gambling_addiction"] },
+  { slug: "prescription-drug-abuse", filters: ["prescription_drug_abuse", "prescription_drugs", "substance_abuse", "detox"] },
+  { slug: "eating-disorders", filters: ["eating_disorders", "eating_disorder", "anorexia", "bulimia"] },
+  { slug: "trauma-ptsd", filters: ["trauma", "ptsd", "trauma_ptsd"] },
+  { slug: "behavioral-addiction", filters: ["behavioral_addiction", "process_addiction", "internet_addiction"] },
+];
 
 const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com").trim();
 
@@ -92,14 +106,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let centerPages: MetadataRoute.Sitemap = [];
   let blogPages: MetadataRoute.Sitemap = [];
   let comparePages: MetadataRoute.Sitemap = [];
+  let cityPages: MetadataRoute.Sitemap = [];
+  let cityConditionPages: MetadataRoute.Sitemap = [];
 
   try {
     const supabase = createAdminClient();
 
-    // Fetch all published center slugs
+    // Fetch all published center slugs + city + treatment_focus for programmatic pages
     const { data: centers } = await supabase
       .from("centers")
-      .select("slug, country, is_featured, editorial_overall, rating, updated_at")
+      .select("slug, country, city, treatment_focus, is_featured, editorial_overall, rating, updated_at")
       .eq("status", "published");
 
     if (centers) {
@@ -162,6 +178,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "monthly" as const,
         priority: 0.6,
       }));
+
+      // City pages (/rehab-in/[country]/[city]) + city × condition combos.
+      // Built from the same centers list so we only emit URLs that have ≥1 listing.
+      type CityRow = { country: string | null; city: string | null; treatment_focus: string[] | null };
+      const byLocation = new Map<string, { country: string; city: string; focus: Set<string> }>();
+      for (const c of centers as CityRow[]) {
+        if (!c.country || !c.city) continue;
+        const key = `${countryToSlug(c.country)}/${cityToSlug(c.city)}`;
+        if (!byLocation.has(key)) {
+          byLocation.set(key, {
+            country: countryToSlug(c.country),
+            city: cityToSlug(c.city),
+            focus: new Set<string>(),
+          });
+        }
+        const entry = byLocation.get(key)!;
+        for (const f of c.treatment_focus || []) entry.focus.add(f);
+      }
+
+      cityPages = [...byLocation.values()].map((loc) => ({
+        url: `${BASE_URL}/rehab-in/${loc.country}/${loc.city}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      }));
+
+      for (const loc of byLocation.values()) {
+        for (const cond of CITY_CONDITION_DEFS) {
+          if (cond.filters.some((f) => loc.focus.has(f))) {
+            cityConditionPages.push({
+              url: `${BASE_URL}/rehab-in/${loc.country}/${loc.city}/${cond.slug}`,
+              lastModified: new Date(),
+              changeFrequency: "weekly" as const,
+              priority: 0.65,
+            });
+          }
+        }
+      }
     }
 
     // Fetch all published blog post slugs
@@ -187,5 +241,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Supabase not configured — return static pages only
   }
 
-  return [...staticPages, ...rehabPages, ...countryPages, ...cmsPages, ...centerPages, ...comparePages, ...blogPages];
+  return [
+    ...staticPages,
+    ...rehabPages,
+    ...countryPages,
+    ...cityPages,
+    ...cityConditionPages,
+    ...cmsPages,
+    ...centerPages,
+    ...comparePages,
+    ...blogPages,
+  ];
 }

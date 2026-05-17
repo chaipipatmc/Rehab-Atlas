@@ -47,6 +47,8 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 - Blog featured images embedded as `![featured](url)` in markdown content
 - **Comparison pages:** SEO-friendly slug routing at `/compare/[a]-vs-[b]` (separator `-vs-`, supports 2-3 centers). Top 100 pairs pre-rendered via `generateStaticParams`, rest served via ISR (24h revalidate). Legacy `/compare?ids=` retained for saved-list flow. Each page emits FAQPage + ItemList JSON-LD for AI search citation.
 - **Family-first content default:** Content Creator agent writes for the family member doing the research by default (~70% of rehab inquiries come from families, not patients themselves). Categories `family-recognition`, `family-decision`, `family-during-after` are explicit family-perspective queues.
+- **Programmatic City × Condition pages:** `/rehab-in/[country]/[city]` (city hub) and `/rehab-in/[country]/[city]/[condition]` (e.g., "Alcohol Rehab in Chiang Mai"). Both pre-rendered via `generateStaticParams` from published centers, ISR 24h. URLs only emitted when ≥1 center matches. Sitemap mirrors the same logic.
+- **AISO (AI Search Optimization) on blog posts:** Blog posts auto-extract FAQ sections (parsing `## Frequently Asked Questions` + `### Question` blocks) and emit FAQPage JSON-LD. Editorial articles also include `reviewedBy` schema (Rehab-Atlas Clinical Review Team) to boost E-E-A-T for YMYL content and increase quoting by ChatGPT/Claude/Perplexity.
 
 ## Security
 

@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Metadata } from "next";
 import type { Components } from "react-markdown";
-import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd } from "@/components/shared/json-ld";
+import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd, FAQJsonLd } from "@/components/shared/json-ld";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -29,6 +29,49 @@ function estimateReadTime(content: string | null): string {
   const words = content.split(/\s+/).length;
   const mins = Math.max(3, Math.ceil(words / 200));
   return `${mins} min read`;
+}
+
+/**
+ * Extract FAQs from article markdown.
+ * Content-creator prompts end articles with:
+ *   ## Frequently Asked Questions
+ *   ### Question 1
+ *   Answer body...
+ *   ### Question 2
+ *   Answer body...
+ *
+ * Returns up to 8 FAQs for FAQPage JSON-LD (AISO).
+ */
+function extractFaqs(content: string | null): { question: string; answer: string }[] {
+  if (!content) return [];
+
+  // Find the FAQ section heading (case-insensitive, allows "Faqs" / "FAQ" variants)
+  const faqSectionMatch = content.match(
+    /##\s+(?:Frequently\s+Asked\s+Questions|FAQs?)\s*\n([\s\S]+?)(?=\n##\s|$)/i,
+  );
+  if (!faqSectionMatch) return [];
+
+  const section = faqSectionMatch[1];
+
+  // Parse ### Question → answer pairs
+  const faqs: { question: string; answer: string }[] = [];
+  const itemRegex = /###\s+(.+?)\n([\s\S]+?)(?=\n###\s|$)/g;
+  let match;
+  while ((match = itemRegex.exec(section)) !== null) {
+    const question = match[1].trim().replace(/[?:]*$/, "?");
+    // Strip markdown formatting from answer body for clean JSON-LD
+    const answer = match[2]
+      .trim()
+      .replace(/\*\*([^*]+)\*\*/g, "$1") // bold
+      .replace(/\*([^*]+)\*/g, "$1") // italic
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // links → text only
+      .replace(/\s+/g, " ")
+      .trim();
+    if (question && answer && answer.length > 10) {
+      faqs.push({ question, answer });
+    }
+  }
+  return faqs.slice(0, 8);
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -131,6 +174,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   const featuredImage = extractFeaturedImage(post.content);
   const cleanContent = stripFeaturedImage(post.content);
+  const faqs = extractFaqs(post.content);
 
   // Fetch related articles
   const { data: related } = await supabase
@@ -152,10 +196,27 @@ export default async function BlogPostPage({ params }: PageProps) {
         description={post.meta_description ?? undefined}
         image={featuredImage ?? undefined}
         datePublished={post.published_at ?? undefined}
+        dateModified={post.updated_at ?? undefined}
         author={
           isPartnerArticle && authorCenter
             ? authorCenter.name
             : "Rehab-Atlas Editorial Team"
+        }
+        authorType={isPartnerArticle && authorCenter ? "Organization" : "Organization"}
+        authorUrl={
+          isPartnerArticle && authorCenter
+            ? `${BASE_URL}/centers/${authorCenter.slug}`
+            : BASE_URL
+        }
+        reviewedBy={
+          // Only add medical reviewer for editorial (non-partner) health articles
+          !isPartnerArticle
+            ? {
+                name: "Rehab-Atlas Clinical Review Team",
+                jobTitle: "Licensed Clinical Reviewers",
+                url: `${BASE_URL}/about`,
+              }
+            : undefined
         }
         url={`${BASE_URL}/blog/${post.slug}`}
       />
@@ -166,6 +227,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         datePublished={post.published_at ?? undefined}
         dateModified={post.updated_at ?? undefined}
       />
+      {faqs.length > 0 && <FAQJsonLd faqs={faqs} />}
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: BASE_URL },
