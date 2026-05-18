@@ -10,6 +10,11 @@ import type { Metadata } from "next";
 import type { Components } from "react-markdown";
 import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd, FAQJsonLd, HowToJsonLd } from "@/components/shared/json-ld";
 
+// ISR: published articles change rarely. Cache the rendered page for 24h so
+// repeat visitors (and crawlers) hit a static edge response instead of paying
+// a Supabase round-trip + full SSR each time.
+export const revalidate = 86400;
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }

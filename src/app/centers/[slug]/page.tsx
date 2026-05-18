@@ -59,6 +59,11 @@ async function canPreview(supabase: Awaited<ReturnType<typeof createClient>>, ce
   return false;
 }
 
+// ISR: center detail pages render heavy SSR (photos, FAQs, staff, related
+// centers). Cache for 10 min to absorb traffic spikes. Partner edits flow
+// through approval and reflect within 10 min.
+export const revalidate = 600;
+
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const { preview } = await searchParams;

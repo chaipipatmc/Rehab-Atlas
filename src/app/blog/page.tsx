@@ -9,17 +9,14 @@ export const metadata: Metadata = {
   description: "Expert articles on addiction, treatment methods, recovery strategies, and mental health. Evidence-based resources to guide your journey.",
 };
 
-function extractFeaturedImage(content: string | null): string | null {
-  if (!content) return null;
-  const match = content.match(/!\[featured\]\(([^)]+)\)/);
-  return match ? match[1] : null;
-}
+// ISR: rebuild at most every 10 minutes. The Content Scheduler publishes new
+// articles once per day, so 10 min lag is fine and saves a Supabase round-trip
+// + full SSR on every visit.
+export const revalidate = 600;
 
-function estimateReadTime(content: string | null): string {
-  if (!content) return "3 min read";
-  const words = content.split(/\s+/).length;
-  const mins = Math.max(3, Math.ceil(words / 200));
-  return `${mins} min read`;
+function readTimeFromWordCount(wordCount: number | null): string {
+  if (!wordCount) return "3 min read";
+  return `${Math.max(3, Math.ceil(wordCount / 200))} min read`;
 }
 
 export default async function BlogPage({
@@ -33,7 +30,7 @@ export default async function BlogPage({
 
   let query = supabase
     .from("pages")
-    .select("slug, title, meta_description, published_at, content, tags")
+    .select("slug, title, meta_description, published_at, featured_image_url, word_count, tags")
     .eq("page_type", "blog")
     .eq("status", "published")
     .order("published_at", { ascending: false });
@@ -42,15 +39,17 @@ export default async function BlogPage({
     query = query.contains("tags", [activeTag]);
   }
 
-  const { data: posts } = await query;
-
-  // Get all unique tags from published posts for the filter
-  const { data: allPosts } = await supabase
-    .from("pages")
-    .select("tags")
-    .eq("page_type", "blog")
-    .eq("status", "published")
-    .not("tags", "is", null);
+  // Both queries are independent — run in parallel to shave a Supabase round-trip
+  // off TTFB.
+  const [{ data: posts }, { data: allPosts }] = await Promise.all([
+    query,
+    supabase
+      .from("pages")
+      .select("tags")
+      .eq("page_type", "blog")
+      .eq("status", "published")
+      .not("tags", "is", null),
+  ]);
 
   const allTags = new Map<string, number>();
   (allPosts || []).forEach((p) => {
@@ -64,7 +63,7 @@ export default async function BlogPage({
 
   const featured = !activeTag ? posts?.[0] : null;
   const rest = !activeTag ? (posts?.slice(1) || []) : (posts || []);
-  const featuredImage = featured ? extractFeaturedImage(featured.content) : null;
+  const featuredImage = featured?.featured_image_url ?? null;
 
   return (
     <div className="bg-surface min-h-screen">
@@ -189,7 +188,7 @@ export default async function BlogPage({
                       </span>
                     )}
                     <span className="w-1 h-1 rounded-full bg-muted-foreground" />
-                    <span>{estimateReadTime(featured.content)}</span>
+                    <span>{readTimeFromWordCount(featured.word_count as number | null)}</span>
                   </div>
                   <span className="flex items-center gap-1 text-sm text-primary font-medium">
                     Read article <ArrowRight className="h-3.5 w-3.5" />
@@ -204,7 +203,7 @@ export default async function BlogPage({
         {rest.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
             {rest.map((post) => {
-              const postImage = extractFeaturedImage(post.content);
+              const postImage = (post.featured_image_url as string | null) ?? null;
               const postTags = post.tags as string[] | null;
               return (
                 <Link
@@ -251,7 +250,7 @@ export default async function BlogPage({
                           </span>
                         )}
                         <span className="w-1 h-1 rounded-full bg-muted-foreground" />
-                        <span>{estimateReadTime(post.content)}</span>
+                        <span>{readTimeFromWordCount(post.word_count as number | null)}</span>
                       </div>
                       <span className="text-xs text-primary">Read &rarr;</span>
                     </div>

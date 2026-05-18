@@ -7,6 +7,16 @@ import { FeaturedCarousel } from "@/components/centers/featured-carousel";
 import { HeroSearch } from "@/components/centers/hero-search";
 import { OrganizationJsonLd } from "@/components/shared/json-ld";
 
+// ISR: rebuild at most every 10 minutes. Home content depends on latest blog
+// articles + featured centers, both of which change at most a few times per
+// day, so 10 min freshness is plenty and saves a Supabase round-trip per visit.
+export const revalidate = 600;
+
+// Minimum number of photographed centers required to show the Featured Centers
+// carousel. Below this, the section is hidden to avoid sparse/empty cards that
+// undermine trust before partner photo backfill is complete.
+const FEATURED_MIN_COUNT = 6;
+
 // Curated Unsplash photos that match "Digital Sanctuary" aesthetic
 // All free for commercial use, no attribution required
 const HERO_IMAGES = {
@@ -23,7 +33,7 @@ const HERO_IMAGES = {
 };
 
 export default async function HomePage() {
-  // Fetch featured centers with photos
+  // Fetch featured centers with photos (only render section if enough exist)
   let featuredCenters: Array<{
     id: string; name: string; slug: string; city: string | null;
     state_province: string | null; country: string; short_description: string | null;
@@ -32,37 +42,23 @@ export default async function HomePage() {
   }> = [];
   try {
     const supabase = await createClient();
-    // Fetch all published centers for the carousel (random rotation on client)
-    const { data: allPublished } = await supabase
+    const { data } = await supabase
       .from("centers")
       .select("id, name, slug, city, state_province, country, short_description, verified_profile, is_unclaimed, photos:center_photos(url, alt_text)")
       .eq("status", "published")
       .limit(20);
-
-    let data = allPublished;
-
-    // Fallback: if query failed, try simpler query
-    if (!data || data.length === 0) {
-      const { data: others } = await supabase
-        .from("centers")
-        .select("id, name, slug, city, state_province, country, short_description, verified_profile, is_unclaimed, photos:center_photos(url, alt_text)")
-        .eq("status", "published")
-        .limit(10);
-      data = [...(data || []), ...(others || [])];
-    }
-    // Only show centers that have at least 1 photo
     if (data) featuredCenters = (data as typeof featuredCenters).filter(c => c.photos && c.photos.length > 0);
   } catch {
     // Supabase not configured yet
   }
 
   // Fetch latest blog articles
-  let latestArticles: Array<{ slug: string; title: string; meta_description: string | null; published_at: string; content: string | null; tags: string[] | null }> = [];
+  let latestArticles: Array<{ slug: string; title: string; meta_description: string | null; published_at: string; featured_image_url: string | null; word_count: number | null; tags: string[] | null }> = [];
   try {
     const supabase = await createClient();
     const { data } = await supabase
       .from("pages")
-      .select("slug, title, meta_description, published_at, content, tags")
+      .select("slug, title, meta_description, published_at, featured_image_url, word_count, tags")
       .eq("page_type", "blog")
       .eq("status", "published")
       .order("published_at", { ascending: false })
@@ -108,35 +104,36 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured Centers */}
-      <section className="py-12 md:py-20 bg-surface-bright">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-10">
-            <div>
-              <h2 className="text-headline-lg font-semibold text-foreground">
-                Featured Centers
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground max-w-md">
-                Exceptional facilities hand-selected for their clinical excellence and
-                uncompromising privacy standards.
-              </p>
+      {/* Featured Centers — only render when we have enough photographed centers */}
+      {featuredCenters.length >= FEATURED_MIN_COUNT && (
+        <section className="py-12 md:py-20 bg-surface-bright">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-10">
+              <div>
+                <h2 className="text-headline-lg font-semibold text-foreground">
+                  Featured Centers
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                  Exceptional facilities hand-selected for their clinical excellence and
+                  uncompromising privacy standards.
+                </p>
+              </div>
+              <Link href="/centers" className="hidden md:flex items-center gap-1 text-sm text-primary hover:text-primary-dim transition-colors duration-300">
+                View all centers
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
-            <Link href="/centers" className="hidden md:flex items-center gap-1 text-sm text-primary hover:text-primary-dim transition-colors duration-300">
-              View all centers
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
 
-          <FeaturedCarousel centers={featuredCenters} />
+            <FeaturedCarousel centers={featuredCenters} />
 
-          {/* Mobile view all link */}
-          <div className="mt-6 md:hidden text-center">
-            <Link href="/centers" className="text-sm text-primary hover:text-primary-dim transition-colors duration-300">
-              View all centers &rarr;
-            </Link>
+            <div className="mt-6 md:hidden text-center">
+              <Link href="/centers" className="text-sm text-primary hover:text-primary-dim transition-colors duration-300">
+                View all centers &rarr;
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Unsure Where to Begin CTA — with background image */}
       <section className="relative py-20 overflow-hidden">
@@ -265,10 +262,8 @@ export default async function HomePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {latestArticles.map((post) => {
-                const imageMatch = post.content?.match(/!\[featured\]\(([^)]+)\)/);
-                const image = imageMatch ? imageMatch[1] : null;
-                const words = post.content?.split(/\s+/).length || 0;
-                const readTime = Math.max(3, Math.ceil(words / 200));
+                const image = post.featured_image_url;
+                const readTime = Math.max(3, Math.ceil((post.word_count ?? 600) / 200));
                 return (
                   <Link
                     key={post.slug}
