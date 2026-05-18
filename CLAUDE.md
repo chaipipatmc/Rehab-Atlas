@@ -1,6 +1,7 @@
 # RehabAtlas — Project Instructions
 
 @AGENTS.md
+@CONTENT_STRATEGY.md
 
 ## Project Overview
 
