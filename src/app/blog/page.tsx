@@ -16,6 +16,11 @@ export const metadata: Metadata = {
 // though the page renders per-request.
 export const revalidate = 600;
 
+// Page size for /blog grid. With ~160 articles, 30 per page = ~6 pages,
+// keeping each HTML response near 200 KB instead of 900+ KB and giving
+// crawlers + AI search bots digestible pages.
+const PAGE_SIZE = 30;
+
 type BlogListPost = {
   slug: string;
   title: string;
@@ -27,19 +32,25 @@ type BlogListPost = {
 };
 
 const getBlogPosts = unstable_cache(
-  async (tag: string | null): Promise<BlogListPost[]> => {
+  async (
+    tag: string | null,
+    page: number,
+  ): Promise<{ posts: BlogListPost[]; total: number }> => {
     const supabase = createPublicClient();
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
     let query = supabase
       .from("pages")
-      .select("slug, title, meta_description, published_at, featured_image_url, word_count, tags")
+      .select("slug, title, meta_description, published_at, featured_image_url, word_count, tags", { count: "exact" })
       .eq("page_type", "blog")
       .eq("status", "published")
-      .order("published_at", { ascending: false });
+      .order("published_at", { ascending: false })
+      .range(from, to);
     if (tag) query = query.contains("tags", [tag]);
-    const { data } = await query;
-    return (data ?? []) as BlogListPost[];
+    const { data, count } = await query;
+    return { posts: (data ?? []) as BlogListPost[], total: count ?? 0 };
   },
-  ["blog-posts-by-tag"],
+  ["blog-posts-paged"],
   { revalidate: 600, tags: ["blog-posts"] },
 );
 
@@ -71,21 +82,35 @@ function readTimeFromWordCount(wordCount: number | null): string {
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tag?: string }>;
+  searchParams: Promise<{ tag?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const activeTag = params.tag || null;
+  const rawPage = Number.parseInt(params.page ?? "1", 10);
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
 
   // Both data sources are now cached — first hit fills the cache, subsequent
   // hits hit memory and skip the Supabase round-trip entirely.
-  const [posts, sortedTags] = await Promise.all([
-    getBlogPosts(activeTag),
+  const [{ posts, total }, sortedTags] = await Promise.all([
+    getBlogPosts(activeTag, page),
     getAllBlogTags(),
   ]);
 
-  const featured = !activeTag ? posts[0] : null;
-  const rest = !activeTag ? posts.slice(1) : posts;
+  // Featured (big hero card) only on page 1 with no tag filter.
+  const showFeatured = !activeTag && page === 1 && posts.length > 0;
+  const featured = showFeatured ? posts[0] : null;
+  const rest = showFeatured ? posts.slice(1) : posts;
   const featuredImage = featured?.featured_image_url ?? null;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
+  const buildPageHref = (p: number) => {
+    const qs = new URLSearchParams();
+    if (activeTag) qs.set("tag", activeTag);
+    if (p > 1) qs.set("page", String(p));
+    const s = qs.toString();
+    return s ? `/blog?${s}` : "/blog";
+  };
 
   return (
     <div className="bg-surface min-h-screen">
@@ -303,6 +328,41 @@ export default async function BlogPage({
             )}
           </div>
         ) : null}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <nav className="mt-10 flex items-center justify-center gap-2" aria-label="Article pagination">
+            {hasPrev ? (
+              <Link
+                href={buildPageHref(page - 1)}
+                className="text-xs font-medium rounded-full px-3.5 py-1.5 bg-surface-container-lowest text-muted-foreground hover:bg-primary/10 hover:text-primary shadow-ambient transition-colors"
+                rel="prev"
+              >
+                &larr; Previous
+              </Link>
+            ) : (
+              <span className="text-xs font-medium rounded-full px-3.5 py-1.5 text-muted-foreground/40 cursor-not-allowed">
+                &larr; Previous
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground px-2">
+              Page <span className="font-semibold text-foreground">{page}</span> of {totalPages}
+            </span>
+            {hasNext ? (
+              <Link
+                href={buildPageHref(page + 1)}
+                className="text-xs font-medium rounded-full px-3.5 py-1.5 bg-primary text-white hover:opacity-90 shadow-ambient transition-opacity"
+                rel="next"
+              >
+                Next &rarr;
+              </Link>
+            ) : (
+              <span className="text-xs font-medium rounded-full px-3.5 py-1.5 text-muted-foreground/40 cursor-not-allowed">
+                Next &rarr;
+              </span>
+            )}
+          </nav>
+        )}
 
         {/* CTA */}
         <div className="mt-12 md:mt-16 text-center bg-surface-container-low rounded-2xl p-8 md:p-10 ghost-border">
