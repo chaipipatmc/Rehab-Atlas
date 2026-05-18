@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BookOpen } from "lucide-react";
 import type { Metadata } from "next";
@@ -26,7 +26,7 @@ export default async function BlogPage({
 }) {
   const params = await searchParams;
   const activeTag = params.tag || null;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   let query = supabase
     .from("pages")

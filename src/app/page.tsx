@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Shield, Users, Compass, ArrowRight, BookOpen } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import { FeaturedCarousel } from "@/components/centers/featured-carousel";
 import { HeroSearch } from "@/components/centers/hero-search";
 import { OrganizationJsonLd } from "@/components/shared/json-ld";
@@ -41,7 +41,7 @@ export default async function HomePage() {
     photos: Array<{ url: string; alt_text: string | null }>;
   }> = [];
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("centers")
       .select("id, name, slug, city, state_province, country, short_description, verified_profile, is_unclaimed, photos:center_photos(url, alt_text)")
@@ -55,7 +55,7 @@ export default async function HomePage() {
   // Fetch latest blog articles
   let latestArticles: Array<{ slug: string; title: string; meta_description: string | null; published_at: string; featured_image_url: string | null; word_count: number | null; tags: string[] | null }> = [];
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("pages")
       .select("slug, title, meta_description, published_at, featured_image_url, word_count, tags")

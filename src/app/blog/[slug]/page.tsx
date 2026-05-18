@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -144,7 +144,7 @@ function extractHowToSteps(
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data: post } = await supabase
     .from("pages")
     .select("title, meta_title, meta_description, content, published_at")
@@ -252,7 +252,7 @@ const blogMdComponents: Components = {
 
 export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   const { data: post } = await supabase
     .from("pages")
