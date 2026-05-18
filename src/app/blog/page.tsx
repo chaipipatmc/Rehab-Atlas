@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BookOpen } from "lucide-react";
@@ -9,10 +10,58 @@ export const metadata: Metadata = {
   description: "Expert articles on addiction, treatment methods, recovery strategies, and mental health. Evidence-based resources to guide your journey.",
 };
 
-// ISR: rebuild at most every 10 minutes. The Content Scheduler publishes new
-// articles once per day, so 10 min lag is fine and saves a Supabase round-trip
-// + full SSR on every visit.
+// `await searchParams` makes the page itself dynamic, so `revalidate` alone
+// doesn't earn an edge cache hit. Instead we cache the Supabase queries with
+// `unstable_cache` so the DB round-trip is amortized across visitors even
+// though the page renders per-request.
 export const revalidate = 600;
+
+type BlogListPost = {
+  slug: string;
+  title: string;
+  meta_description: string | null;
+  published_at: string;
+  featured_image_url: string | null;
+  word_count: number | null;
+  tags: string[] | null;
+};
+
+const getBlogPosts = unstable_cache(
+  async (tag: string | null): Promise<BlogListPost[]> => {
+    const supabase = createPublicClient();
+    let query = supabase
+      .from("pages")
+      .select("slug, title, meta_description, published_at, featured_image_url, word_count, tags")
+      .eq("page_type", "blog")
+      .eq("status", "published")
+      .order("published_at", { ascending: false });
+    if (tag) query = query.contains("tags", [tag]);
+    const { data } = await query;
+    return (data ?? []) as BlogListPost[];
+  },
+  ["blog-posts-by-tag"],
+  { revalidate: 600, tags: ["blog-posts"] },
+);
+
+const getAllBlogTags = unstable_cache(
+  async (): Promise<Array<[string, number]>> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("pages")
+      .select("tags")
+      .eq("page_type", "blog")
+      .eq("status", "published")
+      .not("tags", "is", null);
+    const counts = new Map<string, number>();
+    (data ?? []).forEach((p) => {
+      const tags = p.tags as string[] | null;
+      if (tags) tags.forEach((t) => counts.set(t, (counts.get(t) || 0) + 1));
+    });
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  },
+  ["blog-tags"],
+  { revalidate: 600, tags: ["blog-posts"] },
+);
 
 function readTimeFromWordCount(wordCount: number | null): string {
   if (!wordCount) return "3 min read";
@@ -26,43 +75,16 @@ export default async function BlogPage({
 }) {
   const params = await searchParams;
   const activeTag = params.tag || null;
-  const supabase = createPublicClient();
 
-  let query = supabase
-    .from("pages")
-    .select("slug, title, meta_description, published_at, featured_image_url, word_count, tags")
-    .eq("page_type", "blog")
-    .eq("status", "published")
-    .order("published_at", { ascending: false });
-
-  if (activeTag) {
-    query = query.contains("tags", [activeTag]);
-  }
-
-  // Both queries are independent — run in parallel to shave a Supabase round-trip
-  // off TTFB.
-  const [{ data: posts }, { data: allPosts }] = await Promise.all([
-    query,
-    supabase
-      .from("pages")
-      .select("tags")
-      .eq("page_type", "blog")
-      .eq("status", "published")
-      .not("tags", "is", null),
+  // Both data sources are now cached — first hit fills the cache, subsequent
+  // hits hit memory and skip the Supabase round-trip entirely.
+  const [posts, sortedTags] = await Promise.all([
+    getBlogPosts(activeTag),
+    getAllBlogTags(),
   ]);
 
-  const allTags = new Map<string, number>();
-  (allPosts || []).forEach((p) => {
-    const tags = p.tags as string[] | null;
-    if (tags) {
-      tags.forEach((t) => allTags.set(t, (allTags.get(t) || 0) + 1));
-    }
-  });
-  const sortedTags = Array.from(allTags.entries())
-    .sort((a, b) => b[1] - a[1]);
-
-  const featured = !activeTag ? posts?.[0] : null;
-  const rest = !activeTag ? (posts?.slice(1) || []) : (posts || []);
+  const featured = !activeTag ? posts[0] : null;
+  const rest = !activeTag ? posts.slice(1) : posts;
   const featuredImage = featured?.featured_image_url ?? null;
 
   return (

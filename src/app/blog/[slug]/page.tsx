@@ -10,10 +10,13 @@ import type { Metadata } from "next";
 import type { Components } from "react-markdown";
 import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd, FAQJsonLd, HowToJsonLd } from "@/components/shared/json-ld";
 
-// ISR: published articles change rarely. Cache the rendered page for 24h so
-// repeat visitors (and crawlers) hit a static edge response instead of paying
-// a Supabase round-trip + full SSR each time.
+// ISR: published articles change rarely. force-static signals Next to render
+// statically (with `revalidate` as the freshness window) even though the data
+// source isn't a cacheable fetch. Without force-static, Next conservatively
+// classifies the route as dynamic and Vercel emits Cache-Control: no-store.
+export const dynamic = "force-static";
 export const revalidate = 86400;
+export const dynamicParams = true;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
