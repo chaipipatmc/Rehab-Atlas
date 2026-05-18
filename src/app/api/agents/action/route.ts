@@ -291,6 +291,25 @@ async function executePostAction(
         }
         break;
       }
+
+      case "data_verifier": {
+        // Admin approved the verification: delete suspicious photos and
+        // mark the center as verified.
+        await admin
+          .from("center_photos")
+          .delete()
+          .eq("center_id", entityId)
+          .eq("verification_status", "suspicious");
+
+        await admin
+          .from("centers")
+          .update({
+            data_verification_status: "verified",
+            last_verified: new Date().toISOString(),
+          })
+          .eq("id", entityId);
+        break;
+      }
     }
   } else if (decision === "rejected") {
     switch (agentType) {

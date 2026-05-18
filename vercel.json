@@ -43,6 +43,10 @@
     {
       "path": "/api/agents/system-orchestrator",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/agents/data-verifier",
+      "schedule": "30 2 * * *"
     }
   ]
 }

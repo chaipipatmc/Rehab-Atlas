@@ -7,7 +7,8 @@ export type AgentType =
   | "outreach_research" | "outreach_followup" | "outreach_response"
   | "outreach_agreement" | "outreach_activation" | "outreach_orchestrator"
   | "content_creator" | "content_scheduler" | "content_planner"
-  | "content_auto_approve" | "content_orchestrator" | "system_orchestrator";
+  | "content_auto_approve" | "content_orchestrator" | "system_orchestrator"
+  | "data_verifier";
 export type TaskStatus = "pending" | "processing" | "awaiting_owner" | "approved" | "rejected" | "expired" | "error";
 export type AgentRecommendation = "approve" | "reject" | "needs_info";
 export type OwnerDecision = "approved" | "rejected" | "needs_info";
@@ -74,6 +75,43 @@ export interface CenterAIAnalysis {
   quality_score: number;
   issues: string[];
   suggestions: string[];
+}
+
+// --- Data Verifier Agent ---
+
+export type FieldMatch = "yes" | "partial" | "no" | "not_found";
+export type PhotoVerificationStatus = "unverified" | "verified" | "suspicious";
+export type CenterVerificationStatus = "unverified" | "verified" | "issues_found" | "no_website";
+
+export interface CenterFactCheck {
+  field: string;
+  db_value: string;
+  site_value: string;
+  match: FieldMatch;
+  confidence: number;
+  notes?: string;
+}
+
+export interface PhotoVerification {
+  photo_id: string;
+  url: string;
+  status: PhotoVerificationStatus;
+  site_match: boolean;
+  vision_score: number | null;
+  vision_reason: string | null;
+  matched_source_url: string | null;
+  notes: string;
+}
+
+export interface DataVerifierResult {
+  center_id: string;
+  center_name: string;
+  website_url: string | null;
+  center_status: CenterVerificationStatus;
+  field_checks: CenterFactCheck[];
+  photo_checks: PhotoVerification[];
+  mismatch_count: number;
+  suspicious_photo_count: number;
 }
 
 // --- Content Admin Agent ---

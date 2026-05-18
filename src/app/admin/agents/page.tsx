@@ -11,7 +11,7 @@ import {
   Bot, Zap, Search, Send, MessageSquare, FileSignature,
   Activity, Target, PenTool, CalendarClock,
   ChevronDown, ChevronUp, Settings2, ListTodo, RefreshCw,
-  Sliders, Save,
+  Sliders, Save, ShieldCheck,
 } from "lucide-react";
 
 interface AgentConfig {
@@ -31,6 +31,7 @@ interface AgentConfig {
   content_auto_approve: boolean;
   content_orchestrator: boolean;
   system_orchestrator: boolean;
+  data_verifier: boolean;
 }
 
 interface AgentTaskRow {
@@ -53,7 +54,7 @@ const AGENT_GROUPS = [
   },
   {
     title: "Internal Agents",
-    agents: ["center_admin", "content_admin", "lead_verify", "follow_up"],
+    agents: ["center_admin", "data_verifier", "content_admin", "lead_verify", "follow_up"],
   },
   {
     title: "Outreach Pipeline",
@@ -67,6 +68,7 @@ const AGENT_GROUPS = [
 
 const AGENT_INFO: Record<string, { label: string; description: string; icon: typeof Building2; color: string }> = {
   center_admin: { label: "Center Admin", description: "Verifies center profile completeness and reviews content quality.", icon: Building2, color: "text-primary" },
+  data_verifier: { label: "Data Verifier", description: "Nightly: cross-checks each center's facts against its official website and verifies photo provenance via Claude Vision. Flags mismatches and suspicious photos for one-click review.", icon: ShieldCheck, color: "text-emerald-700" },
   content_admin: { label: "Content Admin", description: "Reviews blog posts for relevance, medical accuracy, and SEO quality.", icon: FileText, color: "text-emerald-600" },
   lead_verify: { label: "Lead Verify", description: "Validates inquiries, checks commission agreements, verifies match quality.", icon: UserSearch, color: "text-amber-600" },
   follow_up: { label: "Follow-up", description: "Sends daily reminders for incomplete profiles and stale content.", icon: Clock, color: "text-violet-600" },
@@ -176,6 +178,56 @@ const AGENT_KNOBS: Record<string, AgentKnob[]> = {
       unit: "x",
     },
   ],
+  data_verifier: [
+    {
+      key: "batch_size",
+      label: "Batch size",
+      description: "Number of centers verified per nightly run. Each center costs ~1 Claude text call + ~4 Vision calls.",
+      type: "number",
+      default: "5",
+      min: 1,
+      max: 30,
+      unit: "centers",
+    },
+    {
+      key: "recheck_days",
+      label: "Re-check window",
+      description: "Skip centers already verified within this many days. Lower = faster catches on data drift, higher = lower API cost.",
+      type: "number",
+      default: "30",
+      min: 1,
+      max: 365,
+      unit: "days",
+    },
+    {
+      key: "vision_threshold_verified",
+      label: "Vision verified threshold",
+      description: "Claude Vision score (1-10) at or above which a photo is auto-marked verified.",
+      type: "number",
+      default: "7",
+      min: 5,
+      max: 10,
+    },
+    {
+      key: "vision_threshold_suspicious",
+      label: "Vision suspicious threshold",
+      description: "Claude Vision score (1-10) at or below which a photo is flagged suspicious. Should be lower than the verified threshold.",
+      type: "number",
+      default: "4",
+      min: 1,
+      max: 6,
+    },
+    {
+      key: "max_image_bytes",
+      label: "Max image size",
+      description: "Skip hashing/Vision for images larger than this. Most facility photos are well under 1MB.",
+      type: "number",
+      default: "2000000",
+      min: 100000,
+      max: 10000000,
+      unit: "bytes",
+    },
+  ],
 };
 
 // Agent type → task group label
@@ -187,6 +239,7 @@ const TASK_GROUP_LABELS: Record<string, string> = {
   content_admin: "Content Reviews",
   content_planner: "Content Calendar",
   center_admin: "Center Reviews",
+  data_verifier: "Data Verification",
   lead_verify: "Lead Verification",
   follow_up: "Follow-ups",
 };

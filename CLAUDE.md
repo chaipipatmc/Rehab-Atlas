@@ -64,12 +64,13 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 
 ## AI Agent System
 
-11 agents automate workflows. Each can be toggled on/off at `/admin/agents`. When OFF = manual mode. When ON = agents process events → email owner for approval.
+12 agents automate workflows. Each can be toggled on/off at `/admin/agents`. When OFF = manual mode. When ON = agents process events → email owner for approval.
 
 ### Internal Agents
 | Agent | Trigger | What It Does |
 |-------|---------|-------------|
 | **Center Admin** | DB webhook on `centers` + `center_edit_requests` | Checks completeness (15-point checklist), AI reviews quality |
+| **Data Verifier** | Daily cron (02:30 UTC / 09:30 Bangkok) | Cross-checks each center's facts (name, address, phone, services) against its official website via Claude, and verifies each photo two ways (site URL/hash match + Claude Vision plausibility). Flags `suspicious` photos and field mismatches for one-click admin review — never auto-deletes. |
 | **Content Admin** | DB webhook on `pages` (draft) | Reviews word count, SEO, medical accuracy, promotion level |
 | **Lead Verify** | DB webhook on `leads` (new) | Validates lead, AI match analysis (commission check disabled while pricing is deferred) |
 | **Follow-up** | Daily cron (09:00 Bangkok) | Sends reminders for stale drafts/incomplete profiles |
@@ -98,6 +99,8 @@ Notifications: Email (Resend) + LINE Notify (urgent items) + Gmail API (outreach
 ## Database Schema
 
 Tables: `centers`, `center_photos`, `center_faqs`, `profiles`, `center_edit_requests`, `assessments`, `leads`, `lead_forwards`, `pages`, `site_faqs`, `center_staff`, `center_analytics`, `agent_tasks`, `agent_follow_ups`, `agent_log`, `site_settings`, `outreach_pipeline`, `outreach_emails`, `outreach_blog_counts`, `commission_reports`
+
+**Data Verifier columns** (migration 025): `centers.data_verification_status` (`unverified` | `verified` | `issues_found` | `no_website`), `centers.data_verification_issues` (jsonb cache of last run's field checks + photo summary), reuses `centers.last_verified`. `center_photos.verification_status` (`unverified` | `verified` | `suspicious`), `center_photos.source_url` (URL on official site that matched, if any), `center_photos.last_verified_at`, `center_photos.verification_notes`.
 
 Key center fields: `commission_type`, `commission_rate`, `commission_fixed_amount` *(dormant — see business rule 3)*, `agreement_status`, `contract_start`, `contract_end`, `account_manager`
 
