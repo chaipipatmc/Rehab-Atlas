@@ -90,8 +90,21 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse;
 }
 
+// Only run middleware on routes that actually need auth gating or session
+// refresh. The previous catch-all matcher ran on every public page (/, /blog,
+// /centers, etc.) and touched cookies on every response, which makes Vercel
+// treat the response as personalized and refuse to cache it (Cache-Control:
+// private, no-cache, no-store). That single line killed ISR + edge caching
+// across the entire public site.
+//
+// Routes listed below all need the user object for gating or for the auth
+// flow itself. Everything else (public marketing, blog, directory) skips
+// the middleware and is cacheable at the edge.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/admin/:path*",
+    "/partner/:path*",
+    "/account/:path*",
+    "/auth/:path*",
   ],
 };
