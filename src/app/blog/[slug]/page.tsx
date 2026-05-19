@@ -10,11 +10,12 @@ import type { Metadata } from "next";
 import type { Components } from "react-markdown";
 import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd, FAQJsonLd, HowToJsonLd } from "@/components/shared/json-ld";
 
-// ISR: published articles change rarely. force-static signals Next to render
-// statically (with `revalidate` as the freshness window) even though the data
-// source isn't a cacheable fetch. Without force-static, Next conservatively
-// classifies the route as dynamic and Vercel emits Cache-Control: no-store.
-export const dynamic = "force-static";
+// ISR: published articles change rarely. revalidate alone is enough — we used
+// to also set dynamic = "force-static" for an extra perf nudge, but it
+// hijacks notFound() and permanentRedirect() handling (returns 200 for both
+// instead of 404 / 308), which broke the blog_redirects flow after the dedup
+// merge. Standard ISR caches readers correctly and still produces a sub-300ms
+// edge HIT on warm paths.
 export const revalidate = 86400;
 export const dynamicParams = true;
 
