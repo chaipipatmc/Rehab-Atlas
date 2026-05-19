@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { logClaudeUsage } from "@/lib/api-usage";
+import { checkDuplicateByTitle, TRIGRAM_AMBIGUOUS } from "@/lib/agents/content-dedup";
 
 /**
  * Generate a monthly editorial calendar using Claude AI.
@@ -155,10 +156,26 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
     return { success: false, reason: `invalid JSON: ${String(parseErr).slice(0, 100)}`, count: jsonMatch[0].length };
   }
 
-  // Insert all calendar entries
+  // Trigram dedup pass: drop any topic whose title is highly similar to an
+  // already-published article. This is the cheap first line of defense —
+  // semantic Claude judging happens later at draft time, but catching obvious
+  // overlap here saves the creator a wasted generation cycle.
   const entries: Array<Record<string, unknown>> = [];
+  let droppedDuplicates = 0;
+  const droppedDetails: Array<{ topic: string; closest: string | null; reasoning: string }> = [];
+
   for (const day of calendarDays) {
     for (const topic of day.topics || []) {
+      const dup = await checkDuplicateByTitle(topic.topic);
+      if (dup.isDuplicate) {
+        droppedDuplicates++;
+        droppedDetails.push({
+          topic: topic.topic,
+          closest: dup.closestMatch?.slug ?? null,
+          reasoning: dup.reasoning,
+        });
+        continue;
+      }
       entries.push({
         planned_date: day.date,
         topic: topic.topic,
@@ -170,8 +187,14 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
     }
   }
 
+  if (droppedDuplicates > 0) {
+    console.log(
+      `Content Planner: dropped ${droppedDuplicates} duplicate topics (trigram >= ${TRIGRAM_AMBIGUOUS})`,
+    );
+  }
+
   if (entries.length === 0) {
-    return { success: false, reason: "no entries generated from Claude response" };
+    return { success: false, reason: "no entries generated from Claude response (all dropped as duplicates?)" };
   }
 
   const { error } = await admin.from("content_calendar").insert(entries);
@@ -199,7 +222,13 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
   await logAgentAction({
     agent_type: "content_planner",
     action: "calendar_planned",
-    details: { month: yearMonth, total_topics: entries.length, days_planned: calendarDays.length },
+    details: {
+      month: yearMonth,
+      total_topics: entries.length,
+      days_planned: calendarDays.length,
+      dropped_duplicates: droppedDuplicates,
+      dropped_details: droppedDetails.slice(0, 10),
+    },
   });
 
   console.log(`Content Planner: created ${entries.length} topics for ${monthName}`);

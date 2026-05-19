@@ -89,7 +89,8 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 ### Content Agent
 | Agent | Trigger | What It Does |
 |-------|---------|-------------|
-| **Content Creator** | Daily cron (weekdays, 1 PM Bangkok) | Auto-researches rehab topics, writes 1500-2000 word SEO articles with Unsplash images, auto-links to condition + country hubs, saves as draft for admin approval |
+| **Content Creator** | Daily cron (weekdays, 1 PM Bangkok) | Auto-researches rehab topics, writes 1500-2000 word SEO articles with Unsplash images, auto-links to condition + country hubs, **runs dedup auto-rewrite loop (up to 2 retries) before saving**, saves as draft for admin approval |
+| **Content Dedup** | Inline (creator + auto-approve + planner) | Two-tier duplicate detection on `pages.title`: Postgres `pg_trgm` similarity ≥ 0.6 → hard flag without Claude; ≥ 0.35 → Claude Haiku semantic judge against top-5 candidates; < 0.35 → clear. Verdict persisted on `pages.dedup_status/closest_slug/reasoning/retry_count/checked_at`. Admin override resets to `overridden` and exempts the draft from re-checking |
 
 Architecture: `src/lib/agents/` (logic) + `src/app/api/agents/` (routes) + `src/app/admin/agents/` (dashboard)
 

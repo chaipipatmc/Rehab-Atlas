@@ -11,6 +11,17 @@ import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { logClaudeUsage } from "@/lib/api-usage";
 import { autoLinkArticle } from "@/lib/agents/auto-linker";
+import {
+  checkDuplicate,
+  persistDedupVerdict,
+  type DedupResult,
+  type DedupCandidate,
+} from "@/lib/agents/content-dedup";
+
+// How many times we'll ask Claude to rewrite an article that came back as a
+// duplicate before we give up and save the last attempt as a flagged draft
+// for admin review.
+const DEDUP_MAX_REWRITES = 2;
 
 // --- Topic Categories ---
 
@@ -419,12 +430,42 @@ async function pickTopic(): Promise<{ category: string; topic: string; imageQuer
 /**
  * Generate article content using Claude AI.
  */
+/**
+ * Build the "don't overlap with these existing articles" context that gets
+ * appended to the user prompt when re-generating after a duplicate flag.
+ */
+function buildAvoidContext(
+  candidates: DedupCandidate[],
+  closest: DedupCandidate | null,
+): string {
+  const topThree = candidates.slice(0, 3);
+  if (topThree.length === 0) return "";
+  const lines = topThree.map(
+    (c) =>
+      `- "${c.title}"${c.meta_description ? ` — ${c.meta_description}` : ""}`,
+  );
+  const closestNote = closest
+    ? `Your previous draft was flagged as a near-duplicate of "${closest.title}". `
+    : "";
+  return `IMPORTANT — AVOID DUPLICATING EXISTING CONTENT:
+${closestNote}Rehab-Atlas already publishes these articles on adjacent topics:
+${lines.join("\n")}
+
+Cover the topic from a clearly DIFFERENT angle than the articles above. Pick a fresh hook, a different audience perspective, or a sub-aspect that those articles do not address in depth. Do not paraphrase; do not write the same article with different words.`;
+}
+
 async function generateArticle(
   topic: string,
   category: string,
   pillar: { slug: string; title: string },
   brief?: string,
   keywords?: string[],
+  /**
+   * Optional context appended to the user message when we're regenerating
+   * after a duplicate flag. Tells Claude which existing articles to avoid
+   * overlapping with and pushes for a different angle.
+   */
+  avoidContext?: string,
 ): Promise<{
   title: string;
   content: string;
@@ -505,7 +546,7 @@ Return a JSON object with:
       messages: [
         {
           role: "user",
-          content: `Write a comprehensive article about: "${topic}"\n\nCategory: ${category}\nTarget pillar: ${pillar.title} (/rehab/${pillar.slug}) — link back to this in the first 250 words.${brief ? `\n\nBrief: ${brief}` : ""}${keywords?.length ? `\n\nTarget keywords: ${keywords.join(", ")}` : ""}\n\nWrite the article now.`,
+          content: `Write a comprehensive article about: "${topic}"\n\nCategory: ${category}\nTarget pillar: ${pillar.title} (/rehab/${pillar.slug}) — link back to this in the first 250 words.${brief ? `\n\nBrief: ${brief}` : ""}${keywords?.length ? `\n\nTarget keywords: ${keywords.join(", ")}` : ""}${avoidContext ? `\n\n${avoidContext}` : ""}\n\nWrite the article now.`,
         },
       ],
     });
@@ -691,17 +732,54 @@ async function writeOneArticle(
   const pillar = inferPillar(topic, category);
   console.log(`Content Creator: writing "${topic}" (${category} → ${pillar.slug})`);
 
-  // Generate article with Claude
-  const article = await generateArticle(topic, category, pillar, brief, keywords);
-  if (!article || !article.content) {
-    console.error("Content Creator: article generation failed");
-    return false;
+  // Generate the article, then dedup-check it. If Claude flags it as a
+  // duplicate of something we already published, re-prompt with an avoid-list
+  // and try again up to DEDUP_MAX_REWRITES times. Final attempt is saved
+  // regardless — if still flagged, it's a draft for admin review.
+  let article: Awaited<ReturnType<typeof generateArticle>> = null;
+  let dedupResult: DedupResult | null = null;
+  let dedupRetries = 0;
+  let avoidContext: string | undefined;
+
+  for (let attempt = 0; attempt <= DEDUP_MAX_REWRITES; attempt++) {
+    article = await generateArticle(topic, category, pillar, brief, keywords, avoidContext);
+    if (!article || !article.content) {
+      console.error("Content Creator: article generation failed");
+      return false;
+    }
+
+    dedupResult = await checkDuplicate({
+      title: article.title,
+      meta_description: article.meta_description,
+      content: article.content,
+    });
+
+    if (!dedupResult.isDuplicate) {
+      if (attempt > 0) {
+        console.log(`Content Creator: dedup cleared after ${attempt} rewrite(s)`);
+      }
+      break;
+    }
+
+    dedupRetries = attempt + 1;
+    console.log(
+      `Content Creator: dedup FLAGGED (attempt ${attempt + 1}/${DEDUP_MAX_REWRITES + 1}) — closest: ${dedupResult.closestMatch?.slug ?? "?"} — ${dedupResult.reasoning}`,
+    );
+
+    if (attempt < DEDUP_MAX_REWRITES) {
+      avoidContext = buildAvoidContext(dedupResult.candidates, dedupResult.closestMatch);
+    }
   }
+
+  // Both are guaranteed non-null by the loop above (we always do at least one
+  // generation + checkDuplicate before exiting; failure returns early).
+  const finalArticle = article!;
+  const finalDedupResult = dedupResult!;
 
   // Use article-specific image queries from Claude, fall back to topic-based.
   // Track each image alongside the descriptive query that produced it so we
   // can use it as alt text for accessibility and image SEO.
-  const articleQueries = article.image_queries || [];
+  const articleQueries = finalArticle.image_queries || [];
   const imagePairs: Array<{ url: string; alt: string }> = [];
 
   if (articleQueries.length > 0) {
@@ -739,7 +817,7 @@ async function writeOneArticle(
   }
 
   // Build content with featured image and inline images
-  let fullContent = article.content;
+  let fullContent = finalArticle.content;
 
   // Replace image placeholders with real Unsplash images + descriptive alt text
   for (let i = 0; i < 4; i++) {
@@ -766,12 +844,12 @@ async function writeOneArticle(
   const { data: slugCheck } = await admin
     .from("pages")
     .select("id")
-    .eq("slug", article.slug)
+    .eq("slug", finalArticle.slug)
     .single();
 
   const finalSlug = slugCheck
-    ? `${article.slug}-${Date.now().toString(36)}`
-    : article.slug;
+    ? `${finalArticle.slug}-${Date.now().toString(36)}`
+    : finalArticle.slug;
 
   // Auto-insert internal links to condition + country/city landing pages.
   // Passing `pillar` guarantees a back-link to the pillar page — if Claude
@@ -802,15 +880,15 @@ async function writeOneArticle(
   const { data: page, error } = await admin
     .from("pages")
     .insert({
-      title: article.title,
+      title: finalArticle.title,
       slug: finalSlug,
       content: fullContent,
       page_type: "blog",
       status: "draft",
       author_type: "rehabatlas",
       author_name: "Rehab-Atlas Editorial",
-      meta_title: article.meta_title,
-      meta_description: article.meta_description,
+      meta_title: finalArticle.meta_title,
+      meta_description: finalArticle.meta_description,
       tags,
     })
     .select("id")
@@ -821,8 +899,14 @@ async function writeOneArticle(
     return false;
   }
 
+  // Persist the dedup verdict on the new row so admin can see it in
+  // /admin/content. status='clear' means it passed all retries; status=
+  // 'flagged' means it's still a near-duplicate after the rewrite loop and
+  // needs admin review before approval.
+  await persistDedupVerdict(page.id as string, finalDedupResult, dedupRetries);
+
   // Calculate word count
-  const wordCount = article.content.split(/\s+/).length;
+  const wordCount = finalArticle.content.split(/\s+/).length;
 
   // Create agent task for admin approval
   await createAgentTask({
@@ -830,17 +914,17 @@ async function writeOneArticle(
     entity_type: "page",
     entity_id: page.id as string,
     checklist: {
-      title: article.title,
+      title: finalArticle.title,
       slug: finalSlug,
       category,
       word_count: wordCount,
       has_featured_image: !!featured,
       image_url: featured?.url ?? null,
       inline_images: inline.length,
-      meta_title: article.meta_title,
-      meta_description: article.meta_description,
+      meta_title: finalArticle.meta_title,
+      meta_description: finalArticle.meta_description,
     },
-    ai_summary: `New article drafted: "${article.title}" (${wordCount} words, ${category})`,
+    ai_summary: `New article drafted: "${finalArticle.title}" (${wordCount} words, ${category})`,
     ai_recommendation: "approve",
     confidence: 0.85,
   });
@@ -850,13 +934,17 @@ async function writeOneArticle(
     action: "article_drafted",
     details: {
       page_id: page.id,
-      title: article.title,
+      title: finalArticle.title,
       slug: finalSlug,
       category,
       word_count: wordCount,
       has_image: !!featured,
       total_images: imagePairs.length,
       internal_links_added: linksAdded.length,
+      dedup_status: finalDedupResult.isDuplicate ? "flagged" : "clear",
+      dedup_closest_slug: finalDedupResult.closestMatch?.slug ?? null,
+      dedup_retry_count: dedupRetries,
+      dedup_judged_by_claude: finalDedupResult.judgedByClaude,
       internal_links: linksAdded,
     },
   });
@@ -871,6 +959,6 @@ async function writeOneArticle(
     }
   }
 
-  console.log(`Content Creator: drafted "${article.title}" (${wordCount} words)`);
+  console.log(`Content Creator: drafted "${finalArticle.title}" (${wordCount} words)`);
   return true;
 }

@@ -16,6 +16,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
+import { checkDuplicate, persistDedupVerdict } from "@/lib/agents/content-dedup";
 
 interface QualityResult {
   passed: boolean;
@@ -102,27 +103,8 @@ export async function autoApproveContent(): Promise<{ approved: number; skipped:
   for (const draft of drafts) {
     const quality = checkQuality(draft as Record<string, unknown>);
 
-    if (quality.passed) {
-      // Auto-approve — move to publishing pool
-      await admin
-        .from("pages")
-        .update({ status: "approved" })
-        .eq("id", draft.id);
-
-      approved++;
-
-      await logAgentAction({
-        agent_type: "content_auto_approve",
-        action: "article_auto_approved",
-        details: {
-          page_id: draft.id,
-          title: draft.title,
-          word_count: quality.wordCount,
-        },
-      });
-    } else {
+    if (!quality.passed) {
       skipped++;
-
       await logAgentAction({
         agent_type: "content_auto_approve",
         action: "article_skipped",
@@ -132,7 +114,69 @@ export async function autoApproveContent(): Promise<{ approved: number; skipped:
           reasons: quality.reasons,
         },
       });
+      continue;
     }
+
+    // Final dedup gate. The creator already runs a dedup loop, but articles
+    // may have been published between when the draft was written and now —
+    // so re-check against the current published catalog. Drafts that already
+    // came in with dedup_status='overridden' (admin force-approved) skip the
+    // check entirely.
+    if ((draft.dedup_status as string | null) !== "overridden") {
+      const dedup = await checkDuplicate({
+        title: draft.title as string,
+        meta_description: (draft.meta_description as string | null) ?? null,
+        content: (draft.content as string | null) ?? null,
+        excludePageId: draft.id as string,
+      });
+      if (dedup.isDuplicate) {
+        await persistDedupVerdict(
+          draft.id as string,
+          dedup,
+          (draft.dedup_retry_count as number | null) ?? 0,
+        );
+        skipped++;
+        await logAgentAction({
+          agent_type: "content_auto_approve",
+          action: "article_skipped",
+          details: {
+            page_id: draft.id,
+            title: draft.title,
+            reasons: [
+              `Dedup flagged: ${dedup.reasoning}`,
+              `Closest match: /blog/${dedup.closestMatch?.slug ?? "?"}`,
+            ],
+            dedup_judged_by_claude: dedup.judgedByClaude,
+          },
+        });
+        continue;
+      }
+      // Refresh dedup_status to 'clear' in case the creator wrote 'flagged'
+      // earlier but a re-judge here came back clean.
+      await persistDedupVerdict(
+        draft.id as string,
+        dedup,
+        (draft.dedup_retry_count as number | null) ?? 0,
+      );
+    }
+
+    // Auto-approve — move to publishing pool
+    await admin
+      .from("pages")
+      .update({ status: "approved" })
+      .eq("id", draft.id);
+
+    approved++;
+
+    await logAgentAction({
+      agent_type: "content_auto_approve",
+      action: "article_auto_approved",
+      details: {
+        page_id: draft.id,
+        title: draft.title,
+        word_count: quality.wordCount,
+      },
+    });
   }
 
   if (approved > 0) {
