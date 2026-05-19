@@ -275,11 +275,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       .select("target_slug")
       .eq("slug", slug)
       .maybeSingle();
-    console.log("[blog/[slug]] no post found, redirect lookup:", {
-      slug,
-      redirect,
-      err: redirErr?.message,
-    });
+    console.log(`DBG slug=${slug} redirect=${JSON.stringify(redirect)} err=${redirErr?.message ?? "none"}`);
     if (redirect?.target_slug) {
       permanentRedirect(`/blog/${redirect.target_slug}`);
     }
