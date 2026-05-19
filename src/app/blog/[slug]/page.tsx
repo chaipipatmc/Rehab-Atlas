@@ -270,11 +270,16 @@ export default async function BlogPostPage({ params }: PageProps) {
     // Article isn't currently published. Check the redirects table — if this
     // slug was merged into another canonical article (auto-dedup cleanup),
     // 301 to the canonical slug to preserve SEO link equity.
-    const { data: redirect } = await supabase
+    const { data: redirect, error: redirErr } = await supabase
       .from("blog_redirects")
       .select("target_slug")
       .eq("slug", slug)
-      .single();
+      .maybeSingle();
+    console.log("[blog/[slug]] no post found, redirect lookup:", {
+      slug,
+      redirect,
+      err: redirErr?.message,
+    });
     if (redirect?.target_slug) {
       permanentRedirect(`/blog/${redirect.target_slug}`);
     }
