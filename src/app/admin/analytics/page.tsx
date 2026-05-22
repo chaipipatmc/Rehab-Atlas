@@ -403,7 +403,12 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
             Peak: {maxDaily} views
           </span>
         </div>
-        <div className="flex items-end gap-1 h-36">
+        {/* h-36 = 144px chart area. Each column is flex-col with a fixed-
+            height bar area on top (h-32 = 128px) and the date label below;
+            without an explicitly-sized parent, the `height: X%` on each bar
+            resolves against an undefined value and the bars collapse to 0 —
+            which is the symptom we used to see (blank chart). */}
+        <div className="flex items-end gap-1 h-44">
           {Array.from(dailyViews.entries()).map(([date, count]) => {
             const sessionsForDay = dailySessions.get(date)!.size;
             const heightPct = Math.max((count / maxDaily) * 100, 2);
@@ -411,29 +416,34 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
             const isWeekend = [0, 6].includes(new Date(date + "T00:00:00").getDay());
             const showLabel = range.days <= 14 || new Date(date + "T00:00:00").getDate() % 5 === 0;
             return (
-              <div key={date} className="flex-1 flex flex-col items-center gap-1 group">
-                <span className="text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">
-                  {count}
-                </span>
-                <div
-                  className={`w-full rounded-t-md relative ${isWeekend ? "bg-primary/15" : "bg-primary/25"}`}
-                  style={{ height: `${heightPct}%` }}
-                  title={`${date}: ${count} views, ${sessionsForDay} sessions`}
-                >
-                  {sessionPct > 0 && (
-                    <div
-                      className="absolute bottom-0 left-0 right-0 bg-primary rounded-t-md"
-                      style={{ height: `${sessionPct}%` }}
-                    />
-                  )}
+              <div key={date} className="flex-1 flex flex-col items-stretch group">
+                {/* Bar area — fixed height so the % on the child bar resolves */}
+                <div className="relative h-32 flex flex-col justify-end">
+                  <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">
+                    {count}
+                  </span>
+                  <div
+                    className={`w-full rounded-t-md relative ${isWeekend ? "bg-primary/15" : "bg-primary/25"}`}
+                    style={{ height: `${heightPct}%` }}
+                    title={`${date}: ${count} views, ${sessionsForDay} sessions`}
+                  >
+                    {sessionPct > 0 && (
+                      <div
+                        className="absolute bottom-0 left-0 right-0 bg-primary rounded-t-md"
+                        style={{ height: `${sessionPct}%` }}
+                      />
+                    )}
+                  </div>
                 </div>
-                {showLabel && (
-                  <span className="text-[9px] text-muted-foreground tabular-nums">
+                {showLabel ? (
+                  <span className="text-[9px] text-muted-foreground tabular-nums text-center mt-1">
                     {new Date(date + "T00:00:00").toLocaleDateString("en-US", {
                       month: "numeric",
                       day: "numeric",
                     })}
                   </span>
+                ) : (
+                  <span className="text-[9px] mt-1">&nbsp;</span>
                 )}
               </div>
             );
