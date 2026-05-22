@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -16,8 +15,6 @@ interface EditRequestActionsProps {
 
 export function EditRequestActions({
   requestId,
-  centerId,
-  changes,
 }: EditRequestActionsProps) {
   const router = useRouter();
   const [note, setNote] = useState("");
@@ -25,47 +22,38 @@ export function EditRequestActions({
 
   async function handleAction(action: "approved" | "rejected") {
     setProcessing(true);
-    const supabase = createClient();
+    try {
+      const res = await fetch("/api/admin/edit-requests/decide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: requestId,
+          action,
+          note: note || undefined,
+        }),
+      });
 
-    // Update request status
-    const { error: reqError } = await supabase
-      .from("center_edit_requests")
-      .update({
-        status: action,
-        review_note: note || null,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq("id", requestId);
-
-    if (reqError) {
-      toast.error("Failed to update request");
-      setProcessing(false);
-      return;
-    }
-
-    // If approved, apply changes to center
-    if (action === "approved") {
-      const { error: centerError } = await supabase
-        .from("centers")
-        .update(changes)
-        .eq("id", centerId);
-
-      if (centerError) {
-        toast.error("Request approved but failed to apply changes");
-        setProcessing(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to update request");
         return;
       }
-    }
 
-    toast.success(action === "approved" ? "Changes approved and applied" : "Request rejected");
-    router.refresh();
-    setProcessing(false);
+      toast.success(
+        action === "approved"
+          ? "Changes approved, applied, and partner notified"
+          : "Request rejected and partner notified"
+      );
+      router.refresh();
+    } finally {
+      setProcessing(false);
+    }
   }
 
   return (
     <div className="space-y-3">
       <Textarea
-        placeholder="Review note (optional)..."
+        placeholder="Review note (shared with the partner if you reject)..."
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={2}

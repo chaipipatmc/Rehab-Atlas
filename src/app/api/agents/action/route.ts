@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { validateActionToken, findTaskByShortCode, updateTaskStatus, logAgentAction, getAppUrl } from "@/lib/agents/base";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendLeadForwardEmail } from "@/lib/email/send";
+import { sendEditRequestStatusEmail } from "@/lib/agents/notify";
 import { sendApprovedOutreach } from "@/lib/agents/outreach/research";
 import { sendApprovedAgreement } from "@/lib/agents/outreach/agreement";
 import { sendEmail as sendGmailReply } from "@/lib/agents/outreach/gmail";
@@ -231,7 +232,7 @@ async function executePostAction(
         if (entityType === "center_edit_request") {
           const { data: editReq } = await admin
             .from("center_edit_requests")
-            .select("center_id, changes")
+            .select("center_id, changes, submitted_by")
             .eq("id", entityId)
             .single();
 
@@ -241,6 +242,8 @@ async function executePostAction(
               status: "approved",
               reviewed_at: new Date().toISOString(),
             }).eq("id", entityId);
+
+            await notifyEditRequestPartner(admin, editReq.center_id as string, editReq.submitted_by as string, "approved", null);
           }
         } else {
           await admin.from("centers").update({ status: "published" }).eq("id", entityId);
@@ -315,10 +318,20 @@ async function executePostAction(
     switch (agentType) {
       case "center_admin": {
         if (entityType === "center_edit_request") {
+          const { data: editReq } = await admin
+            .from("center_edit_requests")
+            .select("center_id, submitted_by")
+            .eq("id", entityId)
+            .single();
+
           await admin.from("center_edit_requests").update({
             status: "rejected",
             reviewed_at: new Date().toISOString(),
           }).eq("id", entityId);
+
+          if (editReq) {
+            await notifyEditRequestPartner(admin, editReq.center_id as string, editReq.submitted_by as string, "rejected", null);
+          }
         }
         break;
       }
@@ -440,6 +453,34 @@ async function executePostAction(
     if (agentType === "lead_verify") {
       await admin.from("leads").update({ status: "awaiting_info" }).eq("id", entityId);
     }
+  }
+}
+
+async function notifyEditRequestPartner(
+  admin: ReturnType<typeof createAdminClient>,
+  centerId: string,
+  submittedBy: string,
+  decision: "approved" | "rejected",
+  reviewNote: string | null,
+) {
+  try {
+    const [{ data: partner }, { data: center }] = await Promise.all([
+      admin.from("profiles").select("email, full_name").eq("id", submittedBy).single(),
+      admin.from("centers").select("name, slug").eq("id", centerId).single(),
+    ]);
+
+    if (partner?.email && center?.name && center?.slug) {
+      await sendEditRequestStatusEmail({
+        to: partner.email as string,
+        partnerName: (partner.full_name as string | null) || null,
+        centerName: center.name as string,
+        centerSlug: center.slug as string,
+        decision,
+        reviewNote,
+      });
+    }
+  } catch (err) {
+    console.error("Edit request partner notification failed:", err);
   }
 }
 

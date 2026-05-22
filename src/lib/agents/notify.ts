@@ -73,6 +73,81 @@ export async function sendAgentEmail(params: {
   }
 }
 
+// ── Edit Request Decision Email ──
+
+/**
+ * Email the partner who submitted a center edit request to tell them whether
+ * it was approved (changes live) or rejected (with optional review note).
+ */
+export async function sendEditRequestStatusEmail(params: {
+  to: string;
+  partnerName: string | null;
+  centerName: string;
+  centerSlug: string;
+  decision: "approved" | "rejected";
+  reviewNote?: string | null;
+}): Promise<void> {
+  const appUrl = getAppUrl();
+  const greeting = params.partnerName ? `Hi ${escapeHtml(params.partnerName)},` : "Hi,";
+  const centerHtml = escapeHtml(params.centerName);
+
+  const subject =
+    params.decision === "approved"
+      ? `Your edit to ${params.centerName} is now live`
+      : `Your edit to ${params.centerName} wasn't applied`;
+
+  const headlineColor = params.decision === "approved" ? "#16a34a" : "#dc2626";
+  const headline =
+    params.decision === "approved"
+      ? "Your edit was approved"
+      : "Your edit wasn't applied";
+
+  const bodyCopy =
+    params.decision === "approved"
+      ? `Your changes to <strong>${centerHtml}</strong> have been reviewed and applied. They are now visible on your public listing.`
+      : `Your changes to <strong>${centerHtml}</strong> weren't applied this time. You can submit a revised version from your partner dashboard.`;
+
+  const noteBlock =
+    params.reviewNote && params.reviewNote.trim()
+      ? `<div style="background:#f4f6f7;border-radius:8px;padding:14px;margin:16px 0;">
+          <p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#6b7d82;">Reviewer note</p>
+          <p style="margin:0;font-size:13px;color:#2d3436;line-height:1.5;">${escapeHtml(params.reviewNote)}</p>
+        </div>`
+      : "";
+
+  const ctaLabel = params.decision === "approved" ? "View listing" : "Edit listing";
+  const ctaPath = params.decision === "approved" ? `/centers/${params.centerSlug}` : `/partner/edit`;
+
+  const html = `
+    <div style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#2d3436;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <h1 style="font-family:'Noto Serif',Georgia,serif;font-size:22px;color:#45636b;margin:0;">Rehab-Atlas</h1>
+      </div>
+      <p style="font-size:14px;margin:0 0 12px;">${greeting}</p>
+      <h2 style="font-size:20px;color:${headlineColor};margin:0 0 12px;">${headline}</h2>
+      <p style="font-size:14px;line-height:1.6;margin:0 0 12px;">${bodyCopy}</p>
+      ${noteBlock}
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${appUrl}${ctaPath}" style="display:inline-block;padding:12px 28px;background:#45636b;color:white;text-decoration:none;border-radius:24px;font-size:14px;font-weight:600;">${ctaLabel}</a>
+      </div>
+      <p style="font-size:11px;color:#9aa5a9;text-align:center;margin-top:24px;">
+        Rehab-Atlas — A Digital Sanctuary for Recovery
+      </p>
+    </div>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: params.to,
+      subject,
+      html,
+    });
+  } catch (err) {
+    console.error("Edit request status email failed:", err);
+  }
+}
+
 // ── Follow-up Email to User ──
 
 export async function sendFollowUpEmail(params: {
