@@ -141,6 +141,14 @@ export default function AssessmentPage() {
         </div>
       </div>
 
+      {/* Top-of-form reassurance — visible on every step */}
+      <div className="container mx-auto px-4 sm:px-6 max-w-2xl pt-6">
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Lock className="h-3.5 w-3.5 text-primary" />
+          <span>Takes 3–5 minutes &middot; your answers stay private &middot; no center contact without your consent</span>
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12 max-w-2xl">
         {/* Step Content Card */}
         <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5 sm:p-8 md:p-10">
@@ -208,6 +216,9 @@ export default function AssessmentPage() {
                   What is the primary concern?
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">Select all that apply.</p>
+                <p className="mt-2 text-xs text-muted-foreground/80 italic">
+                  Why we ask: this helps us identify centers with the right clinical expertise — not all centers handle dual diagnosis, trauma, or detox.
+                </p>
               </div>
               <div className="space-y-2">
                 {TREATMENT_FOCUS_OPTIONS.map((opt) => (
@@ -261,9 +272,14 @@ export default function AssessmentPage() {
           {/* Step 2: Severity */}
           {step === 2 && (
             <div className="space-y-6">
-              <h2 className="text-headline-lg font-semibold text-foreground">
-                How would you describe the severity?
-              </h2>
+              <div>
+                <h2 className="text-headline-lg font-semibold text-foreground">
+                  How would you describe the severity?
+                </h2>
+                <p className="mt-2 text-xs text-muted-foreground/80 italic">
+                  Why we ask: severity guides the level of care — outpatient, residential, or medical detox.
+                </p>
+              </div>
               <RadioGroup
                 value={answers.severity || ""}
                 onValueChange={(v) => updateAnswer("severity", v as AssessmentAnswers["severity"])}
@@ -318,6 +334,9 @@ export default function AssessmentPage() {
 
               <div>
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Budget Range</Label>
+                <p className="mt-1 text-[11px] text-muted-foreground/80 italic">
+                  Why we ask: budget helps us avoid recommending centers that aren&apos;t realistic for your situation.
+                </p>
                 <RadioGroup
                   value={answers.budget || "any"}
                   onValueChange={(v) => updateAnswer("budget", v as AssessmentAnswers["budget"])}
@@ -487,6 +506,9 @@ export default function AssessmentPage() {
                     onChange={(e) => updateAnswer("contact_phone", e.target.value)}
                     className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border h-11"
                   />
+                  <p className="mt-1.5 text-[11px] text-muted-foreground/80 italic">
+                    Why we ask: only used if you specifically request specialist follow-up. We never share it without your consent.
+                  </p>
                 </div>
               </div>
 
@@ -501,6 +523,22 @@ export default function AssessmentPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Final-step privacy reinforcement — last reassurance before the user commits */}
+          {isLastStep && (
+            <div className="mt-8 bg-primary/5 rounded-xl p-4 ghost-border">
+              <p className="text-xs font-semibold text-foreground flex items-center gap-2">
+                <Lock className="h-3.5 w-3.5 text-primary" />
+                Your privacy comes first
+              </p>
+              <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground leading-relaxed">
+                <li>&middot; We do not sell your data.</li>
+                <li>&middot; Your inquiry is not publicly visible.</li>
+                <li>&middot; Centers are never contacted without your explicit consent.</li>
+                <li>&middot; You stay in control at every step.</li>
+              </ul>
             </div>
           )}
 
