@@ -140,6 +140,15 @@ export default function PartnerEditPage() {
 
   async function uploadPhoto(file: File) {
     if (!center) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(
+        `"${file.name}" is ${(file.size / (1024 * 1024)).toFixed(1)}MB. Max size is 5MB — please compress the image and try again.`,
+        { duration: 8000 }
+      );
+      return;
+    }
+
     setUploadingPhoto(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -163,6 +172,15 @@ export default function PartnerEditPage() {
 
   async function uploadStaffPhoto(file: File, index: number) {
     if (!center) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(
+        `Staff photo "${file.name}" is ${(file.size / (1024 * 1024)).toFixed(1)}MB. Max size is 5MB — please compress and try again.`,
+        { duration: 8000 }
+      );
+      return;
+    }
+
     setUploadingStaffPhoto(index);
     const formData = new FormData();
     formData.append("file", file);
@@ -1107,7 +1125,7 @@ export default function PartnerEditPage() {
                   <>
                     <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
                     <p className="text-sm text-foreground font-medium">Click to upload photos</p>
-                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP — max 10MB per file</p>
+                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP — max 5MB per file</p>
                   </>
                 )}
               </div>

@@ -4,6 +4,13 @@ import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Image as ImageIcon, Loader2, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+function formatMb(bytes: number) {
+  return (bytes / (1024 * 1024)).toFixed(1);
+}
 
 interface ImageUploadProps {
   onUpload: (url: string) => void;
@@ -170,11 +177,24 @@ export function MultiImageUpload({
     setUploading(true);
     const supabase = createClient();
     const newImages = [...images];
+    const oversize: string[] = [];
+    const wrongType: string[] = [];
+    const uploadErrors: string[] = [];
+    let skippedAtCap = 0;
 
     for (const file of Array.from(files)) {
-      if (newImages.length >= maxImages) break;
-      if (!file.type.startsWith("image/")) continue;
-      if (file.size > 5 * 1024 * 1024) continue;
+      if (newImages.length >= maxImages) {
+        skippedAtCap++;
+        continue;
+      }
+      if (!file.type.startsWith("image/")) {
+        wrongType.push(file.name);
+        continue;
+      }
+      if (file.size > MAX_UPLOAD_BYTES) {
+        oversize.push(`${file.name} (${formatMb(file.size)}MB)`);
+        continue;
+      }
 
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -188,11 +208,30 @@ export function MultiImageUpload({
           .from("center-photos")
           .getPublicUrl(data.path);
         newImages.push({ url: urlData.publicUrl, alt_text: file.name.replace(/\.[^/.]+$/, "") });
+      } else {
+        console.error("Photo upload failed:", error);
+        uploadErrors.push(`${file.name}: ${error?.message || "unknown error"}`);
       }
     }
 
     onChange(newImages);
     setUploading(false);
+
+    if (oversize.length) {
+      toast.error(
+        `Image too large (max 5MB). Please compress and try again:\n${oversize.join("\n")}`,
+        { duration: 8000 }
+      );
+    }
+    if (wrongType.length) {
+      toast.error(`Not an image file: ${wrongType.join(", ")}`);
+    }
+    if (uploadErrors.length) {
+      toast.error(`Upload failed:\n${uploadErrors.join("\n")}`, { duration: 8000 });
+    }
+    if (skippedAtCap > 0) {
+      toast.error(`Photo limit reached (${maxImages}). Skipped ${skippedAtCap} file(s).`);
+    }
   }
 
   function removeImage(index: number) {
