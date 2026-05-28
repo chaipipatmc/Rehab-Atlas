@@ -56,6 +56,24 @@ export const assessmentSchema = z.object({
   contact_email: z.string().email("Please enter a valid email").max(254),
   contact_name: z.string().max(100).optional().or(z.literal("")),
   contact_phone: phoneSchema,
+  // Traffic attribution captured client-side at first page hit. Sent in the
+  // assessment payload and persisted inside the `answers` JSON column under
+  // `_source`. Optional — only present for visitors whose entry page surfaced
+  // UTM params or a non-empty referrer.
+  _source: z
+    .object({
+      utm_source: z.string().max(120).optional(),
+      utm_medium: z.string().max(120).optional(),
+      utm_campaign: z.string().max(160).optional(),
+      utm_content: z.string().max(200).optional(),
+      utm_term: z.string().max(160).optional(),
+      referrer: z.string().max(500).optional(),
+      landing_path: z.string().max(500).optional(),
+      channel: z
+        .enum(["direct", "organic_search", "ai_referral", "internal_blog", "external_referral", "paid", "social", "email", "other"])
+        .optional(),
+    })
+    .optional(),
 });
 
 export type AssessmentFormData = z.infer<typeof assessmentSchema>;

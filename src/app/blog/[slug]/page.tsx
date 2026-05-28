@@ -9,6 +9,7 @@ import { isValidElement, type ReactNode } from "react";
 import type { Metadata } from "next";
 import type { Components } from "react-markdown";
 import { ArticleJsonLd, BreadcrumbJsonLd, MedicalWebPageJsonLd, FAQJsonLd, HowToJsonLd } from "@/components/shared/json-ld";
+import { inferPillar, getPillarCta } from "@/lib/pillars";
 
 // ISR: published articles change rarely. revalidate alone is enough — we used
 // to also set dynamic = "force-static" for an extra perf nudge, but it
@@ -496,16 +497,35 @@ export default async function BlogPostPage({ params }: PageProps) {
           </p>
         </div>
 
-        {/* CTA */}
-        <div className="mt-8 md:mt-10 gradient-primary rounded-2xl p-6 md:p-8 text-center text-white">
-          <h3 className="text-headline-sm md:text-headline-md font-semibold">Need help finding treatment?</h3>
-          <p className="mt-2 text-xs md:text-sm text-white/70">Our specialists can guide you to the right center.</p>
-          <div className="mt-4 md:mt-5 flex justify-center">
-            <Button className="rounded-full bg-white text-foreground hover:bg-white/90" asChild>
-              <Link href="/assessment">Take Assessment</Link>
-            </Button>
-          </div>
-        </div>
+        {/* Contextual CTA — copy is keyed to this article's pillar so the
+            ask is specific ("Find dual-diagnosis-certified centers") instead
+            of the generic "Need help finding treatment?" we used to ship.
+            Carries a UTM tag so we can attribute assessment starts to the
+            blog → assessment funnel and rank pillars by conversion. */}
+        {(() => {
+          const pillar = inferPillar(post.title, undefined, post.tags as string[] | null);
+          const cta = getPillarCta(pillar.slug);
+          const assessmentHref = `/assessment?utm_source=blog&utm_medium=article_cta&utm_campaign=${pillar.slug}&utm_content=${encodeURIComponent(post.slug)}`;
+          return (
+            <div className="mt-8 md:mt-10 gradient-primary rounded-2xl p-6 md:p-8 text-center text-white">
+              <h3 className="text-headline-sm md:text-headline-md font-semibold">{cta.headline}</h3>
+              <p className="mt-2 text-xs md:text-sm text-white/80 max-w-md mx-auto leading-relaxed">
+                {cta.sub}
+              </p>
+              <div className="mt-4 md:mt-5 flex justify-center">
+                <Button className="rounded-full px-6 bg-white text-foreground hover:bg-white/90" asChild>
+                  <Link href={assessmentHref}>
+                    {cta.ctaLabel}
+                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+              <p className="mt-3 text-[11px] text-white/60">
+                Private &middot; 3–5 minutes &middot; no center contact without your consent
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Related Articles */}
         {related && related.length > 0 && (

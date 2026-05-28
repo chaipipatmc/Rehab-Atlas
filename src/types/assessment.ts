@@ -16,6 +16,27 @@ export interface AssessmentAnswers {
   contact_email: string;
   contact_name?: string;
   contact_phone?: string;
+  // Traffic attribution attached client-side at submit time. Stored inside
+  // the assessments.answers jsonb column; queried via answers->>'_source' in SQL.
+  _source?: {
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_content?: string;
+    utm_term?: string;
+    referrer?: string;
+    landing_path?: string;
+    channel?:
+      | "direct"
+      | "organic_search"
+      | "ai_referral"
+      | "internal_blog"
+      | "external_referral"
+      | "paid"
+      | "social"
+      | "email"
+      | "other";
+  };
 }
 
 export interface Assessment {

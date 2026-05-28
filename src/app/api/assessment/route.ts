@@ -144,6 +144,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Log traffic attribution for early conversion-by-source visibility.
+    // The same data lives in assessments.answers->'_source' for SQL queries.
+    if (answers._source) {
+      const s = answers._source;
+      console.log(
+        `[assessment ${assessment.id}] source=${s.channel ?? "unknown"}` +
+          (s.utm_source ? ` utm=${s.utm_source}/${s.utm_medium ?? ""}/${s.utm_campaign ?? ""}` : "") +
+          (s.referrer ? ` ref=${s.referrer.slice(0, 80)}` : "") +
+          (s.landing_path ? ` landed=${s.landing_path.slice(0, 80)}` : ""),
+      );
+    }
+
     // Fire-and-forget notifications — do not block response on email delivery
     const topMatch = primary[0];
     const topCenter = topMatch ? centersMap.get(topMatch.center_id) : null;

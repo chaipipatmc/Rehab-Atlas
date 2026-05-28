@@ -11,6 +11,7 @@ import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { logClaudeUsage } from "@/lib/api-usage";
 import { autoLinkArticle } from "@/lib/agents/auto-linker";
+import { inferPillar } from "@/lib/pillars";
 import {
   checkDuplicate,
   persistDedupVerdict,
@@ -188,43 +189,10 @@ function slugify(title: string): string {
     .slice(0, 80);
 }
 
-// ---- Pillar architecture (per CONTENT_STRATEGY.md §2-3) ---------------------
-// The 10 /rehab/[condition] pages are our pillar pages. Every blog spoke maps
-// to exactly one pillar and MUST link back to it. inferPillar() returns the
-// best match for a given topic title, falling back to dual-diagnosis (the
-// broadest medically meaningful pillar) when nothing else fits.
-
-const PILLAR_DEFS: { slug: string; title: string; keywords: string[] }[] = [
-  // Order matters — first match wins. Put more specific pillars before broader ones
-  // (opioid before drug-addiction, eating-disorders before mental-health, etc.).
-  { slug: "opioid-addiction", title: "Opioid Addiction Treatment", keywords: ["opioid", "opioids", "heroin", "fentanyl", "oxycodone", "buprenorphine", "methadone", "naltrexone", "mat ", "medication-assisted"] },
-  { slug: "prescription-drug-abuse", title: "Prescription Drug Abuse Treatment", keywords: ["prescription", "benzo", "benzodiazepine", "xanax", "valium", "klonopin", "painkiller", "adderall", "stimulant abuse"] },
-  { slug: "alcohol-addiction", title: "Alcohol Addiction Treatment", keywords: ["alcohol", "drinking", "aud ", "alcoholic", "alcoholism", "wine", "beer ", "binge drinking"] },
-  { slug: "trauma-ptsd", title: "Trauma & PTSD Treatment", keywords: ["trauma", "ptsd", "post-traumatic", "emdr", "aces", "abuse survivor", "complex trauma", "veteran"] },
-  { slug: "eating-disorders", title: "Eating Disorder Treatment", keywords: ["eating disorder", "anorexia", "bulimia", "binge eating", "body image", "purging"] },
-  { slug: "gambling-addiction", title: "Gambling Addiction Treatment", keywords: ["gambling", "betting", "casino"] },
-  { slug: "behavioral-addiction", title: "Behavioral Addiction Treatment", keywords: ["behavioral addiction", "process addiction", "internet addiction", "gaming", "porn", "sex addiction", "shopping addiction", "social media", "technology addiction"] },
-  { slug: "dual-diagnosis", title: "Dual Diagnosis Treatment", keywords: ["dual diagnosis", "co-occurring", "co occurring", "comorbid"] },
-  { slug: "mental-health", title: "Mental Health Treatment", keywords: ["mental health", "depression", "anxiety", "bipolar", "ocd", "psychiatric", "schizophrenia", "personality disorder"] },
-  { slug: "drug-addiction", title: "Drug Addiction Treatment", keywords: ["drug", "cocaine", "methamphetamine", "meth", "ice", "shabu", "ketamine", "mdma", "ecstasy", "cannabis", "marijuana", "kratom"] },
-];
-
-/**
- * Infer the target pillar page for a topic/category combination.
- * Returns the matching pillar (slug + title). Falls back to dual-diagnosis
- * (broadest medical scope) when nothing matches.
- *
- * See CONTENT_STRATEGY.md §3 for the policy.
- */
-export function inferPillar(topic: string, category?: string): { slug: string; title: string } {
-  const haystack = `${topic} ${category || ""}`.toLowerCase();
-  for (const p of PILLAR_DEFS) {
-    if (p.keywords.some((kw) => haystack.includes(kw))) {
-      return { slug: p.slug, title: p.title };
-    }
-  }
-  return { slug: "dual-diagnosis", title: "Dual Diagnosis Treatment" };
-}
+// Pillar architecture is shared with the blog reader so contextual CTAs stay
+// in lockstep with the content-agent's pillar mapping. See `src/lib/pillars.ts`
+// and CONTENT_STRATEGY.md §2-3.
+export { inferPillar } from "@/lib/pillars";
 
 /**
  * Get all image URLs already used in existing blog articles.

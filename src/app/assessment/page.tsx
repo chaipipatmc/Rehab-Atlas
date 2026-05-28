@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useAssessment } from "@/hooks/use-assessment";
+import { readTrafficSource } from "@/lib/traffic-source";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -51,11 +52,12 @@ export default function AssessmentPage() {
 
   async function handleSubmit() {
     setIsSubmitting(true);
+    const _source = readTrafficSource();
     try {
       const res = await fetch("/api/assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(answers),
+        body: JSON.stringify({ ...answers, ...(_source ? { _source } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) {
