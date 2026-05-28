@@ -189,7 +189,7 @@ export default async function CentersPage({ searchParams }: PageProps) {
                 <CenterSort />
               </Suspense>
               <Button className="rounded-full bg-white text-foreground hover:bg-white/90 transition-opacity duration-300" asChild>
-                <Link href="/assessment">Start Assessment</Link>
+                <Link href="/assessment">Start Confidential Assessment</Link>
               </Button>
             </div>
           </div>
@@ -218,16 +218,19 @@ export default async function CentersPage({ searchParams }: PageProps) {
 
           {/* Results */}
           <div className="flex-1">
-            {/* Results count */}
+            {/* Results count — only show when results exist; never lead with a bare zero */}
             <div className="flex items-center justify-between mb-6">
-              {count !== null && (
+              {count !== null && count > 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Found <span className="font-medium text-foreground">{count} Centers</span>
+                  <span className="font-medium text-foreground">{count}</span>{" "}
+                  {count === 1 ? "center" : "centers"} in our network
+                </p>
+              ) : <span />}
+              {count !== null && count > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Page {currentPage} of {totalPages || 1}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">
-                Page {currentPage} of {totalPages || 1}
-              </p>
             </div>
 
             {/* Grid */}
@@ -241,12 +244,25 @@ export default async function CentersPage({ searchParams }: PageProps) {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20">
-                <p className="text-headline-md text-foreground">
-                  No centers found
+              <div className="bg-surface-container-lowest rounded-2xl p-10 md:p-14 text-center shadow-ambient">
+                <h3 className="text-headline-md font-semibold text-foreground">
+                  We&apos;ll match you to centers that actually fit
+                </h3>
+                <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto leading-relaxed">
+                  No two recoveries are the same — and a directory alone can&apos;t tell you which centers
+                  match your situation, budget, and care level. The confidential assessment will surface
+                  the right shortlist for you.
                 </p>
-                <p className="text-sm text-muted-foreground mt-3">
-                  Try adjusting your filters or browse all centers.
+                <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button className="rounded-full px-7 gradient-primary text-white hover:opacity-90 transition-opacity duration-300" asChild>
+                    <Link href="/assessment">Start Confidential Assessment</Link>
+                  </Button>
+                  <Button variant="outline" className="rounded-full px-7 ghost-border border-0" asChild>
+                    <Link href="/centers">Clear filters</Link>
+                  </Button>
+                </div>
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Private &middot; takes 3–5 minutes &middot; no center contact without your consent
                 </p>
               </div>
             )}

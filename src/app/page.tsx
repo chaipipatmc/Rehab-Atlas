@@ -1,10 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Shield, Users, Compass, ArrowRight, BookOpen } from "lucide-react";
+import { Shield, Users, Compass, ArrowRight, BookOpen, ClipboardList, Stethoscope, MailCheck, Lock } from "lucide-react";
 import { createPublicClient } from "@/lib/supabase/server";
 import { FeaturedCarousel } from "@/components/centers/featured-carousel";
-import { HeroSearch } from "@/components/centers/hero-search";
 import { OrganizationJsonLd } from "@/components/shared/json-ld";
 
 // ISR: rebuild at most every 10 minutes. Home content depends on latest blog
@@ -40,6 +39,11 @@ export default async function HomePage() {
     verified_profile: boolean;
     photos: Array<{ url: string; alt_text: string | null }>;
   }> = [];
+
+  // Counts for the trust strip. We surface real numbers (published centers +
+  // distinct countries) so the homepage doesn't lean on vague badges.
+  let publishedCount = 0;
+  let countryCount = 0;
   try {
     const supabase = createPublicClient();
     const { data } = await supabase
@@ -48,6 +52,18 @@ export default async function HomePage() {
       .eq("status", "published")
       .limit(20);
     if (data) featuredCenters = (data as typeof featuredCenters).filter(c => c.photos && c.photos.length > 0);
+
+    const { count: totalPublished } = await supabase
+      .from("centers")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "published");
+    publishedCount = totalPublished || 0;
+
+    const { data: countryRows } = await supabase
+      .from("centers")
+      .select("country")
+      .eq("status", "published");
+    countryCount = countryRows ? new Set(countryRows.map((r) => r.country).filter(Boolean)).size : 0;
   } catch {
     // Supabase not configured yet
   }
@@ -70,7 +86,7 @@ export default async function HomePage() {
   return (
     <>
       <OrganizationJsonLd />
-      {/* Hero Section — with atmospheric background */}
+      {/* Hero Section — single primary CTA: Start Confidential Assessment */}
       <section className="relative min-h-[70vh] md:min-h-[85vh] flex items-center overflow-hidden">
         {/* Background image */}
         <div className="absolute inset-0">
@@ -82,90 +98,135 @@ export default async function HomePage() {
             priority
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/70 to-white/30" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/75 to-white/30" />
         </div>
 
         <div className="relative container mx-auto px-4 sm:px-6 py-12 md:py-20">
           <div className="max-w-xl">
-            <h1 className="text-display-md md:text-display-lg font-semibold text-foreground">
-              A Quiet Path{" "}
-              <br />
-              <em className="font-editorial italic text-primary">to Recovery</em>
+            <h1 className="text-display-md md:text-display-lg font-semibold text-foreground leading-tight">
+              Find the Right Rehab Center —{" "}
+              <em className="font-editorial italic text-primary">Confidentially</em>
             </h1>
             <p className="mt-6 text-base text-muted-foreground max-w-lg leading-relaxed">
-              Navigate the complexities of healing with absolute discretion.
-              We curate the world&apos;s most distinguished recovery centers,
-              acting as your personal advocate in the journey back to yourself.
+              Answer a few private questions and we&apos;ll match you with vetted treatment
+              centers based on your situation — for yourself or a loved one. Independent,
+              specialist-reviewed, and yours to control.
             </p>
 
-            {/* Search Bar — links to /centers with filters */}
-            <HeroSearch />
+            <div className="mt-8 md:mt-10 flex flex-col sm:flex-row gap-3">
+              <Button
+                className="rounded-full px-7 h-12 gradient-primary text-white hover:opacity-90 transition-opacity duration-300 shadow-md"
+                asChild
+              >
+                <Link href="/assessment">
+                  Start Confidential Assessment
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="rounded-full px-7 h-12 bg-white/80 backdrop-blur-sm border-0 ghost-border hover:bg-white transition-colors duration-300"
+                asChild
+              >
+                <Link href="/centers">Browse verified centers</Link>
+              </Button>
+            </div>
+
+            {/* Privacy reassurance — the single most important line on this page */}
+            <p className="mt-5 text-xs text-muted-foreground/90 max-w-md leading-relaxed">
+              <Lock className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5 text-primary" />
+              Private &middot; independent &middot; no center will contact you without your consent.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Featured Centers — only render when we have enough photographed centers */}
-      {featuredCenters.length >= FEATURED_MIN_COUNT && (
-        <section className="py-12 md:py-20 bg-surface-bright">
-          <div className="container mx-auto px-4 sm:px-6">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-10">
+      {/* Trust strip — concrete numbers anchor harder than abstract labels */}
+      {publishedCount > 0 && (
+        <section className="border-y border-[#e5e8ea] bg-surface-bright">
+          <div className="container mx-auto px-4 sm:px-6 py-6 md:py-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-4 text-center">
               <div>
-                <h2 className="text-headline-lg font-semibold text-foreground">
-                  Featured Centers
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground max-w-md">
-                  Exceptional facilities hand-selected for their clinical excellence and
-                  uncompromising privacy standards.
-                </p>
+                <p className="text-2xl md:text-3xl font-semibold font-serif text-primary">{publishedCount}</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Verified Centers</p>
               </div>
-              <Link href="/centers" className="hidden md:flex items-center gap-1 text-sm text-primary hover:text-primary-dim transition-colors duration-300">
-                View all centers
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            <FeaturedCarousel centers={featuredCenters} />
-
-            <div className="mt-6 md:hidden text-center">
-              <Link href="/centers" className="text-sm text-primary hover:text-primary-dim transition-colors duration-300">
-                View all centers &rarr;
-              </Link>
+              <div>
+                <p className="text-2xl md:text-3xl font-semibold font-serif text-primary">{countryCount || "—"}</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Countries</p>
+              </div>
+              <div>
+                <p className="text-2xl md:text-3xl font-semibold font-serif text-primary">0</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Facilities We Own</p>
+              </div>
+              <div>
+                <p className="text-2xl md:text-3xl font-semibold font-serif text-primary">100%</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Clinically Reviewed</p>
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* Unsure Where to Begin CTA — with background image */}
-      <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0">
-          <Image
-            src={HERO_IMAGES.unsure}
-            alt="Peaceful treatment setting"
-            className="w-full h-full object-cover"
-            fill
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-white/85 backdrop-blur-sm" />
-        </div>
-        <div className="relative container mx-auto px-6">
-          <div className="max-w-xl mx-auto text-center bg-white/60 backdrop-blur-md rounded-2xl p-10 shadow-ambient">
-            <h2 className="text-headline-md font-semibold text-foreground">
-              Unsure where to begin?
+      {/* How It Works — removes the "what happens after I submit?" blocker */}
+      <section className="py-16 md:py-24 bg-surface">
+        <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
+          <div className="text-center mb-12 md:mb-14">
+            <span className="text-xs uppercase tracking-widest text-primary font-medium">How It Works</span>
+            <h2 className="mt-2 text-headline-lg font-semibold text-foreground">
+              A quieter way to find the right care
             </h2>
-            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-              Our assessment provides comprehensive guidance, evaluating your specific needs
-              to find the right path forward.
+            <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              Three steps. No cold calls. You stay in control of every conversation.
             </p>
-            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-              <Button className="rounded-full px-6 bg-white text-foreground hover:bg-white/90 transition-opacity duration-300 shadow-md" asChild>
-                <Link href="/assessment">Consult a specialist</Link>
-              </Button>
-            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+            {[
+              {
+                icon: ClipboardList,
+                step: "01",
+                title: "Tell us what's happening",
+                desc: "A private 3–5 minute assessment covers the situation, condition, urgency, location, budget, and the level of care that fits.",
+              },
+              {
+                icon: Stethoscope,
+                step: "02",
+                title: "We review clinical fit",
+                desc: "Our specialists evaluate which centers in our network actually match — by care level, specialization, environment, and language.",
+              },
+              {
+                icon: MailCheck,
+                step: "03",
+                title: "You receive a private shortlist",
+                desc: "We send a hand-picked match list. You decide if, when, and how to make contact. No center hears from us without your consent.",
+              },
+            ].map((s) => (
+              <div key={s.step} className="bg-surface-container-lowest rounded-2xl p-6 md:p-7 shadow-ambient">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center">
+                    <s.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="font-editorial italic text-2xl text-primary/30">{s.step}</span>
+                </div>
+                <h3 className="font-serif text-lg font-semibold text-foreground">{s.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 md:mt-12 text-center">
+            <Button className="rounded-full px-7 h-12 gradient-primary text-white hover:opacity-90 transition-opacity duration-300" asChild>
+              <Link href="/assessment">
+                Start Confidential Assessment
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <p className="mt-3 text-xs text-muted-foreground">Takes 3–5 minutes &middot; your answers stay private</p>
           </div>
         </div>
       </section>
 
-      {/* Why Rehab-Atlas? — with photo on right */}
+      {/* Why Rehab-Atlas? */}
       <section className="py-12 md:py-20 bg-surface-bright">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-start">
@@ -215,7 +276,6 @@ export default async function HomePage() {
 
             {/* Photo + Quote card stack */}
             <div className="space-y-6">
-              {/* Atmospheric photo */}
               <div className="rounded-2xl overflow-hidden aspect-[4/3] relative">
                 <Image
                   src={HERO_IMAGES.quote}
@@ -226,7 +286,6 @@ export default async function HomePage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
               </div>
-              {/* Quote card */}
               <div className="bg-surface-container-low rounded-2xl p-8 ghost-border">
                 <p className="font-editorial italic text-lg text-foreground leading-relaxed">
                   &ldquo;Guiding you to the right center, with care.&rdquo;
@@ -239,6 +298,93 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Assessment Preview — what the form actually covers, before they commit */}
+      <section className="relative py-16 md:py-24 overflow-hidden">
+        <div className="absolute inset-0">
+          <Image
+            src={HERO_IMAGES.unsure}
+            alt="Peaceful treatment setting"
+            className="w-full h-full object-cover"
+            fill
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-white/88 backdrop-blur-sm" />
+        </div>
+        <div className="relative container mx-auto px-4 sm:px-6 max-w-3xl">
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-8 md:p-10 shadow-ambient">
+            <div className="text-center">
+              <h2 className="text-headline-md font-semibold text-foreground">
+                What the assessment covers
+              </h2>
+              <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
+                A short, private set of questions designed to surface the right centers — not to sell you on any of them.
+              </p>
+            </div>
+
+            <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+              {[
+                "Who needs help — you or a loved one",
+                "Primary concern (substance, mental health, dual diagnosis, trauma…)",
+                "Severity and co-occurring conditions",
+                "Urgency and whether medical detox is needed",
+                "Preferred country and treatment setting",
+                "Budget range and insurance situation",
+                "Privacy importance and family involvement",
+                "Where to send your private shortlist",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2 text-foreground/85">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <Button className="rounded-full px-7 h-12 gradient-primary text-white hover:opacity-90 transition-opacity duration-300" asChild>
+                <Link href="/assessment">
+                  Start Confidential Assessment
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground text-center">
+              <Lock className="inline h-3 w-3 mr-1 -mt-0.5 text-primary" />
+              Encrypted submission &middot; we don&apos;t sell your data &middot; you choose what happens next.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Centers — placed after guidance so visitors aren't comparing centers before they know what fits */}
+      {featuredCenters.length >= FEATURED_MIN_COUNT && (
+        <section className="py-12 md:py-20 bg-surface-bright">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-10">
+              <div>
+                <h2 className="text-headline-lg font-semibold text-foreground">
+                  Featured Centers
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                  Vetted facilities in our network. Specializations, settings, and care levels vary — the assessment surfaces which actually fit you.
+                </p>
+              </div>
+              <Link href="/centers" className="hidden md:flex items-center gap-1 text-sm text-primary hover:text-primary-dim transition-colors duration-300">
+                View all centers
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            <FeaturedCarousel centers={featuredCenters} />
+
+            <div className="mt-6 md:hidden text-center">
+              <Link href="/centers" className="text-sm text-primary hover:text-primary-dim transition-colors duration-300">
+                View all centers &rarr;
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Latest Articles */}
       {latestArticles.length > 0 && (
@@ -310,7 +456,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Bottom CTA — with full-width background image */}
+      {/* Bottom CTA — final assessment push */}
       <section className="relative py-16 md:py-28 overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -320,20 +466,26 @@ export default async function HomePage() {
             fill
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-black/55" />
         </div>
         <div className="relative container mx-auto px-6 text-center">
           <p className="text-xs uppercase tracking-widest text-white/60 mb-4">
-            Take the First Step
+            Not sure where to begin?
           </p>
           <h2 className="text-headline-lg md:text-display-md font-semibold text-white max-w-2xl mx-auto">
-            The path to healing is quiet. Let us help you find it.
+            Start here. We&apos;ll help you find the right place — quietly.
           </h2>
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button className="rounded-full px-8 h-12 bg-white text-foreground hover:bg-white/90 transition-opacity duration-300" asChild>
-              <Link href="/assessment">Consult a specialist</Link>
+              <Link href="/assessment">
+                Start Confidential Assessment
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </div>
+          <p className="mt-4 text-xs text-white/60">
+            Private &middot; independent &middot; no center contact without your consent
+          </p>
         </div>
       </section>
     </>
