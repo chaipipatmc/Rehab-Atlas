@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/footer";
 import { Analytics, CookieConsent } from "@/components/shared/analytics";
 import { PageTracker } from "@/components/shared/page-tracker";
 import { TrafficSourceCapture } from "@/components/shared/traffic-source-capture";
+import { AuthCodeCatcher } from "@/components/shared/auth-code-catcher";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
@@ -70,6 +71,7 @@ export default function RootLayout({
         <SpeedInsights />
         <PageTracker />
         <TrafficSourceCapture />
+        <AuthCodeCatcher />
         <CookieConsent />
       </body>
     </html>
