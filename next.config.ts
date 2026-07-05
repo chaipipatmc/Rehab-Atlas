@@ -2,12 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    // Restrict the optimizer to known hosts — a "**" wildcard lets anyone use
+    // /_next/image as an open proxy. Unknown hosts render with `unoptimized`
+    // via canOptimizeImage() in src/lib/images.ts.
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "images.pexels.com" },
     ],
+    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     return [

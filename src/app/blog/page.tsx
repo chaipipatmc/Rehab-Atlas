@@ -1,6 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
+import { canOptimizeImage } from "@/lib/images";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BookOpen } from "lucide-react";
 import type { Metadata } from "next";
@@ -117,10 +119,13 @@ export default async function BlogPage({
       {/* Hero with background image */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1600&q=80&auto=format&fit=crop"
             alt=""
-            className="w-full h-full object-cover object-center"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#45636b]/85 to-[#45636b]/60" />
         </div>
@@ -192,10 +197,13 @@ export default async function BlogPage({
               {/* Featured Image */}
               {featuredImage && (
                 <div className="aspect-[21/9] relative overflow-hidden">
-                  <img
+                  <Image
                     src={featuredImage}
                     alt={featured.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    fill
+                    sizes="(max-width: 896px) 100vw, 896px"
+                    unoptimized={!canOptimizeImage(featuredImage)}
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                   <span className="absolute top-4 left-4 text-[10px] uppercase tracking-wider bg-white/90 backdrop-blur-sm text-primary font-medium rounded-full px-3 py-1">
@@ -261,10 +269,13 @@ export default async function BlogPage({
                   {/* Card Image */}
                   {postImage && (
                     <div className="aspect-[16/9] relative overflow-hidden">
-                      <img
+                      <Image
                         src={postImage}
                         alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        fill
+                        sizes="(max-width: 640px) 100vw, 440px"
+                        unoptimized={!canOptimizeImage(postImage)}
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     </div>
                   )}

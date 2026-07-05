@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com").trim();
+import { BASE_URL } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {

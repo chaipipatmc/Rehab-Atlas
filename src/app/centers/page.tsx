@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createPublicClient } from "@/lib/supabase/server";
 import { CenterCard } from "@/components/centers/center-card";
 import { CenterFilters } from "@/components/centers/center-filters";
 import { CenterSort } from "@/components/centers/center-sort";
@@ -7,6 +8,7 @@ import { Pagination } from "@/components/shared/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import Image from "next/image";
 import type { Center } from "@/types/center";
 import type { Metadata } from "next";
 
@@ -21,13 +23,72 @@ export const metadata: Metadata = {
 
 const PAGE_SIZE = 12;
 
+// Facet options only change when centers are added/edited — cache for 5 min
+// instead of re-scanning the whole published table on every request.
+const getFilterOptions = unstable_cache(
+  async () => {
+    const supabase = createPublicClient();
+    const { data: filterData } = await supabase
+      .from("centers")
+      .select(
+        "country, treatment_focus, conditions, setting_type, insurance, who_we_treat, treatment_methods, languages, amenities"
+      )
+      .eq("status", "published");
+
+    const allCentersForFilters = filterData || [];
+
+    const toOption = (v: string) => ({
+      value: v,
+      label: v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    });
+
+    function extractUniqueValues(field: string): { value: string; label: string }[] {
+      const values = new Set<string>();
+      for (const center of allCentersForFilters) {
+        const arr = (center as Record<string, unknown>)[field];
+        if (Array.isArray(arr)) {
+          for (const v of arr) {
+            if (typeof v === "string" && v) values.add(v);
+          }
+        }
+      }
+      return [...values].sort().map(toOption);
+    }
+
+    function extractUniqueScalarValues(field: string): { value: string; label: string }[] {
+      const values = new Set<string>();
+      for (const center of allCentersForFilters) {
+        const val = (center as Record<string, unknown>)[field];
+        if (typeof val === "string" && val) values.add(val);
+      }
+      return [...values].sort().map(toOption);
+    }
+
+    return {
+      countries: [
+        ...new Set(allCentersForFilters.map((c) => c.country).filter(Boolean)),
+      ].sort() as string[],
+      treatmentFocusOptions: extractUniqueValues("treatment_focus"),
+      conditionOptions: extractUniqueValues("conditions"),
+      settingTypeOptions: extractUniqueScalarValues("setting_type"),
+      insuranceOptions: extractUniqueValues("insurance"),
+      whoWeTreatOptions: extractUniqueValues("who_we_treat"),
+      treatmentMethodOptions: extractUniqueValues("treatment_methods"),
+      languageOptions: extractUniqueValues("languages"),
+      amenityOptions: extractUniqueValues("amenities"),
+    };
+  },
+  ["centers-filter-options"],
+  { revalidate: 300 }
+);
+
 interface PageProps {
   searchParams: Promise<Record<string, string | undefined>>;
 }
 
 export default async function CentersPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const currentPage = Number(params.page) || 1;
   const offset = (currentPage - 1) * PAGE_SIZE;
 
@@ -110,66 +171,31 @@ export default async function CentersPage({ searchParams }: PageProps) {
   const { data: centers, count } = await query;
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
-  // Get distinct filter values from published centers
-  const { data: filterData } = await supabase
-    .from("centers")
-    .select("country, treatment_focus, conditions, setting_type, insurance, who_we_treat, treatment_methods, languages, amenities")
-    .eq("status", "published");
-
-  const allCentersForFilters = filterData || [];
-
-  const countries = [
-    ...new Set(allCentersForFilters.map((c) => c.country).filter(Boolean)),
-  ].sort();
-
-  // Helper to extract unique values from array columns
-  function extractUniqueValues(field: string): { value: string; label: string }[] {
-    const values = new Set<string>();
-    for (const center of allCentersForFilters) {
-      const arr = (center as Record<string, unknown>)[field];
-      if (Array.isArray(arr)) {
-        for (const v of arr) {
-          if (typeof v === "string" && v) values.add(v);
-        }
-      }
-    }
-    return [...values].sort().map((v) => ({
-      value: v,
-      label: v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-    }));
-  }
-
-  // Extract unique scalar values (like setting_type)
-  function extractUniqueScalarValues(field: string): { value: string; label: string }[] {
-    const values = new Set<string>();
-    for (const center of allCentersForFilters) {
-      const val = (center as Record<string, unknown>)[field];
-      if (typeof val === "string" && val) values.add(val);
-    }
-    return [...values].sort().map((v) => ({
-      value: v,
-      label: v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-    }));
-  }
-
-  const treatmentFocusOptions = extractUniqueValues("treatment_focus");
-  const conditionOptions = extractUniqueValues("conditions");
-  const settingTypeOptions = extractUniqueScalarValues("setting_type");
-  const insuranceOptions = extractUniqueValues("insurance");
-  const whoWeTreatOptions = extractUniqueValues("who_we_treat");
-  const treatmentMethodOptions = extractUniqueValues("treatment_methods");
-  const languageOptions = extractUniqueValues("languages");
-  const amenityOptions = extractUniqueValues("amenities");
+  // Distinct filter values — cached (5 min) rather than re-scanned per request
+  const {
+    countries,
+    treatmentFocusOptions,
+    conditionOptions,
+    settingTypeOptions,
+    insuranceOptions,
+    whoWeTreatOptions,
+    treatmentMethodOptions,
+    languageOptions,
+    amenityOptions,
+  } = await getFilterOptions();
 
   return (
     <div className="bg-surface min-h-screen">
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80&auto=format&fit=crop"
             alt="Peaceful rehabilitation center surrounded by nature"
-            className="w-full h-full object-cover object-center"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#45636b]/85 to-[#45636b]/60" />
         </div>

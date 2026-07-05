@@ -2,8 +2,10 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CONDITIONS } from "@/lib/conditions";
+import { BASE_URL } from "@/lib/site";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
 import { CenterCard } from "@/components/centers/center-card";
 import {
@@ -17,74 +19,17 @@ import type { Center, CenterPhoto } from "@/types/center";
 
 export const revalidate = 86400;
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com";
-
-// Condition definitions — keep in sync with /rehab/[condition]/page.tsx
+// Shared condition definitions (@/lib/conditions), adapted to the local shape
+// (short label + concise clinical description) used throughout this page.
 const CITY_CONDITIONS: Record<
   string,
   { label: string; description: string; filters: string[] }
-> = {
-  "alcohol-addiction": {
-    label: "Alcohol Addiction",
-    description:
-      "Alcohol addiction treatment combining medically supervised detox with behavioral therapy. Programs cover assessment, withdrawal management, individual and group therapy, and structured aftercare.",
-    filters: ["alcohol", "alcohol_addiction", "substance_abuse", "detox"],
-  },
-  "drug-addiction": {
-    label: "Drug Addiction",
-    description:
-      "Comprehensive drug addiction rehabilitation covering cocaine, methamphetamine, cannabis, and other illicit substances. Includes medically managed withdrawal and long-term recovery planning.",
-    filters: ["drug_addiction", "substance_abuse", "drugs"],
-  },
-  "opioid-addiction": {
-    label: "Opioid Addiction",
-    description:
-      "Specialized opioid addiction programs with medication-assisted treatment (MAT), safe detox protocols, and chronic pain alternatives.",
-    filters: ["opioid_addiction", "opioids", "substance_abuse", "detox"],
-  },
-  "dual-diagnosis": {
-    label: "Dual Diagnosis",
-    description:
-      "Integrated treatment for co-occurring substance use and mental health disorders, delivered by a coordinated psychiatric and addiction care team.",
-    filters: ["dual_diagnosis", "co_occurring", "mental_health"],
-  },
-  "mental-health": {
-    label: "Mental Health",
-    description:
-      "Residential and outpatient mental health treatment for depression, anxiety, bipolar disorder, and other psychiatric conditions.",
-    filters: ["mental_health", "depression", "anxiety", "psychiatric"],
-  },
-  "gambling-addiction": {
-    label: "Gambling Addiction",
-    description:
-      "Treatment for compulsive gambling using cognitive-behavioral therapy and co-occurring condition support.",
-    filters: ["gambling", "behavioral_addiction", "gambling_addiction"],
-  },
-  "prescription-drug-abuse": {
-    label: "Prescription Drug Abuse",
-    description:
-      "Medically supervised tapering and rehabilitation for benzodiazepine, opioid painkiller, and stimulant dependence.",
-    filters: ["prescription_drug_abuse", "prescription_drugs", "substance_abuse", "detox"],
-  },
-  "eating-disorders": {
-    label: "Eating Disorders",
-    description:
-      "Treatment for anorexia, bulimia, and binge eating disorder — nutritional rehabilitation alongside body image and psychiatric therapy.",
-    filters: ["eating_disorders", "eating_disorder", "anorexia", "bulimia"],
-  },
-  "trauma-ptsd": {
-    label: "Trauma & PTSD",
-    description:
-      "Trauma-informed care including EMDR, somatic experiencing, and prolonged exposure therapy in a secure residential setting.",
-    filters: ["trauma", "ptsd", "trauma_ptsd"],
-  },
-  "behavioral-addiction": {
-    label: "Behavioral Addiction",
-    description:
-      "Treatment for internet, gaming, sex, and shopping compulsions with trigger identification and reward-system restructuring.",
-    filters: ["behavioral_addiction", "process_addiction", "internet_addiction"],
-  },
-};
+> = Object.fromEntries(
+  Object.values(CONDITIONS).map((c) => [
+    c.slug,
+    { label: c.shortLabel, description: c.cityDescription, filters: c.filters },
+  ]),
+);
 
 interface PageProps {
   params: Promise<{ country: string; city: string; condition: string }>;
@@ -195,29 +140,19 @@ export default async function CityConditionPage({ params }: PageProps) {
   const cond = CITY_CONDITIONS[condSlug];
   if (!loc || !cond) notFound();
 
-  const supabase = await createClient();
+  // Cookieless client keeps this page eligible for ISR (revalidate above).
+  const supabase = createPublicClient();
 
-  // Fetch centers in this city matching ANY of the condition filters
-  const queries = cond.filters.map((f) =>
-    supabase
-      .from("centers")
-      .select("*, photos:center_photos(id, url, alt_text, sort_order, is_primary)")
-      .eq("status", "published")
-      .eq("country", loc.countryName)
-      .eq("city", loc.cityName)
-      .contains("treatment_focus", [f]),
-  );
-  const results = await Promise.all(queries);
-  const seen = new Set<string>();
-  const centers: (Center & { photos?: CenterPhoto[] })[] = [];
-  for (const r of results) {
-    for (const c of r.data || []) {
-      if (!seen.has(c.id as string)) {
-        seen.add(c.id as string);
-        centers.push(c as unknown as Center & { photos?: CenterPhoto[] });
-      }
-    }
-  }
+  // Single query: centers in this city matching ANY of the condition filters
+  const { data: centerRows } = await supabase
+    .from("centers")
+    .select("*, photos:center_photos(id, url, alt_text, sort_order, is_primary)")
+    .eq("status", "published")
+    .eq("country", loc.countryName)
+    .eq("city", loc.cityName)
+    .overlaps("treatment_focus", cond.filters);
+
+  const centers = (centerRows || []) as unknown as (Center & { photos?: CenterPhoto[] })[];
   centers.sort((a, b) => {
     if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
     return (b.editorial_overall ?? b.rating ?? 0) - (a.editorial_overall ?? a.rating ?? 0);

@@ -1,8 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { useCallback, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,7 +12,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
+
+// Human labels for active-filter chips
+const FILTER_LABELS: Record<string, string> = {
+  search: "Search",
+  country: "Country",
+  treatment_focus: "Focus",
+  condition: "Condition",
+  setting_type: "Setting",
+  insurance: "Insurance",
+  who_we_treat: "Who we treat",
+  treatment_methods: "Therapy",
+  languages: "Language",
+  amenities: "Amenity",
+  approaches: "Approach",
+  activities: "Activity",
+  accommodations: "Accommodation",
+  has_detox: "Detox",
+};
+
+function prettyValue(key: string, value: string): string {
+  if (key === "has_detox") return "Yes";
+  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 interface FilterOption {
   value: string;
@@ -60,11 +82,33 @@ export function CenterFilters({
     [router, searchParams]
   );
 
+  // Debounced search — the timer must live across renders or every keystroke
+  // triggers a navigation.
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+      searchTimer.current = setTimeout(() => {
+        updateFilter("search", value || null);
+      }, 400);
+    },
+    [updateFilter]
+  );
+  useEffect(() => {
+    return () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
+  }, []);
+
   const clearFilters = () => {
     router.push("/centers");
   };
 
-  const hasFilters = searchParams.toString().length > 0;
+  // Active filters (excluding paging/sorting) → removable chips
+  const activeFilters = [...searchParams.entries()].filter(
+    ([key]) => key !== "page" && key !== "sort"
+  );
+  const hasFilters = activeFilters.length > 0;
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient space-y-6">
@@ -80,6 +124,25 @@ export function CenterFilters({
         )}
       </div>
 
+      {/* Active filter chips — see + remove individual filters */}
+      {hasFilters && (
+        <div className="flex flex-wrap gap-1.5">
+          {activeFilters.map(([key, value]) => (
+            <button
+              key={key}
+              onClick={() => updateFilter(key, null)}
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium px-2.5 py-1 hover:bg-primary/20 transition-colors duration-300"
+              aria-label={`Remove filter ${FILTER_LABELS[key] || key}`}
+            >
+              <span>
+                {(FILTER_LABELS[key] || key)}: {prettyValue(key, value)}
+              </span>
+              <X className="h-3 w-3" />
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Search */}
       <div>
         <div className="relative">
@@ -87,12 +150,7 @@ export function CenterFilters({
           <Input
             placeholder="Search centers..."
             defaultValue={searchParams.get("search") || ""}
-            onChange={(e) => {
-              const timeout = setTimeout(() => {
-                updateFilter("search", e.target.value || null);
-              }, 300);
-              return () => clearTimeout(timeout);
-            }}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 bg-surface-container-low border-0 rounded-xl text-sm ghost-border focus:ring-1 focus:ring-primary/30"
           />
         </div>
@@ -314,10 +372,10 @@ export function CenterFilters({
         />
       </div>
 
-      {/* Apply Filters Button */}
-      <Button className="w-full rounded-full gradient-primary text-white hover:opacity-90 transition-opacity duration-300">
-        Apply Filters
-      </Button>
+      {/* Filters apply instantly on change — no submit button needed */}
+      <p className="text-[11px] text-muted-foreground text-center">
+        Filters apply automatically
+      </p>
     </div>
   );
 }

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
 
   // Rate limit: 10 subscriptions per hour per IP
   const ip = getClientIp(request);
-  const rl = rateLimit(`newsletter:${ip}`, { limit: 10, windowSeconds: 3600 });
+  const rl = await rateLimit(`newsletter:${ip}`, { limit: 10, windowSeconds: 3600 });
   if (!rl.success) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },

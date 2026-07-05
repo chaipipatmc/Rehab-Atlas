@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     // Rate limit: 60 events per minute per IP
     const ip = getClientIp(request);
-    const rl = rateLimit(`track:${ip}`, { limit: 60, windowSeconds: 60 });
+    const rl = await rateLimit(`track:${ip}`, { limit: 60, windowSeconds: 60 });
     if (!rl.success) return ok;
 
     // Parse and validate

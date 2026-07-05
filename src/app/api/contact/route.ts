@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
   // Rate limit: 5 contact messages per hour per IP
   const ip = getClientIp(request);
-  const rl = rateLimit(`contact:${ip}`, { limit: 5, windowSeconds: 3600 });
+  const rl = await rateLimit(`contact:${ip}`, { limit: 5, windowSeconds: 3600 });
   if (!rl.success) {
     return NextResponse.json(
       { error: "Too many messages. Please try again later." },

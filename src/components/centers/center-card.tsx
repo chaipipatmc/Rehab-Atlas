@@ -5,6 +5,7 @@ import { MapPin, Star, Shield, Info } from "lucide-react";
 import type { Center, CenterPhoto } from "@/types/center";
 import { TrackingLink } from "./tracking-link";
 import { countryToSlug } from "@/lib/utils";
+import { canOptimizeImage } from "@/lib/images";
 
 interface CenterCardProps {
   center: Center & { photos?: CenterPhoto[] };
@@ -19,10 +20,13 @@ export function CenterCard({ center }: CenterCardProps) {
       {/* Image */}
       <div className="relative aspect-[4/3] bg-surface-container overflow-hidden">
         {center.photos && center.photos[0] && (
-          <img
+          <Image
             src={center.photos[0].url}
             alt={center.photos[0].alt_text || center.name}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            unoptimized={!canOptimizeImage(center.photos[0].url)}
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

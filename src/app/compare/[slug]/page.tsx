@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
+import { canOptimizeImage } from "@/lib/images";
 import { Button } from "@/components/ui/button";
 import {
   MapPin,
@@ -24,8 +26,7 @@ export const revalidate = 86400;
 export const dynamicParams = true;
 
 const SEPARATOR = "-vs-";
-const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com";
+import { BASE_URL } from "@/lib/site";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -495,11 +496,13 @@ export default async function CompareSlugPage({ params }: PageProps) {
                 >
                   <div className="relative w-full aspect-[16/10] bg-surface-container rounded-xl overflow-hidden mb-4">
                     {photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={photo.url}
                         alt={photo.alt_text || center.name}
-                        className="absolute inset-0 w-full h-full object-cover"
+                        fill
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                        unoptimized={!canOptimizeImage(photo.url)}
+                        className="object-cover"
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">

@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     if (BOT_REGEX.test(ua)) return ok;
 
     const ip = getClientIp(request);
-    const rl = rateLimit(`pv:${ip}`, { limit: 30, windowSeconds: 60 });
+    const rl = await rateLimit(`pv:${ip}`, { limit: 30, windowSeconds: 60 });
     if (!rl.success) return ok;
 
     const body = await request.json();

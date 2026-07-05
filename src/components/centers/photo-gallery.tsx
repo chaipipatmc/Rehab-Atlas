@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { canOptimizeImage } from "@/lib/images";
 
 interface Photo {
   id: string;
@@ -64,10 +66,14 @@ export function PhotoGallery({ photos, centerName }: PhotoGalleryProps) {
             onClick={() => openLightbox(0)}
             className="w-full aspect-[16/10] rounded-2xl bg-surface-container overflow-hidden relative cursor-pointer"
           >
-            <img
+            <Image
               src={photos[0].url}
               alt={photos[0].alt_text || centerName}
-              className="absolute inset-0 w-full h-full object-cover"
+              fill
+              sizes="100vw"
+              priority
+              unoptimized={!canOptimizeImage(photos[0].url)}
+              className="object-cover"
             />
           </button>
           {/* Secondary: horizontal scroll row */}
@@ -80,10 +86,13 @@ export function PhotoGallery({ photos, centerName }: PhotoGalleryProps) {
                   onClick={() => openLightbox(i + 1)}
                   className="flex-shrink-0 w-40 h-28 rounded-xl bg-surface-container overflow-hidden relative cursor-pointer snap-start"
                 >
-                  <img
+                  <Image
                     src={photo.url}
                     alt={photo.alt_text || `${centerName} photo ${i + 2}`}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    fill
+                    sizes="160px"
+                    unoptimized={!canOptimizeImage(photo.url)}
+                    className="object-cover"
                   />
                   {i === photos.length - 2 && photos.length > 5 && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -103,10 +112,14 @@ export function PhotoGallery({ photos, centerName }: PhotoGalleryProps) {
             onClick={() => openLightbox(0)}
             className="col-span-2 row-span-2 rounded-2xl bg-surface-container overflow-hidden relative cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <img
+            <Image
               src={photos[0].url}
               alt={photos[0].alt_text || centerName}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority
+              unoptimized={!canOptimizeImage(photos[0].url)}
+              className="object-cover transition-transform duration-300 hover:scale-[1.02]"
             />
           </button>
           {photos.slice(1, 5).map((photo, i) => (
@@ -116,10 +129,13 @@ export function PhotoGallery({ photos, centerName }: PhotoGalleryProps) {
               onClick={() => openLightbox(i + 1)}
               className="rounded-2xl bg-surface-container overflow-hidden relative cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <img
+              <Image
                 src={photo.url}
                 alt={photo.alt_text || `${centerName} photo ${i + 2}`}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+                fill
+                sizes="25vw"
+                unoptimized={!canOptimizeImage(photo.url)}
+                className="object-cover transition-transform duration-300 hover:scale-[1.02]"
               />
               {i === 3 && photos.length > 5 && (
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center transition-colors duration-300 hover:bg-black/30">
@@ -178,10 +194,14 @@ export function PhotoGallery({ photos, centerName }: PhotoGalleryProps) {
 
           {/* Current photo */}
           <div className="relative z-10 max-w-[90vw] max-h-[85vh] flex items-center justify-center">
-            <img
+            <Image
               src={photos[currentIndex].url}
               alt={photos[currentIndex].alt_text || `${centerName} photo ${currentIndex + 1}`}
-              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl transition-opacity duration-300"
+              width={1600}
+              height={1067}
+              sizes="90vw"
+              unoptimized={!canOptimizeImage(photos[currentIndex].url)}
+              className="max-w-full max-h-[85vh] w-auto h-auto object-contain rounded-xl shadow-2xl transition-opacity duration-300"
             />
           </div>
 

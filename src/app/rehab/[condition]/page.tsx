@@ -1,123 +1,22 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
+import { canOptimizeImage } from "@/lib/images";
 import { countryToSlug } from "@/lib/utils";
+import { CONDITIONS, CONDITION_SLUGS, type ConditionDef } from "@/lib/conditions";
+import { BASE_URL } from "@/lib/site";
 import { CenterCard } from "@/components/centers/center-card";
 import { BreadcrumbJsonLd, MedicalWebPageJsonLd, FAQJsonLd } from "@/components/shared/json-ld";
 import { ArrowRight, BookOpen, Search, HeartPulse, MapPin } from "lucide-react";
 import type { Center, CenterPhoto } from "@/types/center";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
+// Revalidate daily — content only changes when centers/articles are added.
+export const revalidate = 86400;
 
-// ---------------------------------------------------------------------------
-// Condition data mappings
-// ---------------------------------------------------------------------------
-
-interface ConditionData {
-  title: string;
-  shortLabel: string; // used in cross-link cards
-  description: string;
-  relatedTags: string[];
-  centerFilter: string[];
-  related: string[]; // slugs of conceptually related conditions for internal linking
-}
-
-const CONDITIONS: Record<string, ConditionData> = {
-  "alcohol-addiction": {
-    title: "Alcohol Addiction Treatment",
-    shortLabel: "Alcohol Addiction",
-    description:
-      "Alcohol addiction is one of the most prevalent substance use disorders worldwide. Effective treatment combines medically supervised detoxification with behavioral therapies such as CBT and motivational interviewing. Recovery programs range from intensive inpatient stays to flexible outpatient options, each tailored to the severity of dependence.",
-    relatedTags: ["alcohol", "detox", "addiction", "substance abuse", "recovery"],
-    centerFilter: ["alcohol", "alcohol_addiction", "substance_abuse", "detox"],
-    related: ["drug-addiction", "prescription-drug-abuse", "dual-diagnosis", "trauma-ptsd"],
-  },
-  "drug-addiction": {
-    title: "Drug Addiction Treatment",
-    shortLabel: "Drug Addiction",
-    description:
-      "Drug addiction encompasses dependency on illicit substances including cocaine, methamphetamine, heroin, and synthetic drugs. Comprehensive rehabilitation addresses the physical, psychological, and social dimensions of dependency. Treatment typically includes medically managed withdrawal, individual and group counseling, and long-term aftercare planning.",
-    relatedTags: ["drugs", "substance abuse", "addiction", "rehabilitation", "recovery"],
-    centerFilter: ["drug_addiction", "substance_abuse", "drugs"],
-    related: ["alcohol-addiction", "opioid-addiction", "prescription-drug-abuse", "dual-diagnosis"],
-  },
-  "opioid-addiction": {
-    title: "Opioid Addiction Treatment",
-    shortLabel: "Opioid Addiction",
-    description:
-      "The opioid crisis demands specialized treatment approaches including medication-assisted therapy (MAT) with buprenorphine, methadone, or naltrexone. Centers specializing in opioid addiction provide safe detox protocols, chronic pain management alternatives, and evidence-based relapse prevention. Early intervention significantly improves long-term outcomes.",
-    relatedTags: ["opioids", "heroin", "fentanyl", "MAT", "detox", "addiction"],
-    centerFilter: ["opioid_addiction", "opioids", "substance_abuse", "detox"],
-    related: ["prescription-drug-abuse", "drug-addiction", "alcohol-addiction", "dual-diagnosis"],
-  },
-  "dual-diagnosis": {
-    title: "Dual Diagnosis Treatment",
-    shortLabel: "Dual Diagnosis",
-    description:
-      "Dual diagnosis — the co-occurrence of a substance use disorder and a mental health condition — requires integrated treatment that addresses both issues simultaneously. Without treating both conditions, recovery from either becomes significantly harder. Specialized programs employ psychiatrists, therapists, and addiction counselors working as a coordinated care team.",
-    relatedTags: ["dual diagnosis", "co-occurring", "mental health", "addiction", "psychiatric"],
-    centerFilter: ["dual_diagnosis", "co_occurring", "mental_health"],
-    related: ["mental-health", "trauma-ptsd", "alcohol-addiction", "drug-addiction"],
-  },
-  "mental-health": {
-    title: "Mental Health Treatment",
-    shortLabel: "Mental Health",
-    description:
-      "Residential and outpatient mental health treatment addresses conditions such as depression, anxiety, bipolar disorder, schizophrenia, and personality disorders. Programs combine psychiatric medication management with evidence-based psychotherapies including CBT, DBT, and EMDR. A supportive therapeutic environment is foundational to lasting mental wellness.",
-    relatedTags: ["mental health", "depression", "anxiety", "bipolar", "psychiatric", "therapy"],
-    centerFilter: ["mental_health", "depression", "anxiety", "psychiatric"],
-    related: ["dual-diagnosis", "trauma-ptsd", "eating-disorders", "behavioral-addiction"],
-  },
-  "gambling-addiction": {
-    title: "Gambling Addiction Treatment",
-    shortLabel: "Gambling Addiction",
-    description:
-      "Compulsive gambling is a behavioral addiction that can devastate finances, relationships, and mental health. Treatment centers use cognitive-behavioral therapy to restructure distorted thinking patterns around risk and reward. Programs also address co-occurring conditions like depression and anxiety that frequently accompany problem gambling.",
-    relatedTags: ["gambling", "behavioral addiction", "compulsive", "addiction"],
-    centerFilter: ["gambling", "behavioral_addiction", "gambling_addiction"],
-    related: ["behavioral-addiction", "mental-health", "dual-diagnosis", "alcohol-addiction"],
-  },
-  "prescription-drug-abuse": {
-    title: "Prescription Drug Abuse Treatment",
-    shortLabel: "Prescription Drug Abuse",
-    description:
-      "Prescription drug abuse involves dependency on medications such as benzodiazepines, opioid painkillers, and stimulants. Because abrupt cessation can be medically dangerous, treatment requires carefully supervised tapering protocols alongside therapeutic support. Rehabilitation centers help patients develop non-pharmacological coping strategies and pain management techniques.",
-    relatedTags: ["prescription drugs", "benzodiazepines", "painkillers", "medication", "detox"],
-    centerFilter: ["prescription_drug_abuse", "prescription_drugs", "substance_abuse", "detox"],
-    related: ["opioid-addiction", "drug-addiction", "alcohol-addiction", "dual-diagnosis"],
-  },
-  "eating-disorders": {
-    title: "Eating Disorder Treatment",
-    shortLabel: "Eating Disorders",
-    description:
-      "Eating disorders — including anorexia nervosa, bulimia, and binge eating disorder — are serious conditions that affect both physical and mental health. Specialized treatment centers offer nutritional rehabilitation, body image therapy, and structured meal support alongside psychiatric care. Early, comprehensive treatment leads to the best recovery outcomes.",
-    relatedTags: ["eating disorders", "anorexia", "bulimia", "body image", "nutrition"],
-    centerFilter: ["eating_disorders", "eating_disorder", "anorexia", "bulimia"],
-    related: ["mental-health", "trauma-ptsd", "dual-diagnosis", "behavioral-addiction"],
-  },
-  "trauma-ptsd": {
-    title: "Trauma & PTSD Treatment",
-    shortLabel: "Trauma & PTSD",
-    description:
-      "Trauma-informed care is essential for individuals living with PTSD, complex trauma, or the lingering effects of abuse and adverse experiences. Evidence-based modalities like EMDR, somatic experiencing, and prolonged exposure therapy help process traumatic memories safely. Residential programs provide a secure environment for deep healing work.",
-    relatedTags: ["trauma", "PTSD", "EMDR", "abuse", "therapy", "mental health"],
-    centerFilter: ["trauma", "ptsd", "trauma_ptsd"],
-    related: ["mental-health", "dual-diagnosis", "eating-disorders", "alcohol-addiction"],
-  },
-  "behavioral-addiction": {
-    title: "Behavioral Addiction Treatment",
-    shortLabel: "Behavioral Addiction",
-    description:
-      "Behavioral or process addictions — such as internet, gaming, sex, and shopping compulsions — share neurological pathways with substance addictions. Treatment focuses on identifying triggers, restructuring compulsive behaviors, and building healthier reward systems. Centers offering behavioral addiction programs integrate individual therapy, group work, and digital wellness strategies.",
-    relatedTags: ["behavioral addiction", "internet addiction", "gaming", "compulsive", "process addiction"],
-    centerFilter: ["behavioral_addiction", "process_addiction", "internet_addiction"],
-    related: ["gambling-addiction", "mental-health", "eating-disorders", "dual-diagnosis"],
-  },
-};
-
-const CONDITION_SLUGS = Object.keys(CONDITIONS);
+// Condition data lives in the shared module (@/lib/conditions) so this page,
+// the city × condition pages, and the sitemap can never drift apart.
 
 // ---------------------------------------------------------------------------
 // Static params for pre-rendering
@@ -143,6 +42,9 @@ export async function generateMetadata({
   return {
     title: `${data.title} Centers | Rehab-Atlas`,
     description: data.description,
+    alternates: {
+      canonical: `${BASE_URL}/rehab/${condition}`,
+    },
     openGraph: {
       title: `${data.title} Centers | Rehab-Atlas`,
       description: data.description,
@@ -181,38 +83,19 @@ export default async function ConditionPage({
   const data = CONDITIONS[condition];
   if (!data) notFound();
 
-  const supabase = await createClient();
+  // Cookieless client keeps this page statically rendered (ISR via revalidate).
+  const supabase = createPublicClient();
 
-  // Fetch centers whose treatment_focus overlaps with our filter values
-  const centerPromises = data.centerFilter.map((filter) =>
-    supabase
-      .from("centers")
-      .select("*, photos:center_photos(*)")
-      .eq("status", "published")
-      .contains("treatment_focus", [filter])
-  );
+  // Single query: centers whose treatment_focus overlaps ANY filter token
+  const { data: centerRows } = await supabase
+    .from("centers")
+    .select("*, photos:center_photos(*)")
+    .eq("status", "published")
+    .overlaps("treatment_focus", data.filters)
+    .order("is_featured", { ascending: false })
+    .order("rating", { ascending: false, nullsFirst: false });
 
-  const centerResults = await Promise.all(centerPromises);
-
-  // Deduplicate centers by id
-  const seenIds = new Set<string>();
-  const centers: (Center & { photos?: CenterPhoto[] })[] = [];
-  for (const result of centerResults) {
-    if (result.data) {
-      for (const center of result.data) {
-        if (!seenIds.has(center.id)) {
-          seenIds.add(center.id);
-          centers.push(center as Center & { photos?: CenterPhoto[] });
-        }
-      }
-    }
-  }
-
-  // Sort: featured first, then by rating
-  centers.sort((a, b) => {
-    if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
-    return (b.rating ?? 0) - (a.rating ?? 0);
-  });
+  const centers = (centerRows || []) as (Center & { photos?: CenterPhoto[] })[];
 
   // Aggregate country distribution from matching centers (for Locations section).
   // Uses the same set already loaded above — no extra DB call.
@@ -264,7 +147,7 @@ export default async function ConditionPage({
   // Resolve related conditions (filter out missing slugs defensively)
   const relatedConditions = data.related
     .map((slug) => ({ slug, data: CONDITIONS[slug] }))
-    .filter((r): r is { slug: string; data: ConditionData } => Boolean(r.data));
+    .filter((r): r is { slug: string; data: ConditionDef } => Boolean(r.data));
 
   // Auto-generated FAQs for FAQPage JSON-LD (AISO). Generic but condition-aware.
   const conditionLower = data.shortLabel.toLowerCase();
@@ -312,10 +195,13 @@ export default async function ConditionPage({
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80&auto=format&fit=crop"
             alt=""
-            className="w-full h-full object-cover object-center"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#45636b]/90 to-[#45636b]/65" />
         </div>
@@ -348,7 +234,7 @@ export default async function ConditionPage({
               Take Assessment
             </Link>
             <Link
-              href={`/centers?treatment_focus=${encodeURIComponent(data.centerFilter[0])}`}
+              href={`/centers?treatment_focus=${encodeURIComponent(data.filters[0])}`}
               className="inline-flex items-center gap-1.5 justify-center rounded-full bg-white/15 backdrop-blur-sm text-white hover:bg-white/25 transition-colors duration-300 px-5 py-2 text-sm font-medium"
             >
               <Search className="h-3.5 w-3.5" />
@@ -400,7 +286,7 @@ export default async function ConditionPage({
           {centers.length > 9 && (
             <div className="mt-8 text-center">
               <Link
-                href={`/centers?treatment_focus=${encodeURIComponent(data.centerFilter[0])}`}
+                href={`/centers?treatment_focus=${encodeURIComponent(data.filters[0])}`}
                 className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
               >
                 View all {centers.length} centers{" "}
@@ -432,10 +318,13 @@ export default async function ConditionPage({
                   >
                     {postImage && (
                       <div className="aspect-[16/9] relative overflow-hidden">
-                        <img
+                        <Image
                           src={postImage}
                           alt={post.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          unoptimized={!canOptimizeImage(postImage)}
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       </div>
                     )}

@@ -1,15 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createPublicClient } from "@/lib/supabase/server";
 import { countryToSlug } from "@/lib/utils";
+import { BASE_URL } from "@/lib/site";
 import { BreadcrumbJsonLd } from "@/components/shared/json-ld";
 import { Button } from "@/components/ui/button";
 import { Globe, Building2, ArrowRight, MapPin, Clock } from "lucide-react";
 
-// Force dynamic rendering — the admin client requires SUPABASE_SERVICE_ROLE_KEY
-// which isn't available during static prerender at build time. ISR cache stays
-// effective via the route segment cache.
-export const dynamic = "force-dynamic";
+// ISR — statically rendered, refreshed hourly.
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -20,11 +19,11 @@ export const metadata: Metadata = {
     title: "Rehab Destinations Worldwide | Rehab-Atlas",
     description:
       "Explore world-class rehabilitation centers across top recovery destinations.",
-    url: "https://rehab-atlas.vercel.app/rehab-in",
+    url: `${BASE_URL}/rehab-in`,
     type: "website",
   },
   alternates: {
-    canonical: "https://rehab-atlas.vercel.app/rehab-in",
+    canonical: `${BASE_URL}/rehab-in`,
   },
 };
 
@@ -36,14 +35,24 @@ interface CountryWithCount {
 }
 
 export default async function RehabDestinationsPage() {
-  const admin = createAdminClient();
-
   // Pull all centers and bucket by country, splitting verified (published)
   // counts from coming-soon (draft-only) ones so newly imported countries
-  // still appear in the directory.
-  const { data: centerData } = await admin
-    .from("centers")
-    .select("country, status");
+  // still appear in the directory. Draft rows need the service role; if the
+  // key is unavailable (e.g. local build), fall back to published-only via
+  // the anon client so the page still statically renders.
+  let centerData: { country: string | null; status: string }[] | null = null;
+  try {
+    const admin = createAdminClient();
+    ({ data: centerData } = await admin
+      .from("centers")
+      .select("country, status"));
+  } catch {
+    const { data } = await createPublicClient()
+      .from("centers")
+      .select("country, status")
+      .eq("status", "published");
+    centerData = data;
+  }
 
   const publishedByName: Record<string, number> = {};
   const draftOnlyNames = new Set<string>();
@@ -72,9 +81,6 @@ export default async function RehabDestinationsPage() {
       if (a.comingSoon !== b.comingSoon) return a.comingSoon ? 1 : -1;
       return b.count - a.count;
     });
-
-  const BASE_URL =
-    process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
 
   return (
     <div className="bg-surface min-h-screen">

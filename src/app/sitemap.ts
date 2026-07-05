@@ -1,22 +1,13 @@
 import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
+import { CONDITIONS, CONDITION_SLUGS } from "@/lib/conditions";
+import { BASE_URL } from "@/lib/site";
 
-// Keep in sync with /rehab-in/[country]/[city]/[condition]/page.tsx
-const CITY_CONDITION_DEFS: { slug: string; filters: string[] }[] = [
-  { slug: "alcohol-addiction", filters: ["alcohol", "alcohol_addiction", "substance_abuse", "detox"] },
-  { slug: "drug-addiction", filters: ["drug_addiction", "substance_abuse", "drugs"] },
-  { slug: "opioid-addiction", filters: ["opioid_addiction", "opioids", "substance_abuse", "detox"] },
-  { slug: "dual-diagnosis", filters: ["dual_diagnosis", "co_occurring", "mental_health"] },
-  { slug: "mental-health", filters: ["mental_health", "depression", "anxiety", "psychiatric"] },
-  { slug: "gambling-addiction", filters: ["gambling", "behavioral_addiction", "gambling_addiction"] },
-  { slug: "prescription-drug-abuse", filters: ["prescription_drug_abuse", "prescription_drugs", "substance_abuse", "detox"] },
-  { slug: "eating-disorders", filters: ["eating_disorders", "eating_disorder", "anorexia", "bulimia"] },
-  { slug: "trauma-ptsd", filters: ["trauma", "ptsd", "trauma_ptsd"] },
-  { slug: "behavioral-addiction", filters: ["behavioral_addiction", "process_addiction", "internet_addiction"] },
-];
-
-const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com").trim();
+// Shared condition definitions — same source the pages use, so we only emit
+// URLs that will actually render with ≥1 center.
+const CITY_CONDITION_DEFS: { slug: string; filters: string[] }[] =
+  Object.values(CONDITIONS).map((c) => ({ slug: c.slug, filters: c.filters }));
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
@@ -31,19 +22,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/partner/join`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
   ];
 
-  // Rehab condition pages
-  const conditionSlugs = [
-    "alcohol-addiction",
-    "drug-addiction",
-    "opioid-addiction",
-    "dual-diagnosis",
-    "mental-health",
-    "gambling-addiction",
-    "prescription-drug-abuse",
-    "eating-disorders",
-    "trauma-ptsd",
-    "behavioral-addiction",
-  ];
+  // Rehab condition pages — from the shared module
+  const conditionSlugs = CONDITION_SLUGS;
 
   const rehabPages: MetadataRoute.Sitemap = [
     {

@@ -1,5 +1,4 @@
-const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
+import { BASE_URL } from "@/lib/site";
 
 export function OrganizationJsonLd() {
   const data = {

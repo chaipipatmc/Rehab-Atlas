@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Shield, ArrowRight, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { canOptimizeImage } from "@/lib/images";
 
 interface FeaturedCenter {
   id: string;
@@ -77,10 +79,13 @@ export function FeaturedCarousel({ centers }: FeaturedCarouselProps) {
           className="lg:col-span-2 relative rounded-2xl overflow-hidden aspect-[16/10] bg-surface-container group"
         >
           {mainCenter.photos?.[0] && (
-            <img
+            <Image
               src={mainCenter.photos[0].url}
               alt={mainCenter.name}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              fill
+              sizes="(max-width: 1024px) 100vw, 66vw"
+              unoptimized={!canOptimizeImage(mainCenter.photos[0].url)}
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -116,10 +121,13 @@ export function FeaturedCarousel({ centers }: FeaturedCarouselProps) {
               className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-surface-container group"
             >
               {sideCenter.photos?.[0] && (
-                <img
+                <Image
                   src={sideCenter.photos[0].url}
                   alt={sideCenter.name}
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 33vw"
+                  unoptimized={!canOptimizeImage(sideCenter.photos[0].url)}
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
@@ -142,7 +150,14 @@ export function FeaturedCarousel({ centers }: FeaturedCarouselProps) {
                 .map((c) => (
                   <Link key={c.id} href={`/centers/${c.slug}`} className="relative aspect-[4/3] rounded-lg overflow-hidden bg-surface-container group">
                     {c.photos?.[0] && (
-                      <img src={c.photos[0].url} alt={c.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <Image
+                        src={c.photos[0].url}
+                        alt={c.name}
+                        fill
+                        sizes="(max-width: 1024px) 50vw, 16vw"
+                        unoptimized={!canOptimizeImage(c.photos[0].url)}
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                     <p className="absolute bottom-1.5 left-2 right-1 text-[9px] text-white font-medium truncate">{c.name}</p>

@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { BASE_URL } from "@/lib/site";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
+import { canOptimizeImage } from "@/lib/images";
 import { CenterCard } from "@/components/centers/center-card";
 import {
   BreadcrumbJsonLd,
@@ -124,7 +127,7 @@ async function getOrGenerateContent(
   countryName: string,
   countrySlug: string
 ): Promise<CountryContent> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const admin = createAdminClient();
 
   // 1. Check DB cache
@@ -325,7 +328,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      url: `https://rehab-atlas.com/rehab-in/${slug}`,
+      url: `${BASE_URL}/rehab-in/${slug}`,
       type: "website",
       siteName: "Rehab-Atlas",
     },
@@ -335,7 +338,7 @@ export async function generateMetadata({
       description,
     },
     alternates: {
-      canonical: `https://rehab-atlas.com/rehab-in/${slug}`,
+      canonical: `${BASE_URL}/rehab-in/${slug}`,
     },
   };
 }
@@ -349,7 +352,8 @@ export default async function CountryRehabPage({ params }: PageProps) {
   const countryName = await resolveCountry(slug);
   if (!countryName) notFound();
 
-  const supabase = await createClient();
+  // Cookieless client keeps this page eligible for ISR (revalidate above).
+  const supabase = createPublicClient();
 
   // Fetch content + centers + blog posts in parallel
   const [content, centersResult, postsResult] = await Promise.all([
@@ -380,7 +384,6 @@ export default async function CountryRehabPage({ params }: PageProps) {
   const { paragraphs, highlights, images } = content;
   const centers = centersResult.data;
   const posts = postsResult.data;
-  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com";
   const centerCount = centers?.length ?? 0;
   const heroImage = images[0] ?? null;
 
@@ -415,10 +418,13 @@ export default async function CountryRehabPage({ params }: PageProps) {
         <div className="absolute inset-0">
           {heroImage ? (
             <>
-              <img
+              <Image
                 src={heroImage.url}
                 alt={heroImage.alt}
-                className="w-full h-full object-cover"
+                fill
+                sizes="100vw"
+                unoptimized={!canOptimizeImage(heroImage.url)}
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-[#45636b]/90 via-[#45636b]/70 to-[#45636b]/40" />
             </>
@@ -518,11 +524,14 @@ export default async function CountryRehabPage({ params }: PageProps) {
                 {image && (
                   <div className="flex-1 w-full">
                     <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-ambient-lg">
-                      <img
+                      <Image
                         src={image.url}
                         alt={image.alt}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
                         loading={i === 0 ? "eager" : "lazy"}
-                        className="w-full h-full object-cover"
+                        unoptimized={!canOptimizeImage(image.url)}
+                        className="object-cover"
                       />
                     </div>
                     <p className="text-[10px] text-muted-foreground/50 mt-2 text-right">
@@ -699,11 +708,13 @@ export default async function CountryRehabPage({ params }: PageProps) {
                 >
                   {featuredImage && (
                     <div className="relative aspect-[16/9] bg-surface-container overflow-hidden">
-                      <img
+                      <Image
                         src={featuredImage}
                         alt={post.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        unoptimized={!canOptimizeImage(featuredImage)}
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     </div>
                   )}

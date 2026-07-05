@@ -1,10 +1,10 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { BreadcrumbJsonLd } from "@/components/shared/json-ld";
 import { ArrowRight, Heart, Brain, Pill, Shield, Dices, Utensils, Flame, Puzzle } from "lucide-react";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
+import { BASE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Treatment Conditions | Rehab-Atlas",
@@ -111,10 +111,13 @@ export default function RehabDirectoryPage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80&auto=format&fit=crop"
             alt=""
-            className="w-full h-full object-cover object-center"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#45636b]/90 to-[#45636b]/65" />
         </div>

@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   // Rate limit: 3 partner requests per hour per IP
   const ip = getClientIp(request);
-  const rl = rateLimit(`partner-req:${ip}`, { limit: 3, windowSeconds: 3600 });
+  const rl = await rateLimit(`partner-req:${ip}`, { limit: 3, windowSeconds: 3600 });
   if (!rl.success) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },

@@ -8,6 +8,8 @@ import { PageTracker } from "@/components/shared/page-tracker";
 import { TrafficSourceCapture } from "@/components/shared/traffic-source-capture";
 import { AuthCodeCatcher } from "@/components/shared/auth-code-catcher";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
+import { BASE_URL } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -23,6 +25,7 @@ const notoSerif = Noto_Serif({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(BASE_URL),
   title: {
     default: "Rehab-Atlas — A Digital Sanctuary for Recovery",
     template: "%s | Rehab-Atlas",
@@ -69,6 +72,7 @@ export default function RootLayout({
         <Toaster />
         <Analytics />
         <SpeedInsights />
+        <VercelAnalytics />
         <PageTracker />
         <TrafficSourceCapture />
         <AuthCodeCatcher />

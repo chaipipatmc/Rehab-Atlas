@@ -5,6 +5,7 @@ import { Shield, Users, Compass, ArrowRight, BookOpen, ClipboardList, Stethoscop
 import { createPublicClient } from "@/lib/supabase/server";
 import { FeaturedCarousel } from "@/components/centers/featured-carousel";
 import { OrganizationJsonLd } from "@/components/shared/json-ld";
+import { canOptimizeImage } from "@/lib/images";
 
 // ISR: rebuild at most every 10 minutes. Home content depends on latest blog
 // articles + featured centers, both of which change at most a few times per
@@ -418,7 +419,14 @@ export default async function HomePage() {
                   >
                     {image && (
                       <div className="aspect-[16/9] relative overflow-hidden">
-                        <img src={image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <Image
+                          src={image}
+                          alt={post.title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          unoptimized={!canOptimizeImage(image)}
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
                       </div>
                     )}
                     <div className="p-5">

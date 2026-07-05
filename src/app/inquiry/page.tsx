@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import { cookies } from "next/headers";
 import { createHmac } from "crypto";
 import { createClient } from "@/lib/supabase/server";
@@ -133,10 +134,13 @@ export default async function InquiryPage({ searchParams }: PageProps) {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1516302752625-fcc3c50ae61f?w=1600&q=80&auto=format&fit=crop"
             alt=""
-            className="w-full h-full object-cover object-center"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[#45636b]/80 to-[#45636b]/90" />
         </div>

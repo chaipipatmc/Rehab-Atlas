@@ -1,6 +1,9 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createPublicClient } from "@/lib/supabase/server";
+import { canOptimizeImage } from "@/lib/images";
+import { BASE_URL } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -165,6 +168,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: post.meta_title || post.title,
     description: post.meta_description || undefined,
+    alternates: {
+      canonical: `${BASE_URL}/blog/${slug}`,
+    },
     openGraph: {
       type: "article",
       ...(post.published_at ? { publishedTime: post.published_at } : {}),
@@ -251,7 +257,7 @@ const blogMdComponents: Components = {
   ),
   hr: () => <hr className="border-[#e0e4e6] my-10" />,
   img: ({ src, alt }) => (
-    <img src={src} alt={alt || ""} className="rounded-xl shadow-md my-6 w-full" />
+    <img src={src} alt={alt || ""} loading="lazy" decoding="async" className="rounded-xl shadow-md my-6 w-full" />
   ),
 };
 
@@ -271,12 +277,11 @@ export default async function BlogPostPage({ params }: PageProps) {
     // Article isn't currently published. Check the redirects table — if this
     // slug was merged into another canonical article (auto-dedup cleanup),
     // 301 to the canonical slug to preserve SEO link equity.
-    const { data: redirect, error: redirErr } = await supabase
+    const { data: redirect } = await supabase
       .from("blog_redirects")
       .select("target_slug")
       .eq("slug", slug)
       .maybeSingle();
-    console.log(`DBG slug=${slug} redirect=${JSON.stringify(redirect)} err=${redirErr?.message ?? "none"}`);
     if (redirect?.target_slug) {
       permanentRedirect(`/blog/${redirect.target_slug}`);
     }
@@ -305,8 +310,6 @@ export default async function BlogPostPage({ params }: PageProps) {
     .order("published_at", { ascending: false })
     .limit(3);
 
-  const BASE_URL =
-    process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
 
   return (
     <div className="bg-surface min-h-screen">
@@ -367,10 +370,14 @@ export default async function BlogPostPage({ params }: PageProps) {
       {featuredImage && (
         <div className="container mx-auto px-4 sm:px-6 max-w-3xl">
           <div className="relative w-full aspect-[2/1] max-h-[320px] rounded-2xl overflow-hidden">
-            <img
+            <Image
               src={featuredImage}
               alt={featuredAlt || post.title}
-              className="w-full h-full object-cover object-center"
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              priority
+              unoptimized={!canOptimizeImage(featuredImage)}
+              className="object-cover object-center"
             />
           </div>
         </div>
@@ -543,8 +550,15 @@ export default async function BlogPostPage({ params }: PageProps) {
                     className="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-ambient hover:shadow-ambient-lg transition-all duration-300"
                   >
                     {relImage && (
-                      <div className="aspect-[16/9] overflow-hidden">
-                        <img src={relImage.url} alt={relImage.alt || r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <div className="relative aspect-[16/9] overflow-hidden">
+                        <Image
+                          src={relImage.url}
+                          alt={relImage.alt || r.title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, 250px"
+                          unoptimized={!canOptimizeImage(relImage.url)}
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
                       </div>
                     )}
                     <div className="p-4">

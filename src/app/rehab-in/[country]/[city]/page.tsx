@@ -2,8 +2,10 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CONDITIONS } from "@/lib/conditions";
+import { BASE_URL } from "@/lib/site";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
 import { CenterCard } from "@/components/centers/center-card";
 import {
@@ -17,22 +19,14 @@ import type { Center, CenterPhoto } from "@/types/center";
 
 export const revalidate = 86400; // 24h
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com";
-
-// 10 conditions taken from /rehab/[condition]/page.tsx — keep in sync.
-// Used to surface city × condition cross-links at the bottom of the city page.
-const CONDITIONS_FOR_LINKS: { slug: string; label: string; filters: string[] }[] = [
-  { slug: "alcohol-addiction", label: "Alcohol Addiction", filters: ["alcohol", "alcohol_addiction"] },
-  { slug: "drug-addiction", label: "Drug Addiction", filters: ["drug_addiction", "substance_abuse", "drugs"] },
-  { slug: "opioid-addiction", label: "Opioid Addiction", filters: ["opioid_addiction", "opioids"] },
-  { slug: "dual-diagnosis", label: "Dual Diagnosis", filters: ["dual_diagnosis", "co_occurring"] },
-  { slug: "mental-health", label: "Mental Health", filters: ["mental_health", "depression", "anxiety"] },
-  { slug: "gambling-addiction", label: "Gambling Addiction", filters: ["gambling", "behavioral_addiction"] },
-  { slug: "prescription-drug-abuse", label: "Prescription Drug Abuse", filters: ["prescription_drug_abuse", "prescription_drugs"] },
-  { slug: "eating-disorders", label: "Eating Disorders", filters: ["eating_disorders", "eating_disorder"] },
-  { slug: "trauma-ptsd", label: "Trauma & PTSD", filters: ["trauma", "ptsd", "trauma_ptsd"] },
-  { slug: "behavioral-addiction", label: "Behavioral Addiction", filters: ["behavioral_addiction", "process_addiction"] },
-];
+// Shared condition definitions (@/lib/conditions) drive the city × condition
+// cross-links so this page, the condition pages, and the sitemap never drift.
+const CONDITIONS_FOR_LINKS: { slug: string; label: string; filters: string[] }[] =
+  Object.values(CONDITIONS).map((c) => ({
+    slug: c.slug,
+    label: c.shortLabel,
+    filters: c.filters,
+  }));
 
 interface PageProps {
   params: Promise<{ country: string; city: string }>;
@@ -127,7 +121,8 @@ export default async function CityRehabPage({ params }: PageProps) {
   const loc = await resolveLocation(countrySlug, citySlug);
   if (!loc) notFound();
 
-  const supabase = await createClient();
+  // Cookieless client — keeps this page eligible for ISR (revalidate above).
+  const supabase = createPublicClient();
   const { data: centers } = await supabase
     .from("centers")
     .select("*, photos:center_photos(id, url, alt_text, sort_order, is_primary)")

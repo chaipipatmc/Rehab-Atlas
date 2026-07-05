@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { canOptimizeImage } from "@/lib/images";
 import { Badge } from "@/components/ui/badge";
 import {
   MapPin,
@@ -253,10 +255,13 @@ export default async function ComparePage({ searchParams }: PageProps) {
                   {/* Photo */}
                   <div className="relative w-full aspect-[16/10] bg-surface-container rounded-xl overflow-hidden mb-4">
                     {photo ? (
-                      <img
+                      <Image
                         src={photo.url}
                         alt={photo.alt_text || center.name}
-                        className="absolute inset-0 w-full h-full object-cover"
+                        fill
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                        unoptimized={!canOptimizeImage(photo.url)}
+                        className="object-cover"
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">

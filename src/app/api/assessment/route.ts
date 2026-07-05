@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
   // Rate limit: 5 assessments per hour per IP (calls Claude API = cost)
   const ip = getClientIp(request);
-  const rl = rateLimit(`assessment:${ip}`, { limit: 5, windowSeconds: 3600 });
+  const rl = await rateLimit(`assessment:${ip}`, { limit: 5, windowSeconds: 3600 });
   if (!rl.success) {
     return NextResponse.json(
       { error: "Too many assessment requests. Please try again later." },

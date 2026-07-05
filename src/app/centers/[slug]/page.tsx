@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import { BASE_URL } from "@/lib/site";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
+import { canOptimizeImage } from "@/lib/images";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,6 +101,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   return {
     title: `${center.name} — ${location}`,
     description,
+    // Self-canonical strips ?preview=1 and other params from indexing
+    alternates: {
+      canonical: `${BASE_URL}/centers/${slug}`,
+    },
     openGraph: {
       type: "website",
       ...(primaryPhoto
@@ -134,44 +141,46 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
 
   const typedCenter = center as unknown as Center;
 
-  // Load photos
-  const { data: photos } = await supabase
-    .from("center_photos")
-    .select("*")
-    .eq("center_id", center.id)
-    .order("sort_order");
-
-  // Load FAQs
-  const { data: faqs } = await supabase
-    .from("center_faqs")
-    .select("*")
-    .eq("center_id", center.id)
-    .order("sort_order");
-
-  const typedFaqs = (faqs || []) as unknown as CenterFaq[];
-
-  // Load staff
-  const { data: staffRows } = await supabase
-    .from("center_staff")
-    .select("*")
-    .eq("center_id", center.id)
-    .order("sort_order");
-
-  const staff = (staffRows || []) as unknown as CenterStaff[];
-
-  // Load sibling locations (same organization)
+  // Load photos, FAQs, staff, and sibling locations in parallel — they only
+  // depend on the center row, so serial awaits just stack up round-trips.
   const orgName = (center as Record<string, unknown>).organization_name as string | null;
-  let siblingCenters: Array<{ id: string; name: string; slug: string; city: string | null; country: string | null }> = [];
-  if (orgName) {
-    const { data: siblings } = await supabase
-      .from("centers")
-      .select("id, name, slug, city, country")
-      .eq("organization_name", orgName)
-      .eq("status", "published")
-      .neq("id", center.id)
-      .order("name");
-    siblingCenters = (siblings || []) as typeof siblingCenters;
-  }
+  const [photosResult, faqsResult, staffResult, siblingsResult] = await Promise.all([
+    supabase
+      .from("center_photos")
+      .select("*")
+      .eq("center_id", center.id)
+      .order("sort_order"),
+    supabase
+      .from("center_faqs")
+      .select("*")
+      .eq("center_id", center.id)
+      .order("sort_order"),
+    supabase
+      .from("center_staff")
+      .select("*")
+      .eq("center_id", center.id)
+      .order("sort_order"),
+    orgName
+      ? supabase
+          .from("centers")
+          .select("id, name, slug, city, country")
+          .eq("organization_name", orgName)
+          .eq("status", "published")
+          .neq("id", center.id)
+          .order("name")
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const photos = photosResult.data;
+  const typedFaqs = (faqsResult.data || []) as unknown as CenterFaq[];
+  const staff = (staffResult.data || []) as unknown as CenterStaff[];
+  const siblingCenters = (siblingsResult.data || []) as Array<{
+    id: string;
+    name: string;
+    slug: string;
+    city: string | null;
+    country: string | null;
+  }>;
 
   // Load similar centers for comparison links — prefer same city, then top up
   // with same-country centers so we always show 3 suggestions when available.
@@ -275,8 +284,6 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
     ...autoFaqs,
   ];
 
-  const BASE_URL =
-    process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.vercel.app";
 
   return (
     <div className="bg-surface min-h-screen">
@@ -725,9 +732,12 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
                       className="flex items-start gap-4 p-5 bg-surface-container-low rounded-2xl ghost-border"
                     >
                       {member.photo_url ? (
-                        <img
+                        <Image
                           src={member.photo_url}
                           alt={member.name}
+                          width={56}
+                          height={56}
+                          unoptimized={!canOptimizeImage(member.photo_url)}
                           className="h-14 w-14 rounded-full object-cover flex-shrink-0"
                         />
                       ) : (

@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 import { createHmac } from "crypto";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { canOptimizeImage } from "@/lib/images";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star, ArrowRight, Search, AlertCircle, Brain, DollarSign, Building } from "lucide-react";
 import type { Metadata } from "next";
@@ -127,10 +129,13 @@ export default async function ResultsPage({ searchParams }: PageProps) {
                 {/* Image */}
                 <div className="aspect-[4/3] bg-surface-container relative">
                   {(center as Record<string, unknown>).photos && ((center as Record<string, unknown>).photos as Array<{url: string; alt_text: string | null}>)[0] && (
-                    <img
+                    <Image
                       src={((center as Record<string, unknown>).photos as Array<{url: string}>)[0].url}
                       alt={center.name}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      unoptimized={!canOptimizeImage(((center as Record<string, unknown>).photos as Array<{url: string}>)[0].url)}
+                      className="object-cover"
                     />
                   )}
                   <div className="absolute top-3 left-3">

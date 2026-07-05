@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   Mail,
   Clock,
@@ -94,10 +95,13 @@ export default function ContactPage() {
       {/* ── Hero ── */}
       <section className="relative min-h-[52vh] flex items-end overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src={HERO_IMAGE}
             alt="Peaceful outdoor wellness setting"
-            className="w-full h-full object-cover"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover"
           />
           {/* Gradient: dark at bottom for text legibility, lighter at top */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#2b3437]/80 via-[#2b3437]/30 to-transparent" />
