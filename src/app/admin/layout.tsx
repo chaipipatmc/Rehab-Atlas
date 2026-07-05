@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   LayoutDashboard,
   Building2,
@@ -10,7 +11,6 @@ import {
   BarChart3,
   Settings,
   Bell,
-  HelpCircle,
   Plus,
   UserCog,
   Target,
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -55,6 +56,26 @@ export default async function AdminLayout({
     .single();
 
   if (profile?.role !== "admin") redirect("/");
+
+  // Attention counts for the notification bell — mirrors the dashboard's
+  // "Needs you" chips so the badge is visible from every admin page.
+  let attentionCount = 0;
+  try {
+    const admin = createAdminClient();
+    const [newLeads, pendingEdits, draftPages, pendingTasks] = await Promise.all([
+      admin.from("leads").select("id", { count: "exact", head: true }).eq("status", "new"),
+      admin.from("center_edit_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      admin.from("pages").select("id", { count: "exact", head: true }).eq("page_type", "blog").eq("status", "draft"),
+      admin.from("agent_tasks").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    ]);
+    attentionCount =
+      (newLeads.count || 0) +
+      (pendingEdits.count || 0) +
+      (draftPages.count || 0) +
+      (pendingTasks.count || 0);
+  } catch {
+    // counts are best-effort — never block the admin shell
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] bg-surface">
@@ -95,21 +116,33 @@ export default async function AdminLayout({
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <div className="h-14 bg-surface-container-lowest flex items-center justify-between px-6 gap-4">
-          <div className="flex-1 max-w-md">
+        <div className="h-14 bg-surface-container-lowest flex items-center justify-between px-4 md:px-6 gap-3 md:gap-4">
+          <AdminMobileNav />
+          <form action="/admin/search" className="flex-1 max-w-md">
             <Input
-              placeholder="Search leads, facilities, or medical records..."
+              name="q"
+              placeholder="Search leads, centers, or content…"
               className="bg-surface-container-low border-0 rounded-xl ghost-border text-sm h-9"
             />
-          </div>
+          </form>
           <div className="flex items-center gap-2">
-            <button className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-surface-container transition-colors duration-300">
+            <Link
+              href="/admin"
+              title={
+                attentionCount > 0
+                  ? `${attentionCount} item${attentionCount === 1 ? "" : "s"} need your attention`
+                  : "Nothing needs your attention"
+              }
+              className="relative w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-surface-container transition-colors duration-300"
+            >
               <Bell className="h-4 w-4" />
-            </button>
-            <button className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-surface-container transition-colors duration-300">
-              <HelpCircle className="h-4 w-4" />
-            </button>
-            <Button size="sm" className="rounded-full gradient-primary text-white text-xs h-8 px-3" asChild>
+              {attentionCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 rounded-full gradient-primary text-white text-[9px] font-semibold flex items-center justify-center px-1">
+                  {attentionCount > 99 ? "99+" : attentionCount}
+                </span>
+              )}
+            </Link>
+            <Button size="sm" className="rounded-full gradient-primary text-white text-xs h-8 px-3 hidden sm:inline-flex" asChild>
               <Link href="/admin/centers/new">
                 <Plus className="h-3 w-3 mr-1" />
                 Add Center

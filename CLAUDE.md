@@ -40,6 +40,12 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 ## Key Architecture Decisions
 
 - Server Components by default; Client Components only for interactive parts
+- **Public SEO pages use `createPublicClient()`** (cookieless, `src/lib/supabase/server.ts`) — the cookie-bound `createClient()` forces dynamic rendering and silently disables ISR. Only pages that read the user (auth, saved state, preview) use the cookie client.
+- **Single-source modules:** `src/lib/conditions.ts` (the 10 condition pillars — slugs, labels, descriptions, `treatment_focus` filters; consumed by `/rehab/[condition]`, city pages, city × condition pages, and `sitemap.ts` so they cannot drift) and `src/lib/site.ts` (`BASE_URL` for all canonicals/OG/JSON-LD — never hardcode domains in pages)
+- **Image optimizer allowlist:** `next/image` remotePatterns restricted to Supabase storage + Unsplash + Pexels. DB-sourced image URLs must pass `unoptimized={!canOptimizeImage(url)}` (`src/lib/images.ts`) so unknown hosts render instead of throwing
+- **Assessment UX:** answers persist to localStorage (24h TTL, cleared on submit) in `use-assessment.ts`; `/api/assessment/match-count` powers the pre-email-gate "N matching centers" teaser
+- **Platform settings:** `/admin/settings` persists to `site_settings` under `platform_*` keys via `/api/admin/settings`; mailers resolve the admin recipient + notification toggles through `src/lib/settings.ts` (env `ADMIN_EMAIL` is the fallback)
+- **Analytics:** Vercel Web Analytics (cookieless) always on; GA4 + Meta Pixel remain consent-gated
 - Service role for leads table (client never inserts directly)
 - Admin center/content mutations go through API routes (`/api/admin/centers`, `/api/admin/content`), not direct browser Supabase
 - URL-param filters on directory (shareable, bookmarkable)
@@ -54,7 +60,7 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 
 ## Security
 
-- **Rate limiting:** In-memory rate limiter (`src/lib/rate-limit.ts`) on all public APIs — leads (10/hr), assessment (5/hr), contact (5/hr), partner-request (3/hr)
+- **Rate limiting:** Supabase-backed limiter (`src/lib/rate-limit.ts` + `rate_limits` table + atomic `rate_limit_hit` RPC, migration 028) on all public APIs — leads (10/hr), assessment (5/hr), contact (5/hr), partner-request (3/hr). Shared across serverless instances (the old in-memory Map reset per instance on Vercel); in-memory kept only as fallback
 - **CSRF:** Origin/Referer header validation (`src/lib/csrf.ts`) on all state-changing POST routes
 - **Security headers:** X-Frame-Options DENY, HSTS, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy (in `next.config.ts`)
 - **Input validation:** Zod schemas with enum constraints, max lengths, phone format validation

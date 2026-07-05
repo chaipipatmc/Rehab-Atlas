@@ -8,7 +8,9 @@ export default async function AdminContentPage() {
 
   const { data: pages } = await supabase
     .from("pages")
-    .select("*, author_center:centers(name)")
+    .select(
+      "id, title, slug, page_type, status, tags, author_type, created_at, published_at, dedup_status, dedup_closest_slug, dedup_reasoning, author_center:centers(name)"
+    )
     .order("updated_at", { ascending: false });
 
   const blogs = (pages || []).filter((p) => p.page_type === "blog");
@@ -82,7 +84,7 @@ export default async function AdminContentPage() {
               </thead>
               <tbody>
                 {approved.map((page, i) => {
-                  const centerAuthor = page.author_center as { name: string } | null;
+                  const centerAuthor = page.author_center as unknown as { name: string } | null;
                   const tags = (page.tags as string[]) || [];
                   // Estimate publish date: today + (i+1) days, skip weekends
                   const estDate = getEstimatedPublishDate(i);
@@ -155,12 +157,19 @@ export default async function AdminContentPage() {
               </thead>
               <tbody>
                 {drafts.map((page) => {
-                  const centerAuthor = page.author_center as { name: string } | null;
+                  const centerAuthor = page.author_center as unknown as { name: string } | null;
                   const tags = (page.tags as string[]) || [];
                   return (
                     <tr key={page.id} className="border-t border-surface-container-low hover:bg-surface-container-low/50 transition-colors duration-200">
                       <td className="px-6 py-4">
-                        <p className="text-sm font-medium text-foreground">{page.title}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-foreground">{page.title}</p>
+                          <DedupBadge
+                            status={(page.dedup_status as string) || null}
+                            closestSlug={(page.dedup_closest_slug as string) || null}
+                            reasoning={(page.dedup_reasoning as string) || null}
+                          />
+                        </div>
                         <p className="text-[10px] text-muted-foreground">/blog/{page.slug}</p>
                       </td>
                       <td className="px-6 py-4">
@@ -224,7 +233,7 @@ export default async function AdminContentPage() {
             </thead>
             <tbody>
               {published.map((page) => {
-                const centerAuthor = page.author_center as { name: string } | null;
+                const centerAuthor = page.author_center as unknown as { name: string } | null;
                 const tags = (page.tags as string[]) || [];
                 return (
                   <tr key={page.id} className="border-t border-surface-container-low hover:bg-surface-container-low/50 transition-colors duration-200">
@@ -335,6 +344,58 @@ export default async function AdminContentPage() {
       )}
     </div>
   );
+}
+
+/**
+ * Dedup verdict badge for draft rows.
+ * Statuses come from migration 026: 'clear' | 'flagged' | 'overridden' | 'pending'.
+ * Flagged drafts link to the closest published article for quick comparison.
+ */
+function DedupBadge({
+  status,
+  closestSlug,
+  reasoning,
+}: {
+  status: string | null;
+  closestSlug: string | null;
+  reasoning: string | null;
+}) {
+  if (status === "flagged") {
+    const badge = (
+      <span
+        title={reasoning || (closestSlug ? `Closest match: /blog/${closestSlug}` : undefined)}
+        className="text-[10px] font-medium rounded-full px-2 py-0.5 bg-amber-100 text-amber-800"
+      >
+        Possible duplicate
+      </span>
+    );
+    return closestSlug ? (
+      <Link href={`/blog/${closestSlug}`} target="_blank" className="hover:opacity-80 transition-opacity duration-200">
+        {badge}
+      </Link>
+    ) : (
+      badge
+    );
+  }
+  if (status === "overridden") {
+    return (
+      <span
+        title={reasoning || "Dedup flag overridden by admin"}
+        className="text-[10px] font-medium rounded-full px-2 py-0.5 bg-surface-container text-muted-foreground"
+      >
+        Override
+      </span>
+    );
+  }
+  if (status === "clear") {
+    return (
+      <span title={reasoning || undefined} className="text-[10px] font-medium text-emerald-600/70">
+        Unique ✓
+      </span>
+    );
+  }
+  // 'pending' or null — dedup hasn't run yet, show nothing.
+  return null;
 }
 
 /**

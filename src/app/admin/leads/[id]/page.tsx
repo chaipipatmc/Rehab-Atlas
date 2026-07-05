@@ -10,6 +10,32 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+interface TrafficSource {
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  referrer?: string;
+  landing_path?: string;
+  channel?: string;
+}
+
+/** snake_case → Title Case */
+function formatLabel(key: string): string {
+  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatAnswerValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) {
+    return value.length ? value.map(formatAnswerValue).join(", ") : "—";
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value).replace(/_/g, " ");
+}
+
 export default async function LeadDetailPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
@@ -49,6 +75,24 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
   const statusConfig = LEAD_STATUS_OPTIONS.find(
     (s) => s.value === lead.status
+  );
+
+  // Prepare readable assessment data
+  const answers = (assessment?.answers || {}) as Record<string, unknown>;
+  const answerEntries = Object.entries(answers).filter(
+    ([key]) => !key.startsWith("_")
+  );
+  const trafficSource = (answers._source as TrafficSource | undefined) || null;
+  const matchScores = (assessment?.match_scores || {}) as Record<string, number>;
+  const explanations = (assessment?.explanations || []) as Array<{
+    center_id: string;
+    fit_summary?: string;
+  }>;
+  const topMatches = Object.entries(matchScores)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const centerNameById = new Map(
+    (eligibleCenters || []).map((c) => [c.id, c.name])
   );
 
   return (
@@ -151,9 +195,64 @@ export default async function LeadDetailPage({ params }: PageProps) {
             <CardTitle className="text-lg">Assessment Data</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="text-xs bg-slate-50 p-4 rounded overflow-auto max-h-64">
-              {JSON.stringify(assessment.answers, null, 2)}
-            </pre>
+            {answerEntries.length > 0 ? (
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                {answerEntries.map(([key, value]) => (
+                  <div key={key}>
+                    <dt className="text-xs text-slate-500 uppercase">
+                      {formatLabel(key)}
+                    </dt>
+                    <dd className="text-sm">{formatAnswerValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="text-sm text-slate-500">No answers recorded.</p>
+            )}
+
+            {topMatches.length > 0 && (
+              <div className="mt-5">
+                <p className="text-xs text-slate-500 uppercase mb-2">
+                  Top Matches
+                </p>
+                <ul className="space-y-1.5">
+                  {topMatches.map(([centerId, score]) => {
+                    const fitSummary = explanations.find(
+                      (e) => e.center_id === centerId
+                    )?.fit_summary;
+                    return (
+                      <li key={centerId} className="text-sm">
+                        <span className="font-medium">
+                          {centerNameById.get(centerId) || centerId}
+                        </span>
+                        <span className="text-slate-500 ml-2">{score}%</span>
+                        {fitSummary && (
+                          <span className="text-xs text-slate-500 ml-2">
+                            — {fitSummary}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {trafficSource && (
+              <p className="mt-5 pt-3 border-t text-xs text-slate-500">
+                <span className="uppercase tracking-wider">Traffic source:</span>{" "}
+                {[
+                  trafficSource.channel,
+                  trafficSource.utm_source && `utm_source=${trafficSource.utm_source}`,
+                  trafficSource.utm_medium && `utm_medium=${trafficSource.utm_medium}`,
+                  trafficSource.utm_campaign && `utm_campaign=${trafficSource.utm_campaign}`,
+                  trafficSource.referrer && `referrer: ${trafficSource.referrer}`,
+                  trafficSource.landing_path && `landed on ${trafficSource.landing_path}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "unknown"}
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

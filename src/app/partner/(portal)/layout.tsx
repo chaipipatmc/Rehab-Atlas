@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Building2, Pencil, Image, Clock, LayoutDashboard, BookOpen, Users, Receipt } from "lucide-react";
 import { CenterSwitcher } from "@/components/partner/center-switcher";
+import { PartnerMobileNav } from "@/components/partner/partner-mobile-nav";
 
 const navItems = [
   { href: "/partner", label: "Dashboard", icon: LayoutDashboard },
@@ -113,7 +114,10 @@ export default async function PartnerLayout({
         </div>
       </aside>
 
-      <div className="flex-1 p-4 sm:p-6 overflow-auto">{children}</div>
+      <div className="flex-1 p-4 sm:p-6 overflow-auto">
+        <PartnerMobileNav centerName={center?.name || "My Center"} />
+        {children}
+      </div>
     </div>
   );
 }

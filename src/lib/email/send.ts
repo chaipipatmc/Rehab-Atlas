@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { getAdminEmail, isNotificationEnabled } from "@/lib/settings";
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -6,7 +7,8 @@ function escapeHtml(str: string): string {
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder_missing_key");
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "chaipipat.mc@gmail.com";
+// Admin recipient + notification toggles come from /admin/settings
+// (site_settings platform_* keys) with env fallback — see src/lib/settings.ts.
 const FROM_EMAIL = "Rehab-Atlas <onboarding@resend.dev>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -19,6 +21,7 @@ interface AdminNotificationData {
 }
 
 export async function sendAdminNotification(data: AdminNotificationData) {
+  if (!(await isNotificationEnabled("new_lead"))) return;
   const urgencyLabel =
     data.urgency === "urgent" ? "URGENT" : data.urgency === "soon" ? "Soon" : "Normal";
 
@@ -29,7 +32,7 @@ export async function sendAdminNotification(data: AdminNotificationData) {
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: await getAdminEmail(),
       subject: `[${urgencyLabel}] New Inquiry from ${data.name}`,
       html: `
         <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -64,6 +67,7 @@ interface PartnerRequestData {
 }
 
 export async function sendPartnerRequestNotification(data: PartnerRequestData) {
+  if (!(await isNotificationEnabled("partner_request"))) return;
   const safeName = escapeHtml(data.name);
   const safeEmail = escapeHtml(data.email);
   const safeCenterName = escapeHtml(data.centerName);
@@ -73,7 +77,7 @@ export async function sendPartnerRequestNotification(data: PartnerRequestData) {
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: await getAdminEmail(),
       subject: `[Partner Request] ${data.centerName} — ${data.name}`,
       html: `
         <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -114,7 +118,7 @@ export async function sendBlogSubmissionNotification(data: BlogSubmissionData) {
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: await getAdminEmail(),
       subject: `[Article Submission] "${data.articleTitle}" by ${data.centerName}`,
       html: `
         <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -302,7 +306,7 @@ export async function sendAssessmentAdminNotification(data: AssessmentAdminNotif
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: await getAdminEmail(),
       subject: `[${urgencyLabel}] New Assessment — ${data.contactEmail}`,
       html: `
         <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

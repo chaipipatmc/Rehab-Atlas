@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,60 @@ import {
   SERVICE_OPTIONS,
   SETTING_TYPE_OPTIONS,
 } from "@/lib/constants";
+
+const FORM_SECTIONS = [
+  { id: "basic-information", label: "Basic Info" },
+  { id: "location", label: "Location" },
+  { id: "facility-photos", label: "Photos" },
+  { id: "contact-information", label: "Contact" },
+  { id: "treatment-focus-conditions", label: "Treatment Focus" },
+  { id: "services-setting", label: "Services & Setting" },
+  { id: "pricing", label: "Pricing" },
+  { id: "commission-commercial-agreement", label: "Commission" },
+  { id: "status-badges", label: "Status & Badges" },
+  { id: "editorial-ratings", label: "Ratings" },
+] as const;
+
+function SectionNav({ sections }: { sections: ReadonlyArray<{ id: string; label: string }> }) {
+  const [active, setActive] = useState<string>(sections[0]?.id ?? "");
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActive(visible[0].target.id);
+      },
+      { rootMargin: "-96px 0px -55% 0px" }
+    );
+    for (const { id } of sections) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [sections]);
+
+  return (
+    <nav className="sticky top-0 z-30 -mx-2 mb-6 bg-surface/90 backdrop-blur px-2 py-3">
+      <div className="flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {sections.map(({ id, label }) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            className={`flex-shrink-0 text-xs rounded-full px-3 py-1.5 transition-all duration-300 ${
+              active === id
+                ? "bg-primary text-white"
+                : "bg-surface-container-low text-muted-foreground ghost-border hover:bg-surface-container"
+            }`}
+          >
+            {label}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
 
 function slugify(text: string): string {
   return text
@@ -154,9 +208,11 @@ export default function AdminCenterNewPage() {
         </Button>
       </div>
 
+      <SectionNav sections={FORM_SECTIONS} />
+
       <div className="space-y-6">
         {/* Basic Info */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="basic-information" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Basic Information
           </h2>
@@ -205,7 +261,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Location */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="location" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Location
           </h2>
@@ -249,7 +305,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Photos */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="facility-photos" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Facility Photos
           </h2>
@@ -262,7 +318,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Contact */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="contact-information" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Contact Information
           </h2>
@@ -304,7 +360,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Treatment Focus */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="treatment-focus-conditions" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Treatment Focus & Conditions
           </h2>
@@ -351,7 +407,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Services & Setting */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="services-setting" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Services & Setting
           </h2>
@@ -406,7 +462,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Pricing */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="pricing" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Pricing
           </h2>
@@ -444,7 +500,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Commission & Commercial Agreement */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="commission-commercial-agreement" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Commission & Commercial Agreement
           </h2>
@@ -580,7 +636,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Status & Flags */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="status-badges" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Status & Badges
           </h2>
@@ -623,7 +679,7 @@ export default function AdminCenterNewPage() {
         </div>
 
         {/* Editorial Ratings */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+        <div id="editorial-ratings" className="scroll-mt-24 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Editorial Ratings (1.0 - 5.0)
           </h2>

@@ -7,7 +7,7 @@ import { Resend } from "resend";
 import { getAppUrl } from "./base";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder_missing_key");
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "chaipipat.mc@gmail.com";
+import { getAdminEmail } from "@/lib/settings";
 const FROM_EMAIL = "Rehab-Atlas Agent <onboarding@resend.dev>";
 const LINE_TOKEN = process.env.LINE_NOTIFY_TOKEN;
 
@@ -60,7 +60,7 @@ export async function sendAgentEmail(params: {
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: await getAdminEmail(),
       subject: params.subject,
       html,
       headers: {

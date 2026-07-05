@@ -37,6 +37,62 @@ import {
   ACCOMMODATION_OPTIONS,
 } from "@/lib/constants";
 
+const FORM_SECTIONS = [
+  { id: "basic-information", label: "Basic Info" },
+  { id: "photos", label: "Photos" },
+  { id: "clinical-team", label: "Clinical Team" },
+  { id: "treatment-clinical", label: "Treatment & Clinical" },
+  { id: "location", label: "Location" },
+  { id: "pricing-program", label: "Pricing & Program" },
+  { id: "additional-details", label: "Details" },
+  { id: "contact", label: "Contact" },
+  { id: "faqs", label: "FAQs" },
+  { id: "editorial-ratings", label: "Ratings" },
+  { id: "status-badges", label: "Status & Badges" },
+  { id: "commission-commercial-agreement", label: "Commission" },
+] as const;
+
+function SectionNav({ sections }: { sections: ReadonlyArray<{ id: string; label: string }> }) {
+  const [active, setActive] = useState<string>(sections[0]?.id ?? "");
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActive(visible[0].target.id);
+      },
+      { rootMargin: "-96px 0px -55% 0px" }
+    );
+    for (const { id } of sections) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [sections]);
+
+  return (
+    <nav className="sticky top-0 z-30 -mx-2 mb-6 bg-surface/90 backdrop-blur px-2 py-3">
+      <div className="flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {sections.map(({ id, label }) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            className={`flex-shrink-0 text-xs rounded-full px-3 py-1.5 transition-all duration-300 ${
+              active === id
+                ? "bg-primary text-white"
+                : "bg-surface-container-low text-muted-foreground ghost-border hover:bg-surface-container"
+            }`}
+          >
+            {label}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 interface PhotoItem {
   id?: string;
   url: string;
@@ -381,9 +437,11 @@ export default function AdminCenterEditPage() {
         </div>
       )}
 
+      <SectionNav sections={FORM_SECTIONS} />
+
       <div className="space-y-6">
         {/* 1. Basic Info */}
-        <Card>
+        <Card id="basic-information" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
           </CardHeader>
@@ -428,7 +486,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 2. Photos */}
-        <Card>
+        <Card id="photos" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Photos</CardTitle>
           </CardHeader>
@@ -445,7 +503,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 3. Clinical Team / Staff */}
-        <Card>
+        <Card id="clinical-team" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Clinical Team</CardTitle>
           </CardHeader>
@@ -598,7 +656,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 4. Treatment & Clinical */}
-        <Card>
+        <Card id="treatment-clinical" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Treatment & Clinical</CardTitle>
           </CardHeader>
@@ -709,7 +767,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 5. Location */}
-        <Card>
+        <Card id="location" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Location</CardTitle>
           </CardHeader>
@@ -783,7 +841,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 6. Pricing & Program */}
-        <Card>
+        <Card id="pricing-program" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Pricing & Program</CardTitle>
           </CardHeader>
@@ -867,7 +925,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 7. Additional Details */}
-        <Card>
+        <Card id="additional-details" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Additional Details</CardTitle>
           </CardHeader>
@@ -929,7 +987,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 8. Contact */}
-        <Card>
+        <Card id="contact" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Contact</CardTitle>
           </CardHeader>
@@ -970,7 +1028,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 9. FAQs */}
-        <Card>
+        <Card id="faqs" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>FAQs</CardTitle>
           </CardHeader>
@@ -1006,7 +1064,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 10. Editorial Ratings */}
-        <Card>
+        <Card id="editorial-ratings" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Editorial Ratings (1-5)</CardTitle>
           </CardHeader>
@@ -1038,7 +1096,7 @@ export default function AdminCenterEditPage() {
         </Card>
 
         {/* 11. Status & Badges */}
-        <Card>
+        <Card id="status-badges" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Status & Badges</CardTitle>
           </CardHeader>
@@ -1082,7 +1140,7 @@ export default function AdminCenterEditPage() {
         <Separator />
 
         {/* 12. Commission & Commercial Agreement — LAST */}
-        <Card>
+        <Card id="commission-commercial-agreement" className="scroll-mt-24">
           <CardHeader>
             <CardTitle>Commission & Commercial Agreement</CardTitle>
           </CardHeader>

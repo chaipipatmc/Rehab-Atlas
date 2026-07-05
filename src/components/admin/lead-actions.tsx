@@ -122,6 +122,10 @@ export function LeadActions({
 
       if (res.ok) {
         toast.success("Lead forwarded successfully");
+        // The forward API sets the lead's status to "forwarded" in the DB.
+        // Sync the local select so a later "Save Changes" doesn't revert it
+        // to the stale pre-forward status.
+        setStatus("forwarded");
         router.refresh();
       } else {
         const err = await res.json();

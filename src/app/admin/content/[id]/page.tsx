@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, isValidElement, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Eye, Trash2, ExternalLink, CheckCircle, X, Plus, MessageSquare, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { Save, ArrowLeft, Eye, Trash2, ExternalLink, CheckCircle, X, Plus, MessageSquare, RotateCcw, ChevronDown, ChevronUp, Pencil, Files } from "lucide-react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import type { Components } from "react-markdown";
 
 const SUGGESTED_TAGS = [
   "Addiction", "Substance Use", "Treatment", "Rehabilitation",
@@ -26,6 +29,96 @@ const SUGGESTED_TAGS = [
   "Family Support", "Relationships", "Relapse Prevention",
   "Detox", "Therapy", "Insurance", "Dual Diagnosis",
 ];
+
+// Featured image marker: `![featured](url)` or `![featured](url "Alt text")` —
+// same convention as the blog renderer (src/app/blog/[slug]/page.tsx).
+function extractFeaturedImage(content: string): { url: string; alt: string | null } | null {
+  const match = content.match(/!\[featured\]\(([^\s)]+)(?:\s+"([^"]*)")?\)/);
+  if (!match) return null;
+  return { url: match[1], alt: match[2] || null };
+}
+
+function stripFeaturedImage(content: string): string {
+  return content.replace(/!\[featured\]\([^\s)]+(?:\s+"[^"]*")?\)\n?\n?/, "");
+}
+
+// Flatten a React children tree to plain text so we can detect {{IMAGE_N}}
+// placeholder paragraphs in the preview.
+function flattenChildren(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(flattenChildren).join("");
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return flattenChildren(node.props.children);
+  }
+  return "";
+}
+
+// Simplified subset of the blog renderer's markdown components — enough for an
+// admin to judge structure, headings, links, and images at a glance.
+const previewMdComponents: Components = {
+  h1: ({ children }) => (
+    <h1 className="font-serif text-2xl md:text-3xl font-semibold text-foreground leading-snug mt-0 mb-6 pb-4 border-b border-[#e0e4e6]">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="font-serif text-xl md:text-2xl font-semibold text-foreground leading-snug mt-10 mb-4 pl-4 border-l-4 border-[#45636b]">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="font-serif text-lg md:text-xl font-semibold text-[#45636b] leading-snug mt-8 mb-3">
+      {children}
+    </h3>
+  ),
+  p: ({ children }) => {
+    const text = flattenChildren(children).trim();
+    const placeholder = text.match(/^\{\{IMAGE_(\d+)\}\}$/);
+    if (placeholder) {
+      return (
+        <div className="my-6 rounded-xl border-2 border-dashed border-[#c5ced2] bg-surface-container-low/50 py-8 text-center text-xs text-muted-foreground">
+          Inline image slot {placeholder[1]}
+        </div>
+      );
+    }
+    return (
+      <p className="text-sm md:text-base text-[#5a6a70] leading-relaxed mb-4">
+        {children}
+      </p>
+    );
+  },
+  ul: ({ children }) => (
+    <ul className="list-disc pl-5 space-y-2 mb-5 text-sm md:text-base text-[#5a6a70]">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal pl-5 space-y-2 mb-5 text-sm md:text-base text-[#5a6a70]">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  strong: ({ children }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+  a: ({ href, children }) => (
+    <a href={href} className="text-[#45636b] font-medium hover:underline underline-offset-4">
+      {children}
+    </a>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-4 border-[#45636b] bg-[#45636b]/5 rounded-r-xl py-3 px-5 my-6 not-italic text-foreground font-normal">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="border-[#e0e4e6] my-10" />,
+  img: ({ src, alt }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt || ""} loading="lazy" decoding="async" className="rounded-xl shadow-md my-6 w-full" />
+  ),
+};
 
 
 export default function AdminContentEditPage() {
@@ -38,6 +131,7 @@ export default function AdminContentEditPage() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
   const [requestingRewrite, setRequestingRewrite] = useState(false);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
 
 
   useEffect(() => {
@@ -306,18 +400,131 @@ export default function AdminContentEditPage() {
           </div>
         </div>
 
+        {/* Dedup verdict (populated by the content-dedup agent, migration 026) */}
+        {typeof page.dedup_status === "string" &&
+          page.dedup_status !== "pending" &&
+          Boolean(page.dedup_reasoning || page.dedup_closest_slug) && (
+          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient space-y-3">
+            <div className="flex items-center gap-2">
+              <Files className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Duplicate Check</h2>
+              <span
+                className={`text-[10px] font-medium rounded-full px-2 py-0.5 ${
+                  page.dedup_status === "flagged"
+                    ? "bg-amber-100 text-amber-800"
+                    : page.dedup_status === "overridden"
+                      ? "bg-surface-container text-muted-foreground"
+                      : "bg-emerald-100 text-emerald-800"
+                }`}
+              >
+                {page.dedup_status === "flagged"
+                  ? "Possible duplicate"
+                  : page.dedup_status === "overridden"
+                    ? "Override"
+                    : "Unique"}
+              </span>
+            </div>
+            {typeof page.dedup_closest_slug === "string" && page.dedup_closest_slug && (
+              <p className="text-xs text-muted-foreground">
+                Closest article:{" "}
+                <Link
+                  href={`/blog/${page.dedup_closest_slug}`}
+                  target="_blank"
+                  className="text-primary hover:underline font-medium"
+                >
+                  /blog/{page.dedup_closest_slug}
+                </Link>
+              </p>
+            )}
+            {typeof page.dedup_reasoning === "string" && page.dedup_reasoning && (
+              <p className="text-xs text-foreground leading-relaxed bg-surface-container-low rounded-xl px-4 py-3">
+                {page.dedup_reasoning}
+              </p>
+            )}
+            <p className="text-[10px] text-muted-foreground">
+              {page.dedup_checked_at
+                ? `Checked ${new Date(page.dedup_checked_at as string).toLocaleDateString("en-US", {
+                    month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+                  })}`
+                : "Check time unknown"}
+              {typeof page.dedup_retry_count === "number" && page.dedup_retry_count > 0
+                ? ` · ${page.dedup_retry_count} rewrite ${page.dedup_retry_count === 1 ? "retry" : "retries"}`
+                : ""}
+            </p>
+          </div>
+        )}
+
         {/* Content Editor */}
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
-          <Label className="text-xs text-muted-foreground mb-2 block">Content</Label>
-          <MarkdownEditor
-            value={(page.content as string) || ""}
-            onChange={(v) => update("content", v)}
-            uploadFolder="content"
-            placeholder="Start writing your article here...
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-xs text-muted-foreground block">Content</Label>
+            <div className="flex items-center gap-0.5 rounded-full bg-surface-container-low p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("edit")}
+                className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1 transition-colors duration-200 ${
+                  viewMode === "edit"
+                    ? "bg-surface-container-lowest text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("preview")}
+                className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1 transition-colors duration-200 ${
+                  viewMode === "preview"
+                    ? "bg-surface-container-lowest text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Eye className="h-3 w-3" />
+                Preview
+              </button>
+            </div>
+          </div>
+          {viewMode === "edit" ? (
+            <MarkdownEditor
+              value={(page.content as string) || ""}
+              onChange={(v) => update("content", v)}
+              uploadFolder="content"
+              placeholder="Start writing your article here...
 
 Use the toolbar to format text. Click the Upload button or paste/drag images directly into the editor."
-            minHeight="450px"
-          />
+              minHeight="450px"
+            />
+          ) : (
+            (() => {
+              const raw = (page.content as string) || "";
+              const featured = extractFeaturedImage(raw);
+              const body = stripFeaturedImage(raw);
+              return (
+                <div className="rounded-xl bg-surface-container-low/40 px-5 py-6 md:px-8 md:py-8">
+                  {featured && (
+                    <div className="relative w-full aspect-[2/1] max-h-[320px] rounded-2xl overflow-hidden mb-8">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={featured.url}
+                        alt={featured.alt || (page.title as string) || "Featured image"}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                      />
+                    </div>
+                  )}
+                  {body.trim() ? (
+                    <article>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={previewMdComponents}>
+                        {body}
+                      </ReactMarkdown>
+                    </article>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-10">Nothing to preview yet.</p>
+                  )}
+                </div>
+              );
+            })()
+          )}
         </div>
 
         {/* Feedback / Request Rewrite */}
