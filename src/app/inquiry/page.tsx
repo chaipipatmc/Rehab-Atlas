@@ -180,15 +180,15 @@ export default async function InquiryPage({ searchParams }: PageProps) {
               <div className="mt-4 space-y-2">
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
                   <span className="w-1 h-1 rounded-full bg-primary" />
-                  HIPAA Compliant Infrastructure
+                  Encrypted in transit and at rest
                 </p>
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
                   <span className="w-1 h-1 rounded-full bg-primary" />
-                  256-bit AES Encryption
+                  Reviewed by a specialist &mdash; never auto-forwarded
                 </p>
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
                   <span className="w-1 h-1 rounded-full bg-primary" />
-                  Anonymous Routing Available
+                  Your data is never sold or shared without consent
                 </p>
               </div>
             </div>

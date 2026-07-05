@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Shield, Users, Compass, ArrowRight, BookOpen, ClipboardList, Stethoscope, MailCheck, Lock } from "lucide-react";
 import { createPublicClient } from "@/lib/supabase/server";
 import { FeaturedCarousel } from "@/components/centers/featured-carousel";
+import { HeroSearch } from "@/components/centers/hero-search";
 import { OrganizationJsonLd } from "@/components/shared/json-ld";
 import { canOptimizeImage } from "@/lib/images";
 
@@ -133,6 +134,9 @@ export default async function HomePage() {
               </Button>
             </div>
 
+            {/* Quick search — country + treatment typeahead straight into the directory */}
+            <HeroSearch />
+
             {/* Privacy reassurance — the single most important line on this page */}
             <p className="mt-5 text-xs text-muted-foreground/90 max-w-md leading-relaxed">
               <Lock className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5 text-primary" />
@@ -156,12 +160,12 @@ export default async function HomePage() {
                 <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Countries</p>
               </div>
               <div>
-                <p className="text-2xl md:text-3xl font-semibold font-serif text-primary">0</p>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Facilities We Own</p>
+                <p className="text-2xl md:text-3xl font-semibold font-serif text-primary">2&ndash;4h</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Typical Response Time</p>
               </div>
               <div>
                 <p className="text-2xl md:text-3xl font-semibold font-serif text-primary">100%</p>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Clinically Reviewed</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Independent &mdash; We Own No Facility</p>
               </div>
             </div>
           </div>

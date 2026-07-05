@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Star, Shield, Info } from "lucide-react";
 import type { Center, CenterPhoto } from "@/types/center";
 import { TrackingLink } from "./tracking-link";
+import { CardSaveButton } from "./card-save-button";
 import { countryToSlug } from "@/lib/utils";
 import { canOptimizeImage } from "@/lib/images";
 
@@ -43,14 +44,15 @@ export function CenterCard({ center }: CenterCardProps) {
             </span>
           ) : null}
         </div>
-        {center.rating && (
-          <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          {center.rating && (
             <span className="inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-medium text-foreground rounded-full px-2.5 py-1">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
               {Number(center.rating).toFixed(1)}
             </span>
-          </div>
-        )}
+          )}
+          <CardSaveButton centerId={center.id} />
+        </div>
       </div>
 
       {/* Content */}

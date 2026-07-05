@@ -35,7 +35,7 @@ export function Footer() {
               <li><Link href="/about" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">About Us</Link></li>
               <li><Link href="/contact" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">Contact Specialist</Link></li>
               <li><Link href="/partner/join" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">Center Partnership</Link></li>
-              <li><Link href="/pages/hipaa" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">HIPAA Compliance</Link></li>
+              <li><Link href="/pages/hipaa" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-300">Data Security &amp; Privacy</Link></li>
             </ul>
           </div>
 
@@ -60,11 +60,11 @@ export function Footer() {
             &copy; {new Date().getFullYear()} Rehab-Atlas. A digital sanctuary for recovery. Your privacy is our priority.
           </p>
           <div className="flex items-center gap-4 text-[10px] text-muted-foreground/60">
-            <span>HIPAA Aligned</span>
+            <span>Encrypted in Transit &amp; at Rest</span>
             <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-            <span>256-bit Encrypted</span>
+            <span>Confidential by Design</span>
             <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-            <span>SOC 2 Compliant</span>
+            <span>Your Data Is Never Sold</span>
           </div>
         </div>
       </div>

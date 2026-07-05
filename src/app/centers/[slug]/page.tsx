@@ -41,6 +41,7 @@ import { BreadcrumbJsonLd, FAQJsonLd, LocalBusinessJsonLd } from "@/components/s
 import { ViewTracker } from "@/components/shared/view-tracker";
 import { SaveButton } from "@/components/centers/save-button";
 import { PhotoGallery } from "@/components/centers/photo-gallery";
+import { MobileInquiryBar } from "@/components/centers/mobile-inquiry-bar";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -1042,8 +1043,11 @@ export default async function CenterProfilePage({ params, searchParams }: PagePr
         </div>
       </div>
 
-      {/* Bottom spacing */}
-      <div className="h-20" />
+      {/* Bottom spacing — taller on mobile so the fixed inquiry bar never covers content */}
+      <div className="h-32 lg:h-20" />
+
+      {/* Persistent mobile inquiry CTA */}
+      <MobileInquiryBar centerId={typedCenter.id} centerName={typedCenter.name} />
     </div>
   );
 }

@@ -53,11 +53,11 @@ export default function InquirySuccessPage() {
         <div className="mt-10 flex items-center justify-center gap-6 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <Shield className="h-3.5 w-3.5" />
-            HIPAA Compliant
+            Confidential by Design
           </span>
           <span className="flex items-center gap-1.5">
             <Lock className="h-3.5 w-3.5" />
-            Secure Data
+            Encrypted &amp; Never Sold
           </span>
         </div>
 

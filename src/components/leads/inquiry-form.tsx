@@ -58,7 +58,6 @@ export function InquiryForm({ centerId, centerName, prefill }: InquiryFormProps)
       urgency: (formData.get("urgency") as string) || undefined,
       preferred_center_id: centerId || undefined,
       budget: (formData.get("budget") as string) || undefined,
-      message: (formData.get("message") as string) || undefined,
       consent: formData.get("consent") === "on",
       request_call: formData.get("request_call") === "on",
     };
@@ -111,13 +110,14 @@ export function InquiryForm({ centerId, centerName, prefill }: InquiryFormProps)
       {/* Personal Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground">Full Name</Label>
+          <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground">Name</Label>
           <Input
             id="name"
             name="name"
             required
             defaultValue={prefill?.name || ""}
             autoComplete="name"
+            placeholder="A first name or alias is fine"
             className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border"
           />
         </div>
@@ -188,17 +188,20 @@ export function InquiryForm({ centerId, centerName, prefill }: InquiryFormProps)
       </div>
 
       <div>
-        <Label htmlFor="concern" className="text-xs uppercase tracking-wider text-muted-foreground">Primary Concern</Label>
+        <Label htmlFor="concern" className="text-xs uppercase tracking-wider text-muted-foreground">What&apos;s going on?</Label>
         <Textarea
           id="concern"
           name="concern"
           required
           minLength={10}
           defaultValue={prefill?.concern || ""}
-          placeholder="Please describe the situation and how we can best support you..."
-          className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border min-h-[100px]"
-          rows={4}
+          placeholder="Describe the situation in your own words — what's happening, who it's for, and anything specific you'd like us to know..."
+          className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border min-h-[120px]"
+          rows={5}
         />
+        <p className="text-[11px] text-muted-foreground mt-1.5">
+          A few sentences is plenty. A specialist reads every inquiry personally.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -230,17 +233,6 @@ export function InquiryForm({ centerId, centerName, prefill }: InquiryFormProps)
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="message" className="text-xs uppercase tracking-wider text-muted-foreground">Specific Message</Label>
-        <Textarea
-          id="message"
-          name="message"
-          placeholder="Briefly describe the situation and how we can best support you..."
-          className="mt-2 bg-surface-container-low border-0 rounded-xl ghost-border"
-          rows={3}
-        />
-      </div>
-
       {/* Request Call */}
       <div className="flex items-center gap-3 p-3.5 rounded-xl bg-surface-container-low ghost-border">
         <Checkbox id="request_call" name="request_call" />
@@ -269,6 +261,10 @@ export function InquiryForm({ centerId, centerName, prefill }: InquiryFormProps)
         {loading ? "Submitting..." : hasPrefill ? "Confirm & Submit" : "Submit Inquiry"}
         <ArrowRight className="ml-2 h-4 w-4" />
       </Button>
+      <p className="text-[11px] text-muted-foreground text-center leading-relaxed -mt-2">
+        Confidential — reviewed by a Rehab-Atlas specialist, never sent directly to a center.
+        Typical response within 2&ndash;4 hours.
+      </p>
     </form>
   );
 }

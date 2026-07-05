@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { MapPin, Search, CheckCircle } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
 import { TREATMENT_FOCUS_OPTIONS } from "@/lib/constants";
 
 const POPULAR_COUNTRIES = [
@@ -69,7 +69,7 @@ export function HeroSearch() {
 
   return (
     <div>
-      <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         {/* Country */}
         <div className="relative flex-1" ref={countryRef}>
           <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-3 shadow-ambient">
@@ -134,12 +134,6 @@ export function HeroSearch() {
         >
           Search
         </Button>
-      </div>
-
-      {/* Verified Badge */}
-      <div className="mt-5 md:mt-6 inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm">
-        <CheckCircle className="h-4 w-4 text-primary" />
-        <span className="text-xs text-muted-foreground">Verified Centers</span>
       </div>
     </div>
   );

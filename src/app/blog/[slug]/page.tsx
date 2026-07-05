@@ -300,15 +300,60 @@ export default async function BlogPostPage({ params }: PageProps) {
     ? extractHowToSteps(post.content)
     : [];
 
-  // Fetch related articles
-  const { data: related } = await supabase
-    .from("pages")
-    .select("slug, title, meta_description, content")
-    .eq("page_type", "blog")
-    .eq("status", "published")
-    .neq("slug", slug)
-    .order("published_at", { ascending: false })
-    .limit(3);
+  // Fetch related articles — tag-relevant first (shared tags keep readers in
+  // the same pillar), topped up with latest when there aren't enough matches.
+  const postTags = (post.tags as string[] | null) || [];
+  let related: { slug: string; title: string; meta_description: string | null; content: string | null }[] = [];
+  if (postTags.length > 0) {
+    const { data: tagged } = await supabase
+      .from("pages")
+      .select("slug, title, meta_description, content")
+      .eq("page_type", "blog")
+      .eq("status", "published")
+      .neq("slug", slug)
+      .overlaps("tags", postTags)
+      .order("published_at", { ascending: false })
+      .limit(3);
+    related = tagged || [];
+  }
+  if (related.length < 3) {
+    const { data: latest } = await supabase
+      .from("pages")
+      .select("slug, title, meta_description, content")
+      .eq("page_type", "blog")
+      .eq("status", "published")
+      .neq("slug", slug)
+      .order("published_at", { ascending: false })
+      .limit(6);
+    const seen = new Set(related.map((r) => r.slug));
+    for (const r of latest || []) {
+      if (related.length >= 3) break;
+      if (!seen.has(r.slug)) related.push(r);
+    }
+  }
+
+  // Split the article at a mid-point H2 so we can place an inline assessment
+  // CTA where engaged readers actually are, instead of only after the footer.
+  const pillar = inferPillar(post.title, undefined, post.tags as string[] | null);
+  const pillarCta = getPillarCta(pillar.slug);
+  const assessmentHref = `/assessment?utm_source=blog&utm_medium=article_cta&utm_campaign=${pillar.slug}&utm_content=${encodeURIComponent(post.slug)}`;
+
+  let contentTop = cleanContent;
+  let contentBottom: string | null = null;
+  {
+    const headingPositions: number[] = [];
+    const re = /\n##\s+(?!Frequently\s+Asked\s+Questions|FAQs?\b)/gi;
+    let m;
+    while ((m = re.exec(cleanContent)) !== null) headingPositions.push(m.index);
+    if (headingPositions.length >= 3) {
+      const mid = cleanContent.length / 2;
+      const splitAt = headingPositions.reduce((best, pos) =>
+        Math.abs(pos - mid) < Math.abs(best - mid) ? pos : best
+      );
+      contentTop = cleanContent.slice(0, splitAt);
+      contentBottom = cleanContent.slice(splitAt);
+    }
+  }
 
 
   return (
@@ -449,7 +494,29 @@ export default async function BlogPostPage({ params }: PageProps) {
       {/* Article Content */}
       <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12 max-w-3xl">
         <article>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={blogMdComponents}>{cleanContent}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={blogMdComponents}>{contentTop}</ReactMarkdown>
+
+          {/* Inline mid-article CTA — compact, pillar-aware, doesn't break reading flow */}
+          {contentBottom && (
+            <aside className="my-8 rounded-2xl bg-primary/5 ghost-border p-5 flex flex-col sm:flex-row sm:items-center gap-4 not-prose">
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">{pillarCta.headline}</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Free &middot; confidential &middot; 3&ndash;5 minutes
+                </p>
+              </div>
+              <Button className="rounded-full px-5 gradient-primary text-white hover:opacity-90 transition-opacity duration-300 flex-shrink-0" asChild>
+                <Link href={`${assessmentHref}&utm_term=inline`}>
+                  {pillarCta.ctaLabel}
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </aside>
+          )}
+
+          {contentBottom && (
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={blogMdComponents}>{contentBottom}</ReactMarkdown>
+          )}
         </article>
 
         {/* Author Box */}
@@ -509,30 +576,23 @@ export default async function BlogPostPage({ params }: PageProps) {
             of the generic "Need help finding treatment?" we used to ship.
             Carries a UTM tag so we can attribute assessment starts to the
             blog → assessment funnel and rank pillars by conversion. */}
-        {(() => {
-          const pillar = inferPillar(post.title, undefined, post.tags as string[] | null);
-          const cta = getPillarCta(pillar.slug);
-          const assessmentHref = `/assessment?utm_source=blog&utm_medium=article_cta&utm_campaign=${pillar.slug}&utm_content=${encodeURIComponent(post.slug)}`;
-          return (
-            <div className="mt-8 md:mt-10 gradient-primary rounded-2xl p-6 md:p-8 text-center text-white">
-              <h3 className="text-headline-sm md:text-headline-md font-semibold">{cta.headline}</h3>
-              <p className="mt-2 text-xs md:text-sm text-white/80 max-w-md mx-auto leading-relaxed">
-                {cta.sub}
-              </p>
-              <div className="mt-4 md:mt-5 flex justify-center">
-                <Button className="rounded-full px-6 bg-white text-foreground hover:bg-white/90" asChild>
-                  <Link href={assessmentHref}>
-                    {cta.ctaLabel}
-                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </div>
-              <p className="mt-3 text-[11px] text-white/60">
-                Private &middot; 3–5 minutes &middot; no center contact without your consent
-              </p>
-            </div>
-          );
-        })()}
+        <div className="mt-8 md:mt-10 gradient-primary rounded-2xl p-6 md:p-8 text-center text-white">
+          <h3 className="text-headline-sm md:text-headline-md font-semibold">{pillarCta.headline}</h3>
+          <p className="mt-2 text-xs md:text-sm text-white/80 max-w-md mx-auto leading-relaxed">
+            {pillarCta.sub}
+          </p>
+          <div className="mt-4 md:mt-5 flex justify-center">
+            <Button className="rounded-full px-6 bg-white text-foreground hover:bg-white/90" asChild>
+              <Link href={assessmentHref}>
+                {pillarCta.ctaLabel}
+                <ArrowRight className="ml-2 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
+          <p className="mt-3 text-[11px] text-white/60">
+            Private &middot; 3–5 minutes &middot; no center contact without your consent
+          </p>
+        </div>
 
         {/* Related Articles */}
         {related && related.length > 0 && (

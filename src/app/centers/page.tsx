@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
 import { CenterCard } from "@/components/centers/center-card";
 import { CenterFilters } from "@/components/centers/center-filters";
+import { MobileFilters } from "@/components/centers/mobile-filters";
 import { CenterSort } from "@/components/centers/center-sort";
 import { Pagination } from "@/components/shared/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -224,9 +225,26 @@ export default async function CentersPage({ searchParams }: PageProps) {
 
       <div className="container mx-auto px-4 sm:px-6 py-6 md:py-10">
 
+        {/* Mobile: filters collapse into a drawer so results are visible immediately */}
+        <div className="mb-6 lg:hidden">
+          <Suspense fallback={null}>
+            <MobileFilters
+              countries={countries}
+              treatmentFocusOptions={treatmentFocusOptions}
+              conditionOptions={conditionOptions}
+              settingTypeOptions={settingTypeOptions}
+              insuranceOptions={insuranceOptions}
+              whoWeTreatOptions={whoWeTreatOptions}
+              treatmentMethodOptions={treatmentMethodOptions}
+              languageOptions={languageOptions}
+              amenityOptions={amenityOptions}
+            />
+          </Suspense>
+        </div>
+
         <div className="flex flex-col lg:flex-row gap-10">
-          {/* Filters Sidebar */}
-          <aside className="w-full lg:w-64 flex-shrink-0">
+          {/* Filters Sidebar — desktop only; mobile uses the drawer above */}
+          <aside className="hidden lg:block w-64 flex-shrink-0">
             <Suspense fallback={<Skeleton className="h-96 w-full rounded-2xl" />}>
               <CenterFilters
                 countries={countries}

@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAssessment } from "@/hooks/use-assessment";
+import { useAssessment, clearAssessmentProgress } from "@/hooks/use-assessment";
 import { readTrafficSource } from "@/lib/traffic-source";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -48,7 +49,32 @@ export default function AssessmentPage() {
     isLastStep,
     isSubmitting,
     setIsSubmitting,
+    resumed,
   } = useAssessment();
+
+  // Match-count teaser for the final (email) step — concrete value before the gate
+  const [matchCount, setMatchCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isLastStep) return;
+    let cancelled = false;
+    fetch("/api/assessment/match-count", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(answers),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data && typeof data.count === "number" && data.count > 0) {
+          setMatchCount(data.count);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally only re-fetch when the user reaches the last step
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLastStep]);
 
   async function handleSubmit() {
     setIsSubmitting(true);
@@ -72,6 +98,7 @@ export default function AssessmentPage() {
         return;
       }
       if (data.assessment_id) {
+        clearAssessmentProgress();
         router.push(`/assessment/results?id=${data.assessment_id}`);
       }
     } catch {
@@ -149,6 +176,13 @@ export default function AssessmentPage() {
           <Lock className="h-3.5 w-3.5 text-primary" />
           <span>Takes 3–5 minutes &middot; your answers stay private &middot; no center contact without your consent</span>
         </div>
+        {resumed && step > 0 && (
+          <div className="mt-4 bg-primary/5 rounded-xl p-3 text-center">
+            <p className="text-xs text-foreground">
+              Welcome back — we saved your progress. You&apos;re on step {step + 1} of 6.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12 max-w-2xl">
@@ -456,11 +490,22 @@ export default function AssessmentPage() {
           {step === 5 && (
             <div className="space-y-6">
               <div>
+                {matchCount !== null && (
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-4 py-1.5 text-sm font-medium">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                    </span>
+                    {matchCount} matching {matchCount === 1 ? "center" : "centers"} found
+                  </div>
+                )}
                 <h2 className="text-headline-lg font-semibold text-foreground">
                   Where should we send your personalized matches?
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Your matches are ready. Give us your email so you can return to them anytime, and so our clinical team can follow up if you&apos;d like guidance.
+                  {matchCount !== null
+                    ? "Your matches are ready — ranked by clinical fit, budget, and preferences. Enter your email to view them and return anytime."
+                    : "Your matches are ready. Give us your email so you can return to them anytime, and so our clinical team can follow up if you'd like guidance."}
                 </p>
               </div>
 
