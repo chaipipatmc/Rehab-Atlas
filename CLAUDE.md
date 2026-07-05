@@ -13,7 +13,7 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 - **Database + Auth:** Supabase (PostgreSQL + Supabase Auth + Storage)
 - **UI:** Tailwind CSS v4 + shadcn/ui v4 (uses @base-ui/react, NOT Radix)
 - **Design System:** "The Quiet Authority" — Noto Serif + Inter, teal palette (#45636b), no hard borders, glassmorphism nav
-- **AI:** Template-based matching by default; Claude API (`@anthropic-ai/sdk`, claude-sonnet-4-20250514) optional when ANTHROPIC_API_KEY is set
+- **AI:** Template-based matching by default; Claude API (`@anthropic-ai/sdk`, `claude-sonnet-5` for generation, `claude-haiku-4-5` for dedup judging) optional when ANTHROPIC_API_KEY is set
 - **Email:** Resend (transactional) + Gmail API (outreach via info@rehab-atlas.com)
 - **E-Signature:** PandaDoc (partnership agreements)
 - **Images:** Unsplash API (blog featured + inline images)

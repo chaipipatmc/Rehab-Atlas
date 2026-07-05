@@ -449,8 +449,9 @@ async function generateArticle(
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4000,
+      model: "claude-sonnet-5",
+      thinking: { type: "disabled" },
+      max_tokens: 12000,
       system: `You are a senior health journalist and clinical editor writing for Rehab-Atlas, a global platform connecting people with rehabilitation centers. You have 15+ years of experience covering addiction, mental health, and recovery.
 
 PRIMARY AUDIENCE — READ THIS FIRST:
@@ -520,9 +521,9 @@ Return a JSON object with:
     });
 
     // Log usage
-    await logClaudeUsage(response, "content_creator", "article_generation", "claude-sonnet-4-20250514", { topic, category, pillar: pillar.slug });
+    await logClaudeUsage(response, "content_creator", "article_generation", "claude-sonnet-5", { topic, category, pillar: pillar.slug });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text = response.content.find((b) => b.type === "text")?.text ?? "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
 

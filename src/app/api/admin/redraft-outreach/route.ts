@@ -83,8 +83,9 @@ export async function POST(request: Request) {
       if (anthropic) {
         try {
           const response = await anthropic.messages.create({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 800,
+            model: "claude-sonnet-5",
+            thinking: { type: "disabled" },
+            max_tokens: 1200,
             system: getOutreachSystemPrompt(),
             messages: [{
               role: "user",
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
             }],
           });
 
-          const text = response.content[0].type === "text" ? response.content[0].text : "";
+          const text = response.content.find((b) => b.type === "text")?.text ?? "";
           const jsonMatch = text.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);

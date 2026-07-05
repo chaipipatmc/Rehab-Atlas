@@ -24,10 +24,10 @@ export async function analyzeWithClaude<T>(params: {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const model = "claude-sonnet-4-20250514";
+    const model = "claude-sonnet-5";
     const response = await anthropic.messages.create({
       model,
-      max_tokens: params.maxTokens || 500,
+      max_tokens: params.maxTokens || 750,
       system: params.systemPrompt,
       messages: [{ role: "user", content: params.userPrompt }],
     });
@@ -40,7 +40,7 @@ export async function analyzeWithClaude<T>(params: {
       model,
     );
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text = response.content.find((b) => b.type === "text")?.text ?? "";
 
     // Extract JSON from response (handle markdown code blocks)
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -84,10 +84,10 @@ export async function analyzeImageWithClaude<T>(params: {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const model = "claude-sonnet-4-20250514";
+    const model = "claude-sonnet-5";
     const response = await anthropic.messages.create({
       model,
-      max_tokens: params.maxTokens || 400,
+      max_tokens: params.maxTokens || 600,
       system: params.systemPrompt,
       messages: [
         {
@@ -107,7 +107,7 @@ export async function analyzeImageWithClaude<T>(params: {
       model,
     );
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text = response.content.find((b) => b.type === "text")?.text ?? "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
 

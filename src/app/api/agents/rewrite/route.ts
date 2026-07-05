@@ -47,11 +47,11 @@ export async function POST(request: Request) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const isEmail = !!checklist.to_email;
-    const model = "claude-sonnet-4-20250514";
+    const model = "claude-sonnet-5";
 
     const response = await anthropic.messages.create({
       model,
-      max_tokens: 1000,
+      max_tokens: 1500,
       system: isEmail
         ? `You rewrite outreach emails for Rehab-Atlas based on admin feedback. Keep the same general structure and tone (warm, professional, human-sounding). Apply the feedback precisely. Return JSON: { "subject": "...", "body_text": "..." }. Use the signature: Sarah\\nPartnerships, Rehab-Atlas\\ninfo@rehab-atlas.com\\nrehab-atlas.com`
         : `You rewrite content for Rehab-Atlas based on admin feedback. Apply the feedback precisely and return the improved version. Return JSON with the same fields as the original.`,
@@ -72,7 +72,7 @@ ${isEmail ? "Return JSON: { \"subject\": \"...\", \"body_text\": \"...\" }" : "R
 
     await logClaudeUsage(response, task.agent_type, "rewrite_feedback", model, { taskId, feedback: feedback.slice(0, 100) });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text = response.content.find((b) => b.type === "text")?.text ?? "";
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: "Failed to parse rewrite" }, { status: 500 });
 

@@ -7,6 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 // Claude Sonnet pricing (per million tokens)
 const PRICING: Record<string, { input: number; output: number }> = {
+  "claude-sonnet-5": { input: 3.0, output: 15.0 },
+  // retired 2026-06-15 — kept so historical usage rows still price correctly
   "claude-sonnet-4-20250514": { input: 3.0, output: 15.0 },
   "claude-haiku-4-5-20251001": { input: 0.80, output: 4.0 },
 };
@@ -63,7 +65,7 @@ export async function logClaudeUsage(
   response: { usage: { input_tokens: number; output_tokens: number } },
   agentType: string,
   operation: string,
-  model: string = "claude-sonnet-4-20250514",
+  model: string = "claude-sonnet-5",
   metadata?: Record<string, unknown>,
 ): Promise<void> {
   await logApiUsage({

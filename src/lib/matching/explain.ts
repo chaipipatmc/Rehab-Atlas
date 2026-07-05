@@ -85,8 +85,9 @@ async function generateAIExplanation(
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 300,
+      model: "claude-sonnet-5",
+      thinking: { type: "disabled" },
+      max_tokens: 450,
       system: `You are a compassionate treatment matching assistant for Rehab-Atlas.
 Explain why a rehab center may suit someone based on their assessment responses.
 Rules: Never diagnose. Never guarantee outcomes. Use "may be suitable", "based on your responses".
@@ -118,7 +119,7 @@ Write a JSON object with:
     });
 
     const text =
-      response.content[0].type === "text" ? response.content[0].text : "";
+      response.content.find((b) => b.type === "text")?.text ?? "";
     const parsed = JSON.parse(text);
 
     if (

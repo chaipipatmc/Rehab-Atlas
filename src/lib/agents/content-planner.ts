@@ -85,8 +85,9 @@ export async function planMonthlyCalendar(forceMonth?: string): Promise<{ succes
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8000,
+    model: "claude-sonnet-5",
+    thinking: { type: "disabled" },
+    max_tokens: 12000,
     system: `You are a content strategist for Rehab-Atlas, a global rehab center discovery platform. Plan a monthly editorial calendar with 2-3 blog article topics per weekday.
 
 PLANNING STRATEGY:
@@ -121,9 +122,9 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
   });
 
   // Log usage
-  await logClaudeUsage(response, "content_planner", "calendar_planning", "claude-sonnet-4-20250514", { month: monthName });
+  await logClaudeUsage(response, "content_planner", "calendar_planning", "claude-sonnet-5", { month: monthName });
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const text = response.content.find((b) => b.type === "text")?.text ?? "";
 
   // Extract JSON array — handle markdown code blocks
   let jsonStr = text;
