@@ -9,7 +9,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
-import { isAgentEnabled } from "@/lib/agents/config";
+import { isAgentEnabled, getAgentSettingString } from "@/lib/agents/config";
 import { logClaudeUsage } from "@/lib/api-usage";
 import { checkDuplicateByTitle, TRIGRAM_AMBIGUOUS } from "@/lib/agents/content-dedup";
 
@@ -202,7 +202,25 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
     return { success: false, reason: `database insert failed: ${error.message}` };
   }
 
-  // Create agent task for admin to review/approve the calendar
+  // Auto-approve the calendar unless the owner opted out
+  // (site_settings: agent_content_planner_setting_auto_approve = "false").
+  // A calendar stuck in "planned" starves the creator — getTodaysTopics only
+  // reads status='approved' — which stalled the whole pipeline in July 2026.
+  // The article layer keeps its own gates (auto-approve quality checks +
+  // admin draft review), so approving topics here is low-risk.
+  const autoApproveSetting = await getAgentSettingString(
+    "content_planner",
+    "auto_approve",
+    "true"
+  );
+  const autoApprove = autoApproveSetting.toLowerCase() !== "false";
+  let autoApprovedCount = 0;
+  if (autoApprove) {
+    autoApprovedCount = await approveCalendarMonth(yearMonth);
+  }
+
+  // Create agent task so admin still reviews the calendar (edit/remove topics
+  // at /admin/content-calendar) even when it was auto-approved.
   await createAgentTask({
     agent_type: "content_planner",
     entity_type: "content_calendar",
@@ -211,10 +229,13 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
       month: monthName,
       total_days: calendarDays.length,
       total_topics: entries.length,
+      auto_approved: autoApprove,
       categories: [...new Set(entries.map((e) => e.category as string))],
       sample_topics: entries.slice(0, 5).map((e) => e.topic),
     },
-    ai_summary: `Editorial calendar for ${monthName}: ${entries.length} topics across ${calendarDays.length} days. Review and approve at /admin/content-calendar.`,
+    ai_summary: autoApprove
+      ? `Editorial calendar for ${monthName}: ${entries.length} topics across ${calendarDays.length} days (auto-approved so the creator can start). Review or adjust at /admin/content-calendar.`
+      : `Editorial calendar for ${monthName}: ${entries.length} topics across ${calendarDays.length} days. Review and approve at /admin/content-calendar.`,
     ai_recommendation: "approve",
     confidence: 0.9,
   });
@@ -226,12 +247,13 @@ Create 2-3 unique topics per weekday. Return the JSON array now.`,
       month: yearMonth,
       total_topics: entries.length,
       days_planned: calendarDays.length,
+      auto_approved: autoApprovedCount,
       dropped_duplicates: droppedDuplicates,
       dropped_details: droppedDetails.slice(0, 10),
     },
   });
 
-  console.log(`Content Planner: created ${entries.length} topics for ${monthName}`);
+  console.log(`Content Planner: created ${entries.length} topics for ${monthName}${autoApprove ? ` (${autoApprovedCount} auto-approved)` : ""}`);
   return { success: true, count: entries.length };
 }
 

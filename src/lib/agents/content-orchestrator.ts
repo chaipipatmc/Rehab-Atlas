@@ -44,10 +44,11 @@ const DEFAULT_CREATOR_STALL_HOURS = 2;
 // short-circuit the stall window further so the orchestrator can actively refill.
 const CRITICAL_POOL_FRACTION = 0.25;
 const CRITICAL_STALL_HOURS = 0.5;
-// Per-tick cap when refilling. Creator API route batches internally; this is
-// just the orchestrator's nudge size to bound cost per tick.
-const CRITICAL_REFILL_BATCH = 5;
-const NORMAL_REFILL_BATCH = 3;
+// Per-tick cap when refilling. Bounded by the route's 300s maxDuration —
+// each article is a full Claude generation (+ images + dedup), so 2/tick is
+// the safe ceiling; the 30-min cron cadence still refills up to ~20/day.
+const CRITICAL_REFILL_BATCH = 2;
+const NORMAL_REFILL_BATCH = 2;
 
 export async function runContentOrchestrator(): Promise<ContentOrchestratorResult> {
   const enabled = await isAgentEnabled("content_orchestrator");
@@ -59,42 +60,72 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
   const result: ContentOrchestratorResult = { enabled: true, steps: [] };
   const now = new Date();
 
-  // ── Step 1: Check planner — does next month have a calendar? ────────────
-  if (now.getDate() >= 25) {
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const startISO = nextMonth.toISOString().slice(0, 10);
-    const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0)
+  // ── Step 1: Planner — make sure a calendar exists ────────────────────────
+  // Two triggers:
+  //  (a) CURRENT month has no calendar → plan it immediately, any day. This
+  //      is the month-start safety net: if the ahead-of-time run was missed
+  //      or crashed (June 2026: an unhandled planner error killed every
+  //      orchestrator tick from the 25th-30th, so July was never planned and
+  //      the creator starved), the pipeline self-heals on the next tick.
+  //  (b) From the 25th, plan NEXT month ahead of time (original behavior).
+  // The planner call is try/caught so a failure becomes a logged step instead
+  // of aborting the creator/scheduler remediation below.
+  const monthKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const monthEntryCount = async (d: Date): Promise<number> => {
+    const startISO = new Date(d.getFullYear(), d.getMonth(), 1)
       .toISOString()
       .slice(0, 10);
-
-    const { count: existingCount } = await admin
+    const endISO = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+      .toISOString()
+      .slice(0, 10);
+    const { count } = await admin
       .from("content_calendar")
       .select("id", { count: "exact", head: true })
       .gte("planned_date", startISO)
-      .lte("planned_date", endOfNextMonth);
+      .lte("planned_date", endISO);
+    return count || 0;
+  };
 
-    if (!existingCount || existingCount === 0) {
-      const planResult = await planMonthlyCalendar();
+  try {
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    let planTarget: Date | null = null;
+    let planLabel = "";
+    if ((await monthEntryCount(currentMonth)) === 0) {
+      planTarget = currentMonth;
+      planLabel = "current month (missing calendar)";
+    } else if (now.getDate() >= 25 && (await monthEntryCount(nextMonth)) === 0) {
+      planTarget = nextMonth;
+      planLabel = "next month";
+    }
+
+    if (planTarget) {
+      const planResult = await planMonthlyCalendar(monthKey(planTarget));
       result.steps.push({
         step: "planner",
         triggered: planResult.success,
         reason: planResult.success
-          ? `Planned ${planResult.count} topics for next month`
+          ? `Planned ${planResult.count} topics for ${planLabel}`
           : `Skipped: ${planResult.reason}`,
-        detail: { count: planResult.count },
+        detail: { count: planResult.count, target: monthKey(planTarget) },
       });
     } else {
       result.steps.push({
         step: "planner",
         triggered: false,
-        reason: `Calendar already exists for next month (${existingCount} topics)`,
+        reason:
+          now.getDate() >= 25
+            ? "Calendars exist for current and next month"
+            : `Calendar exists for current month (day ${now.getDate()} — next month plans from the 25th)`,
       });
     }
-  } else {
+  } catch (err) {
     result.steps.push({
       step: "planner",
       triggered: false,
-      reason: `Day ${now.getDate()} — planner runs after the 25th`,
+      reason: `Planner failed: ${err instanceof Error ? err.message : String(err)}`,
     });
   }
 
@@ -143,28 +174,36 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
       !lastCreatorRun || (lastCreatorRun.created_at as string) < stallCutoff;
 
     if (creatorIsStale) {
-      const batchSize = criticallyLow ? CRITICAL_REFILL_BATCH : NORMAL_REFILL_BATCH;
-      const creatorResult = await createArticleDraft({
-        maxArticles: batchSize,
-        skipWeekendCheck: true,
-      });
-      // Auto-approve any drafts that pass quality gates
-      const approveResult = await autoApproveContent();
-      result.steps.push({
-        step: "creator",
-        triggered: creatorResult.written > 0,
-        reason: creatorResult.written > 0
-          ? `${criticallyLow ? "Critical refill: " : ""}Drafted ${creatorResult.written} articles, pool now ${creatorResult.poolSize}/${poolTarget}`
-          : `No new drafts (pool at ${creatorResult.poolSize}/${poolTarget})`,
-        detail: {
-          drafted: creatorResult.written,
-          autoApproved: approveResult.approved,
-          autoSkipped: approveResult.skipped,
-          poolSize: creatorResult.poolSize,
-          mode: criticallyLow ? "critical" : "normal",
-          batchSize,
-        },
-      });
+      try {
+        const batchSize = criticallyLow ? CRITICAL_REFILL_BATCH : NORMAL_REFILL_BATCH;
+        const creatorResult = await createArticleDraft({
+          maxArticles: batchSize,
+          skipWeekendCheck: true,
+        });
+        // Auto-approve any drafts that pass quality gates
+        const approveResult = await autoApproveContent();
+        result.steps.push({
+          step: "creator",
+          triggered: creatorResult.written > 0,
+          reason: creatorResult.written > 0
+            ? `${criticallyLow ? "Critical refill: " : ""}Drafted ${creatorResult.written} articles, pool now ${creatorResult.poolSize}/${poolTarget}`
+            : `No new drafts (pool at ${creatorResult.poolSize}/${poolTarget})`,
+          detail: {
+            drafted: creatorResult.written,
+            autoApproved: approveResult.approved,
+            autoSkipped: approveResult.skipped,
+            poolSize: creatorResult.poolSize,
+            mode: criticallyLow ? "critical" : "normal",
+            batchSize,
+          },
+        });
+      } catch (err) {
+        result.steps.push({
+          step: "creator",
+          triggered: false,
+          reason: `Creator failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
     } else {
       result.steps.push({
         step: "creator",
@@ -196,14 +235,22 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
       .gte("published_at", todayStart);
 
     if (!publishedToday || publishedToday === 0) {
-      const published = await publishFromPool();
-      result.steps.push({
-        step: "scheduler",
-        triggered: published,
-        reason: published
-          ? "Published 1 article from pool"
-          : "Scheduler ran, nothing to publish",
-      });
+      try {
+        const published = await publishFromPool();
+        result.steps.push({
+          step: "scheduler",
+          triggered: published,
+          reason: published
+            ? "Published 1 article from pool"
+            : "Scheduler ran, nothing to publish",
+        });
+      } catch (err) {
+        result.steps.push({
+          step: "scheduler",
+          triggered: false,
+          reason: `Scheduler failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
     } else {
       result.steps.push({
         step: "scheduler",
