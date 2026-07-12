@@ -50,11 +50,13 @@ export async function POST(request: Request) {
       // Stop if nothing was written (pool full, no topics, or agent disabled)
       if (result.written === 0) break;
 
-      // Auto-approve after each batch
-      await autoApproveContent();
-
       console.log(`Content Creator: batch done — ${totalWritten} total, pool at ${poolSize}, elapsed ${Math.round((Date.now() - startTime) / 1000)}s`);
     }
+
+    // Auto-approve pending drafts even when no new articles were written —
+    // gating this on written > 0 deadlocks the pipeline when the pool is
+    // already full of unapproved drafts.
+    await autoApproveContent();
 
     return NextResponse.json({
       success: totalWritten > 0,

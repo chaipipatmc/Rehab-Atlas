@@ -180,8 +180,6 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
           maxArticles: batchSize,
           skipWeekendCheck: true,
         });
-        // Auto-approve any drafts that pass quality gates
-        const approveResult = await autoApproveContent();
         result.steps.push({
           step: "creator",
           triggered: creatorResult.written > 0,
@@ -190,8 +188,6 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
             : `No new drafts (pool at ${creatorResult.poolSize}/${poolTarget})`,
           detail: {
             drafted: creatorResult.written,
-            autoApproved: approveResult.approved,
-            autoSkipped: approveResult.skipped,
             poolSize: creatorResult.poolSize,
             mode: criticallyLow ? "critical" : "normal",
             batchSize,
@@ -220,8 +216,39 @@ export async function runContentOrchestrator(): Promise<ContentOrchestratorResul
     });
   }
 
-  // ── Step 3: Scheduler — anything to publish today? ──────────────────────
-  if ((approvedCount || 0) > 0) {
+  // ── Step 3: Auto-approve — always run, independent of the creator ────────
+  // Auto-approve must NOT be gated on the creator step: when the pool is full
+  // of drafts the creator never runs, so an auto-approve call placed only
+  // inside the creator branch never fires and the pipeline deadlocks (pool
+  // full of drafts → zero approved → scheduler has nothing to publish).
+  let approvedAfterAutoApprove = approvedCount || 0;
+  try {
+    const approveResult = await autoApproveContent();
+    approvedAfterAutoApprove += approveResult.approved;
+    result.steps.push({
+      step: "auto_approve",
+      triggered: approveResult.approved > 0,
+      reason:
+        approveResult.approved > 0
+          ? `Approved ${approveResult.approved} drafts (${approveResult.skipped} skipped)`
+          : approveResult.skipped > 0
+            ? `No drafts passed quality gates (${approveResult.skipped} skipped)`
+            : "No drafts pending",
+      detail: {
+        approved: approveResult.approved,
+        skipped: approveResult.skipped,
+      },
+    });
+  } catch (err) {
+    result.steps.push({
+      step: "auto_approve",
+      triggered: false,
+      reason: `Auto-approve failed: ${err instanceof Error ? err.message : String(err)}`,
+    });
+  }
+
+  // ── Step 4: Scheduler — anything to publish today? ──────────────────────
+  if (approvedAfterAutoApprove > 0) {
     const todayStart = new Date(
       now.getFullYear(),
       now.getMonth(),
