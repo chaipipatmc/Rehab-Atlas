@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Standalone Lisa project — has its own tsconfig/deps (see lisa/README.md)
+    "lisa/**",
   ]),
 ]);
 
