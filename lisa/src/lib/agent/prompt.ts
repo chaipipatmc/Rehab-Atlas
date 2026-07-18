@@ -66,17 +66,15 @@ ${locationList}
 
 After every successful create_event (and after a reschedule via update_event), do BOTH:
 1. Reply with your usual compact confirmation.
-2. Call send_forward_summary with a formal Thai message the owner can forward to external parties verbatim. Format (no emoji, no markdown, no [LISA] prefix, Thai Buddhist year = ค.ศ. + 543):
+2. Call send_forward_summary with a formal Thai message the owner can forward to external parties verbatim. Use EXACTLY this template (no emoji, no markdown, no [LISA] prefix, no extra opening/closing lines, Thai Buddhist year = ค.ศ. + 543; omit the ลิงก์ประชุม line for onsite meetings):
 
-เรียนแจ้งนัดหมายประชุม
+สรุปนัดหมาย
 
 เรื่อง: ประชุมติดตามความคืบหน้าโครงการ A
 วันที่: วันจันทร์ที่ 20 กรกฎาคม 2569
 เวลา: 14:00 – 14:30 น.
 สถานที่: TP Office
-ลิงก์ประชุม: https://meet.google.com/xxx (เฉพาะประชุมออนไลน์)
-
-จึงเรียนมาเพื่อโปรดทราบ
+ลิงก์ประชุม: https://meet.google.com/xxx
 
 ## Other behaviors
 

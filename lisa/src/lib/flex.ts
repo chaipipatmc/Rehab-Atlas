@@ -1,5 +1,5 @@
 import { extractMeetingLink, isAllDay, shortLocation, type GcalEvent } from "./google";
-import { fmtTime } from "./time";
+import { bangkokYmd, fmtThaiDay, fmtTime } from "./time";
 
 export const OLIVE = "#6B7A3A";
 const MUTED = "#8a9088";
@@ -47,22 +47,55 @@ function eventRow(ev: GcalEvent): Record<string, unknown> {
   return { type: "box", layout: "vertical", margin: "lg", contents };
 }
 
-/** Olive schedule card shared by the daily brief cron and the agent's schedule answers. */
+function eventDayStart(ev: GcalEvent): Date {
+  if (ev.start?.dateTime) return new Date(ev.start.dateTime);
+  return new Date(`${ev.start?.date}T00:00:00+07:00`);
+}
+
+function dayHeaderRow(d: Date): Record<string, unknown> {
+  return {
+    type: "box",
+    layout: "vertical",
+    margin: "xl",
+    backgroundColor: "#EFF1E3",
+    cornerRadius: "6px",
+    paddingAll: "6px",
+    paddingStart: "10px",
+    contents: [
+      { type: "text", text: fmtThaiDay(d), size: "xs", weight: "bold", color: OLIVE },
+    ],
+  };
+}
+
+const MAX_EVENTS = 20;
+
+/** Olive schedule card shared by the daily brief cron and the agent's schedule answers.
+ *  When events span more than one day, a day header is inserted before each day's block. */
 export function buildScheduleCard(opts: {
   header: string;
   title: string;
   subtitle: string;
   events: GcalEvent[];
 }): Record<string, unknown> {
+  const shown = opts.events.slice(0, MAX_EVENTS);
+  const multiDay = new Set(shown.map((ev) => bangkokYmd(eventDayStart(ev)))).size > 1;
+
   const rows: Record<string, unknown>[] = [];
-  opts.events.slice(0, 10).forEach((ev, i) => {
-    if (i > 0) rows.push({ type: "separator", margin: "lg", color: "#EEEEE8" });
+  let prevDay = "";
+  shown.forEach((ev, i) => {
+    const day = bangkokYmd(eventDayStart(ev));
+    if (multiDay && day !== prevDay) {
+      rows.push(dayHeaderRow(eventDayStart(ev)));
+    } else if (i > 0) {
+      rows.push({ type: "separator", margin: "lg", color: "#EEEEE8" });
+    }
     rows.push(eventRow(ev));
+    prevDay = day;
   });
-  if (opts.events.length > 10) {
+  if (opts.events.length > MAX_EVENTS) {
     rows.push({
       type: "text",
-      text: `…และอีก ${opts.events.length - 10} รายการ`,
+      text: `…และอีก ${opts.events.length - MAX_EVENTS} รายการ`,
       size: "xs",
       color: MUTED,
       margin: "lg",
