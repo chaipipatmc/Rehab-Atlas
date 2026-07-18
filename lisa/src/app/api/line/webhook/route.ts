@@ -43,7 +43,7 @@ async function handleEvent(event: LineEvent): Promise<void> {
 
   try {
     const reply = await runLisaAgent(text);
-    await pushText(reply);
+    if (reply) await pushText(reply);
   } catch (err) {
     console.error("Lisa agent failed:", err);
     await pushText("ขอโทษค่ะ มีข้อผิดพลาดภายใน Lisa ลองอีกครั้งได้เลยนะคะ 🙏");

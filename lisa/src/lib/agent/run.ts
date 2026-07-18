@@ -48,6 +48,7 @@ export async function runLisaAgent(userText: string): Promise<string> {
   const system = buildSystemPrompt(locations);
 
   const messages: Anthropic.MessageParam[] = [...history, { role: "user", content: userText }];
+  const pushState = { count: 0 };
   let finalText = "";
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
@@ -73,17 +74,19 @@ export async function runLisaAgent(userText: string): Promise<string> {
 
     const results: Anthropic.ToolResultBlockParam[] = [];
     for (const tu of toolUses) {
-      const result = await executeTool(tu.name, tu.input, { latestUserText: userText });
+      const result = await executeTool(tu.name, tu.input, { latestUserText: userText, pushState });
       results.push({ type: "tool_result", tool_use_id: tu.id, content: result });
     }
     messages.push({ role: "user", content: results });
   }
 
-  if (!finalText) {
+  // Tools may have already pushed messages (schedule card / forward summary) —
+  // an empty final text is fine in that case; only fall back when nothing went out.
+  if (!finalText && pushState.count === 0) {
     finalText = "ขอโทษค่ะ Lisa ประมวลผลไม่สำเร็จ ลองพิมพ์อีกครั้งได้ไหมคะ 🙏";
   }
 
   await saveMessage("user", userText);
-  await saveMessage("assistant", finalText);
+  await saveMessage("assistant", finalText || "(ส่งการ์ด/ข้อความสรุปให้เรียบร้อยแล้ว)");
   return finalText;
 }
