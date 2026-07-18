@@ -60,6 +60,20 @@ export async function runLisaAgent(userText: string): Promise<string> {
       messages,
     });
 
+    // Log token usage for the weekly cost summary (best-effort)
+    try {
+      const { error } = await db().from("lisa_usage").insert({
+        model: response.model ?? CLAUDE_MODEL,
+        input_tokens: response.usage?.input_tokens ?? 0,
+        output_tokens: response.usage?.output_tokens ?? 0,
+        cache_creation_tokens: response.usage?.cache_creation_input_tokens ?? 0,
+        cache_read_tokens: response.usage?.cache_read_input_tokens ?? 0,
+      });
+      if (error) console.error("usage log failed:", error.message);
+    } catch (err) {
+      console.error("usage log failed:", err);
+    }
+
     const textParts = response.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text);
