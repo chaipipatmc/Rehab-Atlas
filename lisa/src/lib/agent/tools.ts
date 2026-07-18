@@ -10,7 +10,17 @@ import {
 } from "../google";
 import { pushFlex, pushText } from "../line";
 import { db } from "../supabase";
-import { TZ } from "../time";
+import { bangkokYmd, TZ } from "../time";
+
+/** "9:00" style Bangkok time (no leading zero, matches the owner's availability format). */
+function fmtTimeLocal(ms: number): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(ms));
+}
 
 export const TITLE_PREFIX = "[LISA] - ";
 export const DEFAULT_DURATION_MIN = 30;
@@ -109,7 +119,7 @@ export const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "search_contacts",
-    description: "Search saved contacts by name, nickname, or email fragment. Use before sending invitations.",
+    description: "Search saved contacts by name, nickname, company, or email fragment. Use before sending invitations.",
     input_schema: {
       type: "object",
       properties: { query: { type: "string" } },
@@ -122,11 +132,25 @@ export const TOOLS: Anthropic.Tool[] = [
     input_schema: {
       type: "object",
       properties: {
-        name: { type: "string" },
+        name: { type: "string", description: "Full name" },
         email: { type: "string" },
-        nickname: { type: "string" },
+        nickname: { type: "string", description: "Common/short name the owner uses" },
+        company: { type: "string", description: "Related company/organization" },
       },
       required: ["name", "email"],
+    },
+  },
+  {
+    name: "find_free_slots",
+    description:
+      "Compute the owner's open meeting slots between two times. Working window is 09:00–18:00 Bangkok per day; slots shorter than 60 minutes are flagged online_only (too tight for travel — online meetings only). Use when the owner asks for available time to offer someone (e.g. 'ขอเวลารับนัด วันพฤหัส').",
+    input_schema: {
+      type: "object",
+      properties: {
+        time_min: { type: "string", description: "RFC3339 start of range with +07:00 offset" },
+        time_max: { type: "string", description: "RFC3339 end of range" },
+      },
+      required: ["time_min", "time_max"],
     },
   },
   {
@@ -264,8 +288,8 @@ export async function executeTool(
         const q = `%${String(input.query).trim()}%`;
         const { data, error } = await db()
           .from("lisa_contacts")
-          .select("name, nickname, email")
-          .or(`name.ilike.${q},nickname.ilike.${q},email.ilike.${q}`)
+          .select("name, nickname, company, email")
+          .or(`name.ilike.${q},nickname.ilike.${q},email.ilike.${q},company.ilike.${q}`)
           .limit(10);
         if (error) return fail(error.message);
         return ok(data);
@@ -276,6 +300,7 @@ export async function executeTool(
           {
             name: String(input.name).trim(),
             nickname: input.nickname ? String(input.nickname).trim() : null,
+            company: input.company ? String(input.company).trim() : null,
             email: String(input.email).trim().toLowerCase(),
             updated_at: new Date().toISOString(),
           },
@@ -283,6 +308,65 @@ export async function executeTool(
         );
         if (error) return fail(error.message);
         return ok({ saved: input.email });
+      }
+
+      case "find_free_slots": {
+        const events = await listEvents({ timeMin: input.time_min, timeMax: input.time_max });
+        const busyEvents = events.filter(
+          (ev) =>
+            ev.start?.dateTime &&
+            ev.end?.dateTime &&
+            ev.transparency !== "transparent" &&
+            ev.attendees?.find((a) => a.self)?.responseStatus !== "declined"
+        );
+        const now = Date.now();
+        const rangeStart = Date.parse(input.time_min);
+        const rangeEnd = Date.parse(input.time_max);
+        if (Number.isNaN(rangeStart) || Number.isNaN(rangeEnd)) return fail("invalid time range");
+
+        const days: { label: string; slots: { start: string; end: string; online_only: boolean }[] }[] = [];
+        // Iterate Bangkok days across the range
+        let dayStart = new Date(`${bangkokYmd(new Date(rangeStart))}T00:00:00+07:00`).getTime();
+        while (dayStart < rangeEnd && days.length < 14) {
+          const workStart = dayStart + 9 * 3600_000;
+          const workEnd = dayStart + 18 * 3600_000;
+          const windowStart = Math.max(workStart, now, rangeStart);
+          const windowEnd = Math.min(workEnd, rangeEnd);
+          if (windowStart < windowEnd) {
+            const busy = busyEvents
+              .map((ev) => [Date.parse(ev.start!.dateTime!), Date.parse(ev.end!.dateTime!)] as [number, number])
+              .filter(([s, e]) => e > windowStart && s < windowEnd)
+              .sort((a, b) => a[0] - b[0]);
+            const merged: [number, number][] = [];
+            for (const [s, e] of busy) {
+              const last = merged[merged.length - 1];
+              if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+              else merged.push([s, e]);
+            }
+            const gaps: [number, number][] = [];
+            let cursor = windowStart;
+            for (const [s, e] of merged) {
+              if (s > cursor) gaps.push([cursor, Math.min(s, windowEnd)]);
+              cursor = Math.max(cursor, e);
+            }
+            if (cursor < windowEnd) gaps.push([cursor, windowEnd]);
+
+            const slots = gaps
+              .filter(([s, e]) => e - s >= 30 * 60_000) // drop slivers under 30 min
+              .map(([s, e]) => ({
+                start: fmtTimeLocal(s),
+                end: fmtTimeLocal(e),
+                online_only: e - s < 60 * 60_000,
+              }));
+            if (slots.length > 0) {
+              const d = new Date(dayStart + 12 * 3600_000);
+              const label = `${new Intl.DateTimeFormat("en-US", { timeZone: TZ, month: "long", day: "numeric", year: "numeric" }).format(d)} (${new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short" }).format(d)})`;
+              days.push({ label, slots });
+            }
+          }
+          dayStart += 86400_000;
+        }
+        return ok({ days, note: "online_only=true means the slot is squeezed between meetings — offer it for online meetings only, mark it (online)." });
       }
 
       case "add_location": {

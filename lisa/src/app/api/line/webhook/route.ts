@@ -1,6 +1,8 @@
 import { after } from "next/server";
 import { env } from "@/lib/env";
+import { respondToInvite } from "@/lib/google";
 import { pushText, replyText, verifyLineSignature } from "@/lib/line";
+import { db } from "@/lib/supabase";
 import { runLisaAgent } from "@/lib/agent/run";
 
 export const maxDuration = 300;
@@ -10,6 +12,29 @@ interface LineEvent {
   replyToken?: string;
   source?: { type: string; userId?: string };
   message?: { type: string; id: string; text?: string };
+  postback?: { data?: string };
+}
+
+/** Handle invite accept/decline button presses from invitation cards. */
+async function handleInvitePostback(data: string): Promise<void> {
+  const m = data.match(/^invite:(accepted|declined):(.+)$/);
+  if (!m) return;
+  const [, decision, eventId] = m;
+  try {
+    const ev = await respondToInvite(eventId, decision as "accepted" | "declined");
+    await db()
+      .from("lisa_invite_notices")
+      .update({ decision, decided_at: new Date().toISOString() })
+      .eq("event_id", eventId);
+    await pushText(
+      decision === "accepted"
+        ? `✅ ตอบรับคำเชิญ "${ev.summary ?? ""}" เรียบร้อยค่ะ ลงตารางให้แล้วนะคะ`
+        : `❌ ปฏิเสธคำเชิญ "${ev.summary ?? ""}" ให้เรียบร้อยค่ะ`
+    );
+  } catch (err) {
+    console.error("invite postback failed:", err);
+    await pushText("ขอโทษค่ะ ตอบกลับคำเชิญไม่สำเร็จ ลองกดอีกครั้งได้นะคะ 🙏");
+  }
 }
 
 async function handleEvent(event: LineEvent): Promise<void> {
@@ -30,6 +55,11 @@ async function handleEvent(event: LineEvent): Promise<void> {
 
   // Lisa is a personal assistant — ignore everyone except the owner.
   if (senderId !== ownerId) return;
+
+  if (event.type === "postback") {
+    await handleInvitePostback(event.postback?.data ?? "");
+    return;
+  }
 
   if (event.type !== "message") return;
 
