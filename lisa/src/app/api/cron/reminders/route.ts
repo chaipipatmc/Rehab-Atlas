@@ -1,5 +1,5 @@
 import { requireEnv } from "@/lib/env";
-import { extractMeetingLink, isAllDay, listEvents } from "@/lib/google";
+import { extractMeetingLink, isAllDay, listEvents, shortLocation } from "@/lib/google";
 import { pushText } from "@/lib/line";
 import { db } from "@/lib/supabase";
 import { fmtTime } from "@/lib/time";
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       `📅 ${ev.summary ?? "(ไม่มีชื่อ)"}`,
       `🕐 ${fmtTime(start)}${ev.end?.dateTime ? `–${fmtTime(new Date(ev.end.dateTime))}` : ""}`,
     ];
-    if (ev.location) lines.push(`📍 ${ev.location}`);
+    if (ev.location) lines.push(`📍 ${shortLocation(ev.location)}`);
     if (link) lines.push(`🔗 ${link}`);
     await pushText(lines.join("\n"));
     sent++;
