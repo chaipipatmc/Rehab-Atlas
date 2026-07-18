@@ -40,6 +40,16 @@ export function fmtDate(d: Date): string {
   }).format(d);
 }
 
+/** "วันจันทร์ที่ 20 ก.ค." — Thai day header for schedule cards. */
+export function fmtThaiDay(d: Date): string {
+  return new Intl.DateTimeFormat("th-TH", {
+    timeZone: TZ,
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  }).format(d);
+}
+
 /** Full current date-time context string for the agent prompt. */
 export function nowBangkokContext(): string {
   const now = new Date();
