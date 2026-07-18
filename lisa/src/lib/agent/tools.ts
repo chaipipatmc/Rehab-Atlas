@@ -13,6 +13,16 @@ import { TZ } from "../time";
 export const TITLE_PREFIX = "[LISA] - ";
 export const DEFAULT_DURATION_MIN = 30;
 
+/** Owner's category → Google Calendar event colorId (API supports 11 fixed colors). */
+const CATEGORY_COLORS: Record<string, string> = {
+  tp: "10", // Basil (dark green)
+  aqua: "7", // Peacock (blue)
+  fab: "6", // Tangerine (orange)
+  sport: "2", // Sage (light green — closest to Avocado)
+  personal: "8", // Graphite (gray — closest to Birch)
+  other: "5", // Banana (yellow)
+};
+
 /** The confirmation words the owner must type before invitations go out. */
 export function isConfirmationMessage(text: string): boolean {
   const t = text.trim().toLowerCase();
@@ -53,8 +63,14 @@ export const TOOLS: Anthropic.Tool[] = [
         online: { type: "boolean", description: "true = online meeting → create Google Meet" },
         location: { type: "string", description: "Plain place name (resolved from alias). Required for onsite events" },
         description: { type: "string", description: "Optional notes/agenda summarized from the owner's message" },
+        category: {
+          type: "string",
+          enum: ["tp", "aqua", "fab", "sport", "personal", "other"],
+          description:
+            "Event color category: tp = TP-related (Basil green), aqua = AQUA-related (Peacock blue), fab = FAB-related (Tangerine orange), sport = sport/training/exercise (light green), personal = personal/family/pets/doctor (gray), other = everything else (Banana yellow)",
+        },
       },
-      required: ["topic", "start", "online"],
+      required: ["topic", "start", "online", "category"],
     },
   },
   {
@@ -69,6 +85,11 @@ export const TOOLS: Anthropic.Tool[] = [
         end: { type: "string", description: "New RFC3339 end" },
         location: { type: "string" },
         description: { type: "string" },
+        category: {
+          type: "string",
+          enum: ["tp", "aqua", "fab", "sport", "personal", "other"],
+          description: "Change the event's color category",
+        },
       },
       required: ["event_id"],
     },
@@ -187,6 +208,7 @@ export async function executeTool(
           startISO: input.start,
           endISO: resolveEnd(input.start, input.end, input.duration_minutes),
           withMeet: Boolean(input.online),
+          colorId: CATEGORY_COLORS[input.category] ?? CATEGORY_COLORS.other,
         });
         return ok(simplifyEvent(ev));
       }
@@ -198,6 +220,7 @@ export async function executeTool(
         if (input.description !== undefined) patch.description = input.description;
         if (input.start) patch.start = { dateTime: input.start, timeZone: TZ };
         if (input.end) patch.end = { dateTime: input.end, timeZone: TZ };
+        if (input.category) patch.colorId = CATEGORY_COLORS[input.category] ?? CATEGORY_COLORS.other;
         const ev = await patchEvent(input.event_id, patch);
         return ok(simplifyEvent(ev));
       }

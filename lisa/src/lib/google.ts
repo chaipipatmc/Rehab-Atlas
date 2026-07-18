@@ -143,6 +143,7 @@ export async function createEvent(opts: {
   startISO: string;
   endISO: string;
   withMeet: boolean;
+  colorId?: string;
 }): Promise<GcalEvent> {
   const body: Record<string, unknown> = {
     summary: opts.summary,
@@ -150,6 +151,7 @@ export async function createEvent(opts: {
     location: opts.location,
     start: { dateTime: opts.startISO, timeZone: TZ },
     end: { dateTime: opts.endISO, timeZone: TZ },
+    colorId: opts.colorId,
   };
   if (opts.withMeet) {
     body.conferenceData = {
@@ -213,6 +215,13 @@ export function extractMeetingLink(ev: GcalEvent): string | null {
     if (m) return m[0];
   }
   return null;
+}
+
+/** "PETiS Animal Hospital 45/5 Rat Phatthana Rd., ..." → "PETiS Animal Hospital 45/5 Rat Phatthana Rd." is
+ * still too long — keep only the venue name (text before the first comma), capped for chat display. */
+export function shortLocation(location: string): string {
+  const name = location.split(",")[0].trim();
+  return name.length > 45 ? `${name.slice(0, 42)}…` : name;
 }
 
 export function isAllDay(ev: GcalEvent): boolean {
