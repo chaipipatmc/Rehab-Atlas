@@ -16,7 +16,7 @@
 
 ## สถาปัตยกรรม
 
-Standalone Next.js app (API เท่านั้น) ในโฟลเดอร์ `lisa/` — deploy เป็น Vercel project แยกจาก Rehab-Atlas แต่ใช้ Supabase project เดิมได้ (ตารางทั้งหมด prefix `lisa_`, service-role only)
+Standalone Next.js app (API เท่านั้น) ในโฟลเดอร์ `lisa/` — deploy เป็น Vercel project แยก และใช้ **Supabase project แยกของตัวเอง** (ชื่อ "Lisa") ไม่เกี่ยวข้องกับ Rehab-Atlas เลย (ตารางทั้งหมด prefix `lisa_`, service-role only)
 
 | Route | หน้าที่ |
 |---|---|
@@ -30,7 +30,7 @@ Standalone Next.js app (API เท่านั้น) ในโฟลเดอ�
 
 ### 1. Supabase
 
-รัน `migrations/001_lisa_schema.sql` ใน Supabase SQL Editor (ใช้ project เดิมของ Rehab-Atlas ได้)
+รัน `migrations/001_lisa_schema.sql` ใน Supabase SQL Editor ของ project "Lisa" (project แยก ไม่ใช้ร่วมกับ Rehab-Atlas)
 
 ### 2. LINE Official Account
 

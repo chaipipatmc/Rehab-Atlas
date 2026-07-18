@@ -7,7 +7,7 @@
 
 RehabAtlas is a global rehab center discovery and referral marketplace. Users browse centers, complete AI assessments, and submit inquiries — all routed through RehabAtlas admin (never directly to centers).
 
-> **Note:** The `lisa/` folder is a separate personal project (LINE bot "Lisa" that manages the owner's Google Calendar) — a standalone Next.js app deployed as its own Vercel project (Root Directory = `lisa`), sharing the Supabase project via `lisa_*` tables only. It is not part of the RehabAtlas product; see [lisa/README.md](lisa/README.md).
+> **Note:** The `lisa/` folder is a separate personal project (LINE bot "Lisa" that manages the owner's Google Calendar) — a standalone Next.js app deployed as its own Vercel project (Root Directory = `lisa`) with its own separate Supabase project ("Lisa") — fully independent from RehabAtlas infrastructure. It is not part of the RehabAtlas product; see [lisa/README.md](lisa/README.md).
 
 ## Tech Stack
 
