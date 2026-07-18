@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { buildScheduleCard } from "../flex";
 import {
   createEvent,
   deleteEvent,
@@ -7,6 +8,7 @@ import {
   patchEvent,
   simplifyEvent,
 } from "../google";
+import { pushFlex, pushText } from "../line";
 import { db } from "../supabase";
 import { TZ } from "../time";
 
@@ -32,6 +34,8 @@ export function isConfirmationMessage(text: string): boolean {
 export interface ToolContext {
   /** The owner's latest LINE message — used to enforce the invitation confirmation gate. */
   latestUserText: string;
+  /** Incremented when a tool pushes a LINE message directly (card / forward summary). */
+  pushState: { count: number };
 }
 
 export const TOOLS: Anthropic.Tool[] = [
@@ -161,6 +165,32 @@ export const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "send_schedule_card",
+    description:
+      "Fetch events in a time range and push a rich schedule card (same style as the daily brief) to the owner. ALWAYS use this instead of a text list when the owner asks what's on their schedule for a day or range. If it returns events=0 no card is sent — answer briefly in text instead. After the card is sent, keep your final reply to one short line or nothing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        time_min: { type: "string", description: "RFC3339 start of range with +07:00 offset" },
+        time_max: { type: "string", description: "RFC3339 end of range" },
+        title: { type: "string", description: "Card title, e.g. 'จันทร์ 20 ก.ค.' or 'สัปดาห์นี้'" },
+      },
+      required: ["time_min", "time_max", "title"],
+    },
+  },
+  {
+    name: "send_forward_summary",
+    description:
+      "Push a standalone formal text message the owner can forward to external parties. Call this right after successfully booking or rescheduling a meeting. The text must be formal Thai business style: no emoji, no markdown, no [LISA] prefix — including เรื่อง / วันที่ (Thai date, พ.ศ.) / เวลา / สถานที่ / ลิงก์ประชุม (if any).",
+    input_schema: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "The formal summary text, ready to forward" },
+      },
+      required: ["text"],
+    },
+  },
+  {
     name: "send_invitations",
     description:
       "Send the most recently staged invitation. ONLY call this when the owner's latest message is a confirmation (ยืนยัน / confirm / cf) — the system rejects it otherwise.",
@@ -285,6 +315,32 @@ export async function executeTool(
           attendees,
           next_step: "Ask the owner to reply ยืนยัน / confirm / cf to send.",
         });
+      }
+
+      case "send_schedule_card": {
+        const events = await listEvents({ timeMin: input.time_min, timeMax: input.time_max });
+        if (events.length === 0) {
+          return ok({ events: 0, card_sent: false, note: "No events — answer in text instead." });
+        }
+        await pushFlex(
+          `ตารางนัดหมาย ${events.length} รายการ`,
+          buildScheduleCard({
+            header: "Lisa · Schedule",
+            title: String(input.title),
+            subtitle: `${events.length} นัดหมาย`,
+            events,
+          })
+        );
+        ctx.pushState.count++;
+        return ok({ events: events.length, card_sent: true });
+      }
+
+      case "send_forward_summary": {
+        const text = String(input.text ?? "").trim();
+        if (!text) return fail("text is empty");
+        await pushText(text);
+        ctx.pushState.count++;
+        return ok({ sent: true });
       }
 
       case "send_invitations": {
