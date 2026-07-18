@@ -30,6 +30,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   tp: "10", // Basil (dark green)
   aqua: "7", // Peacock (blue)
   fab: "6", // Tangerine (orange)
+  hills: "4", // Flamingo (pink — closest to Cherry Blossom)
   sport: "2", // Sage (light green — closest to Avocado)
   personal: "8", // Graphite (gray — closest to Birch)
   other: "5", // Banana (yellow)
@@ -79,9 +80,9 @@ export const TOOLS: Anthropic.Tool[] = [
         description: { type: "string", description: "Optional notes/agenda summarized from the owner's message" },
         category: {
           type: "string",
-          enum: ["tp", "aqua", "fab", "sport", "personal", "other"],
+          enum: ["tp", "aqua", "fab", "hills", "sport", "personal", "other"],
           description:
-            "Event color category: tp = TP-related (Basil green), aqua = AQUA-related (Peacock blue), fab = FAB-related (Tangerine orange), sport = sport/training/exercise (light green), personal = personal/family/pets/doctor (gray), other = everything else (Banana yellow)",
+            "Event color category: tp = TP/Thai Parcel (Basil green), aqua = AQUA group incl. TCDC/EP (Peacock blue), fab = FAB Food (Tangerine orange), hills = The Hills / Mantra (pink), sport = sport/training/exercise (light green), personal = personal/family/pets/doctor (gray), other = everything else incl. 7X (Banana yellow)",
         },
       },
       required: ["topic", "start", "online", "category"],
@@ -101,7 +102,7 @@ export const TOOLS: Anthropic.Tool[] = [
         description: { type: "string" },
         category: {
           type: "string",
-          enum: ["tp", "aqua", "fab", "sport", "personal", "other"],
+          enum: ["tp", "aqua", "fab", "hills", "sport", "personal", "other"],
           description: "Change the event's color category",
         },
       },
