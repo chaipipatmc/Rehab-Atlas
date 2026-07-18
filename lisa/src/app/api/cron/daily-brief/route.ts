@@ -106,7 +106,10 @@ function buildBrief(dateLabel: string, events: GcalEvent[]): Record<string, unkn
 }
 
 function authorized(req: Request): boolean {
-  return req.headers.get("authorization") === `Bearer ${requireEnv("CRON_SECRET")}`;
+  const secret = requireEnv("CRON_SECRET");
+  if (req.headers.get("authorization") === `Bearer ${secret}`) return true;
+  // Manual trigger for testing: /api/cron/daily-brief?key=<CRON_SECRET>
+  return new URL(req.url).searchParams.get("key") === secret;
 }
 
 export async function GET(req: Request) {

@@ -9,7 +9,10 @@ export const maxDuration = 60;
 const REMIND_WINDOW_MIN = 31; // remind at the first 5-min tick where start is ≤31 min away
 
 function authorized(req: Request): boolean {
-  return req.headers.get("authorization") === `Bearer ${requireEnv("CRON_SECRET")}`;
+  const secret = requireEnv("CRON_SECRET");
+  if (req.headers.get("authorization") === `Bearer ${secret}`) return true;
+  // Manual trigger for testing: /api/cron/reminders?key=<CRON_SECRET>
+  return new URL(req.url).searchParams.get("key") === secret;
 }
 
 export async function GET(req: Request) {
