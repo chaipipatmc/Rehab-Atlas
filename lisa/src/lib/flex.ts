@@ -130,3 +130,92 @@ export function buildScheduleCard(opts: {
     },
   };
 }
+
+/** Invitation card with Accept/Decline postback buttons and a conflict summary. */
+export function buildInviteCard(ev: GcalEvent, conflicts: GcalEvent[]): Record<string, unknown> {
+  const start = ev.start?.dateTime ? new Date(ev.start.dateTime) : null;
+  const end = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
+  const time = start
+    ? `${fmtThaiDay(start)} · ${fmtTime(start)}${end ? ` – ${fmtTime(end)}` : ""}`
+    : `${ev.start?.date ?? ""} (ทั้งวัน)`;
+  const organizer = ev.organizer?.displayName || ev.organizer?.email || "(ไม่ระบุ)";
+  const link = extractMeetingLink(ev);
+  const title = ev.summary ?? "(ไม่มีชื่อ)";
+
+  const body: Record<string, unknown>[] = [
+    { type: "text", text: time, weight: "bold", size: "sm", color: OLIVE },
+    { type: "text", text: title, size: "md", weight: "bold", wrap: true, color: "#333333", margin: "sm" },
+    { type: "text", text: `👤 ${organizer}`, size: "xs", color: MUTED, wrap: true, margin: "sm" },
+  ];
+  if (ev.location) {
+    body.push({ type: "text", text: `📍 ${shortLocation(ev.location)}`, size: "xs", color: MUTED, wrap: true, margin: "xs" });
+  }
+  if (link) {
+    body.push({ type: "text", text: "🔗 มีลิงก์ประชุมออนไลน์", size: "xs", color: OLIVE, margin: "xs" });
+  }
+
+  body.push({ type: "separator", margin: "lg", color: "#EEEEE8" });
+  if (conflicts.length === 0) {
+    body.push({ type: "text", text: "✅ ไม่ชนกับนัดเดิมในตาราง", size: "xs", color: "#3E7A45", margin: "lg" });
+  } else {
+    body.push({ type: "text", text: "⚠️ ชนกับนัดเดิม:", size: "xs", weight: "bold", color: "#B3261E", margin: "lg" });
+    conflicts.slice(0, 4).forEach((c) => {
+      const cs = c.start?.dateTime ? fmtTime(new Date(c.start.dateTime)) : "ทั้งวัน";
+      const ce = c.end?.dateTime ? `–${fmtTime(new Date(c.end.dateTime))}` : "";
+      body.push({
+        type: "text",
+        text: `• ${cs}${ce} ${c.summary ?? "(ไม่มีชื่อ)"}`,
+        size: "xs",
+        color: "#B3261E",
+        wrap: true,
+        margin: "xs",
+      });
+    });
+  }
+
+  return {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: OLIVE,
+      paddingAll: "16px",
+      contents: [
+        { type: "text", text: "Lisa · Invitation", color: "#ffffffcc", size: "xs" },
+        { type: "text", text: "คำเชิญประชุมใหม่", color: "#ffffff", size: "lg", weight: "bold", margin: "xs" },
+      ],
+    },
+    body: { type: "box", layout: "vertical", paddingAll: "16px", contents: body },
+    footer: {
+      type: "box",
+      layout: "horizontal",
+      spacing: "md",
+      paddingAll: "12px",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: OLIVE,
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "รับนัด ✓",
+            data: `invite:accepted:${ev.id}`,
+            displayText: `รับนัด: ${title}`.slice(0, 250),
+          },
+        },
+        {
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "ไม่รับ ✕",
+            data: `invite:declined:${ev.id}`,
+            displayText: `ไม่รับนัด: ${title}`.slice(0, 250),
+          },
+        },
+      ],
+    },
+  };
+}

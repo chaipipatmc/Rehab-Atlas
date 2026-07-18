@@ -102,6 +102,8 @@ export interface GcalEvent {
   location?: string;
   hangoutLink?: string;
   htmlLink?: string;
+  transparency?: string;
+  organizer?: { email?: string; displayName?: string; self?: boolean };
   start?: { dateTime?: string; date?: string; timeZone?: string };
   end?: { dateTime?: string; date?: string; timeZone?: string };
   attendees?: { email: string; displayName?: string; responseStatus?: string; self?: boolean }[];
@@ -193,6 +195,18 @@ export async function deleteEvent(eventId: string): Promise<void> {
   if (!res.ok && res.status !== 410) {
     throw new Error(`deleteEvent failed (${res.status}): ${await res.text()}`);
   }
+}
+
+/** RSVP to an invitation on the owner's behalf (accepted / declined). */
+export async function respondToInvite(
+  eventId: string,
+  response: "accepted" | "declined"
+): Promise<GcalEvent> {
+  const ev = await getEvent(eventId);
+  const attendees = (ev.attendees ?? []).map((a) =>
+    a.self ? { ...a, responseStatus: response } : a
+  );
+  return patchEvent(eventId, { attendees });
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────

@@ -1,12 +1,20 @@
 import { requireEnv } from "@/lib/env";
-import { extractMeetingLink, isAllDay, listEvents, shortLocation } from "@/lib/google";
-import { pushText } from "@/lib/line";
+import { buildInviteCard } from "@/lib/flex";
+import {
+  extractMeetingLink,
+  isAllDay,
+  listEvents,
+  shortLocation,
+  type GcalEvent,
+} from "@/lib/google";
+import { pushFlex, pushText } from "@/lib/line";
 import { db } from "@/lib/supabase";
 import { fmtTime } from "@/lib/time";
 
 export const maxDuration = 60;
 
 const REMIND_WINDOW_MIN = 31; // remind at the first 5-min tick where start is ≤31 min away
+const INVITE_HORIZON_DAYS = 45; // scan this far ahead for unanswered invitations
 
 function authorized(req: Request): boolean {
   const secret = requireEnv("CRON_SECRET");
@@ -15,10 +23,16 @@ function authorized(req: Request): boolean {
   return new URL(req.url).searchParams.get("key") === secret;
 }
 
-export async function GET(req: Request) {
-  if (!authorized(req)) return new Response("unauthorized", { status: 401 });
+function overlaps(a: GcalEvent, b: GcalEvent): boolean {
+  if (!a.start?.dateTime || !a.end?.dateTime || !b.start?.dateTime || !b.end?.dateTime) return false;
+  return (
+    Date.parse(a.start.dateTime) < Date.parse(b.end.dateTime) &&
+    Date.parse(b.start.dateTime) < Date.parse(a.end.dateTime)
+  );
+}
 
-  const now = new Date();
+/** Push 30-minute-before reminders for upcoming events. */
+async function sendReminders(now: Date): Promise<{ checked: number; sent: number }> {
   const events = await listEvents({
     timeMin: now.toISOString(),
     timeMax: new Date(now.getTime() + 45 * 60_000).toISOString(),
@@ -53,6 +67,53 @@ export async function GET(req: Request) {
     await pushText(lines.join("\n"));
     sent++;
   }
+  return { checked: events.length, sent };
+}
 
-  return Response.json({ ok: true, checked: events.length, sent });
+/** Detect new unanswered invitations and push an accept/decline card for each. */
+async function sendInviteCards(now: Date): Promise<{ invites: number }> {
+  const horizon = await listEvents({
+    timeMin: now.toISOString(),
+    timeMax: new Date(now.getTime() + INVITE_HORIZON_DAYS * 86400_000).toISOString(),
+  });
+
+  let invites = 0;
+  for (const ev of horizon) {
+    const self = ev.attendees?.find((a) => a.self);
+    if (self?.responseStatus !== "needsAction") continue;
+    if (ev.organizer?.self) continue; // own events never need an RSVP card
+
+    // At-most-once per event: claim the notice row first.
+    const { error } = await db().from("lisa_invite_notices").insert({ event_id: ev.id });
+    if (error) continue; // already notified
+
+    const conflicts = horizon.filter(
+      (other) =>
+        other.id !== ev.id &&
+        !isAllDay(other) &&
+        other.attendees?.find((a) => a.self)?.responseStatus !== "declined" &&
+        overlaps(ev, other)
+    );
+    await pushFlex(
+      `คำเชิญประชุมใหม่: ${ev.summary ?? "(ไม่มีชื่อ)"}`,
+      buildInviteCard(ev, conflicts)
+    );
+    invites++;
+  }
+  return { invites };
+}
+
+export async function GET(req: Request) {
+  if (!authorized(req)) return new Response("unauthorized", { status: 401 });
+
+  const now = new Date();
+  const reminders = await sendReminders(now);
+  let invites = { invites: 0 };
+  try {
+    invites = await sendInviteCards(now);
+  } catch (err) {
+    console.error("invite scan failed:", err);
+  }
+
+  return Response.json({ ok: true, ...reminders, ...invites });
 }
