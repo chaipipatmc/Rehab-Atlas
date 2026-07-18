@@ -1,17 +1,17 @@
 import path from "path";
 import type { NextConfig } from "next";
 
-// lisa/ lives inside the Rehab-Atlas repo — pin BOTH roots to this folder so
-// Next.js doesn't treat the repo root as the workspace root (which would pull
-// in the parent app's src/middleware.ts and lockfile). On Vercel, keep these
-// in sync or outputFileTracingRoot wins and points at /vercel/path0.
-const root = path.join(__dirname);
+const nextConfig: NextConfig = {};
 
-const nextConfig: NextConfig = {
-  outputFileTracingRoot: root,
-  turbopack: {
-    root,
-  },
-};
+// Local dev only: the parent Rehab-Atlas repo has its own lockfile, so pin the
+// workspace root to this folder or Next infers the repo root and compiles the
+// parent app's middleware. On Vercel (Root Directory = lisa, "include files
+// outside root" disabled) the defaults are already correct — and overriding
+// outputFileTracingRoot there breaks Vercel's build-output collection.
+if (!process.env.VERCEL) {
+  const root = path.join(__dirname);
+  nextConfig.outputFileTracingRoot = root;
+  nextConfig.turbopack = { root };
+}
 
 export default nextConfig;
