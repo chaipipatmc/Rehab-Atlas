@@ -76,7 +76,20 @@ async function handleEvent(event: LineEvent): Promise<void> {
     if (reply) await pushText(reply);
   } catch (err) {
     console.error("Lisa agent failed:", err);
-    await pushText("ขอโทษค่ะ มีข้อผิดพลาดภายใน Lisa ลองอีกครั้งได้เลยนะคะ 🙏");
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("usage limits")) {
+      await pushText(
+        "ขอโทษค่ะ ตอนนี้โควต้า Claude API ประจำเดือนเต็มแล้ว 😢 สมองของลิซ่าเลยหยุดทำงานชั่วคราวค่ะ\n\nแก้ได้โดยเพิ่ม Monthly spend limit ที่ console.anthropic.com → Settings → Limits แล้วกลับมาคุยกันต่อได้ทันทีค่ะ"
+      );
+    } else if (msg.includes("credit balance")) {
+      await pushText(
+        "ขอโทษค่ะ เครดิต Claude API หมดแล้ว 😢 เติมเครดิตที่ console.anthropic.com → Billing แล้วกลับมาคุยกันต่อได้ทันทีค่ะ"
+      );
+    } else if (msg.includes("rate_limit") || msg.includes("Overloaded") || msg.includes("overloaded")) {
+      await pushText("ระบบกำลังหนาแน่นชั่วคราวค่ะ รอสัก 1 นาทีแล้วส่งข้อความเดิมอีกครั้งนะคะ 🙏");
+    } else {
+      await pushText("ขอโทษค่ะ มีข้อผิดพลาดภายใน Lisa ลองอีกครั้งได้เลยนะคะ 🙏");
+    }
   }
 }
 
