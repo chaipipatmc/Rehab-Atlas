@@ -47,7 +47,7 @@ function eventRow(ev: GcalEvent): Record<string, unknown> {
   return { type: "box", layout: "vertical", margin: "lg", contents };
 }
 
-function eventDayStart(ev: GcalEvent): Date {
+export function eventDayStart(ev: GcalEvent): Date {
   if (ev.start?.dateTime) return new Date(ev.start.dateTime);
   return new Date(`${ev.start?.date}T00:00:00+07:00`);
 }
@@ -81,6 +81,9 @@ export function buildScheduleCard(opts: {
   const multiDay = new Set(shown.map((ev) => bangkokYmd(eventDayStart(ev)))).size > 1;
 
   const rows: Record<string, unknown>[] = [];
+  if (shown.length === 0) {
+    rows.push({ type: "text", text: "ไม่มีนัดหมายค่ะ 🎉", size: "sm", color: MUTED, margin: "lg" });
+  }
   let prevDay = "";
   shown.forEach((ev, i) => {
     const day = bangkokYmd(eventDayStart(ev));
@@ -128,6 +131,22 @@ export function buildScheduleCard(opts: {
       paddingTop: "6px",
       contents: rows,
     },
+  };
+}
+
+/** One bubble per day, horizontally swipeable — for multi-day schedule requests (e.g. a week).
+ *  Days with no events still get a bubble, so the owner can browse day by day. */
+export function buildWeekCarousel(days: { label: string; events: GcalEvent[] }[]): Record<string, unknown> {
+  return {
+    type: "carousel",
+    contents: days.map((d) =>
+      buildScheduleCard({
+        header: "Lisa · Schedule",
+        title: d.label,
+        subtitle: d.events.length > 0 ? `${d.events.length} นัดหมาย` : "ไม่มีนัดหมาย",
+        events: d.events,
+      })
+    ),
   };
 }
 
