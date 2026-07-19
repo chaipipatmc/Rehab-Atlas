@@ -26,6 +26,7 @@ const QUICK_REPLY_ITEMS: Record<string, unknown>[] = [
   { type: "action", action: { type: "message", label: "🗓 สัปดาห์นี้", text: "สรุปตารางสัปดาห์นี้มีอะไรบ้าง" } },
   { type: "action", action: { type: "message", label: "🕐 เวลาว่าง", text: "ขอตารางว่างประชุมสัปดาห์นี้" } },
   { type: "action", action: { type: "message", label: "🍽 มื้ออาหาร", text: "ตารางทานข้าวสัปดาห์นี้มีอะไรบ้าง" } },
+  { type: "action", action: { type: "message", label: "📝 ที่ฝากไว้", text: "มีอะไรฝากไว้บ้าง" } },
 ];
 
 function withQuickReply(message: LineMessage): LineMessage {

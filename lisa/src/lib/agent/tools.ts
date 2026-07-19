@@ -205,6 +205,45 @@ export const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "add_note",
+    description:
+      "Save a freeform reminder/note the owner asks Lisa to remember — things WITHOUT a specific date/time (decisions to make, things to look into, ideas). If the owner gives a concrete date/time, use create_event instead — never this. Trigger phrases: 'จำไว้ว่า...', 'ฝากไว้...', 'อย่าลืม...', 'ต้องคิดเรื่อง...'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        content: { type: "string", description: "Concise summary of what to remember, in the owner's language" },
+        category: {
+          type: "string",
+          enum: ["work", "personal", "other"],
+          description: "work = business/company-related, personal = personal life, other = unclear",
+        },
+      },
+      required: ["content", "category"],
+    },
+  },
+  {
+    name: "list_notes",
+    description:
+      "List saved reminders/notes. Use when the owner asks what they've asked Lisa to remember or what's pending ('มีอะไรฝากไว้บ้าง', 'สิ่งที่ค้างอยู่มีอะไรบ้าง', 'เตือนอะไรไว้บ้าง'). Defaults to open (unresolved) notes across all categories.",
+    input_schema: {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["open", "done", "all"], description: "Defaults to open" },
+        category: { type: "string", enum: ["work", "personal", "other", "all"], description: "Defaults to all" },
+      },
+    },
+  },
+  {
+    name: "complete_note",
+    description:
+      "Mark a saved note as done/resolved, e.g. when the owner says a decision has been made or a task is handled. Call list_notes first if you need the note_id.",
+    input_schema: {
+      type: "object",
+      properties: { note_id: { type: "string" } },
+      required: ["note_id"],
+    },
+  },
+  {
     name: "send_schedule_card",
     description:
       "Fetch events in a time range and push a rich schedule card to the owner. ALWAYS use this instead of a text list when the owner asks what's on their schedule for a day or range. Ranges spanning 2–12 days automatically render as a horizontally swipeable carousel of daily cards (one bubble per day, including empty days); single-day or longer ranges render as one combined card. If it returns events=0 no card is sent — answer briefly in text instead. After the card is sent, keep your final reply to one short line or nothing.",
@@ -416,6 +455,42 @@ export async function executeTool(
           attendees,
           next_step: "Ask the owner to reply ยืนยัน / confirm / cf to send.",
         });
+      }
+
+      case "add_note": {
+        const { data, error } = await db()
+          .from("lisa_notes")
+          .insert({
+            content: String(input.content).trim(),
+            category: input.category || "other",
+          })
+          .select("id")
+          .single();
+        if (error) return fail(error.message);
+        return ok({ saved: true, id: data.id });
+      }
+
+      case "list_notes": {
+        const status = input.status || "open";
+        const category = input.category || "all";
+        let q = db()
+          .from("lisa_notes")
+          .select("id, content, category, status, created_at")
+          .order("created_at", { ascending: true });
+        if (status !== "all") q = q.eq("status", status);
+        if (category !== "all") q = q.eq("category", category);
+        const { data, error } = await q;
+        if (error) return fail(error.message);
+        return ok(data);
+      }
+
+      case "complete_note": {
+        const { error } = await db()
+          .from("lisa_notes")
+          .update({ status: "done", done_at: new Date().toISOString() })
+          .eq("id", input.note_id);
+        if (error) return fail(error.message);
+        return ok({ completed: input.note_id });
       }
 
       case "send_schedule_card": {
