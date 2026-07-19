@@ -45,6 +45,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   aqua: "7", // Peacock (blue)
   fab: "6", // Tangerine (orange)
   hills: "4", // Flamingo (pink — closest to Cherry Blossom)
+  meal: "11", // Tomato (red)
   sport: "2", // Sage (light green — closest to Avocado)
   personal: "8", // Graphite (gray — closest to Birch)
   other: "5", // Banana (yellow)
@@ -94,9 +95,9 @@ export const TOOLS: Anthropic.Tool[] = [
         description: { type: "string", description: "Optional notes/agenda summarized from the owner's message" },
         category: {
           type: "string",
-          enum: ["tp", "aqua", "fab", "hills", "sport", "personal", "other"],
+          enum: ["tp", "aqua", "fab", "hills", "meal", "sport", "personal", "other"],
           description:
-            "Event color category: tp = TP/Thai Parcel (Basil green), aqua = AQUA group incl. TCDC/EP (Peacock blue), fab = FAB Food (Tangerine orange), hills = The Hills / Mantra (pink), sport = sport/training/exercise (light green), personal = personal/family/pets/doctor (gray), other = everything else incl. 7X (Banana yellow)",
+            "Event color category: tp = TP/Thai Parcel (Basil green), aqua = AQUA group incl. TCDC/EP (Peacock blue), fab = FAB Food (Tangerine orange), hills = The Hills / Mantra (pink), meal = eating/drinking with someone — lunch, dinner, coffee, drinks at any time of day (Tomato red — takes priority over the company category even if it's a business meal), sport = sport/training/exercise (light green), personal = personal/family/pets/doctor (gray), other = everything else incl. 7X (Banana yellow)",
         },
       },
       required: ["topic", "start", "online", "category"],
@@ -116,7 +117,7 @@ export const TOOLS: Anthropic.Tool[] = [
         description: { type: "string" },
         category: {
           type: "string",
-          enum: ["tp", "aqua", "fab", "hills", "sport", "personal", "other"],
+          enum: ["tp", "aqua", "fab", "hills", "meal", "sport", "personal", "other"],
           description: "Change the event's color category",
         },
       },
