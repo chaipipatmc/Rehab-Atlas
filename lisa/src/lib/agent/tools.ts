@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { buildScheduleCard } from "../flex";
+import { buildScheduleCard, buildWeekCarousel, eventDayStart } from "../flex";
 import {
   createEvent,
   deleteEvent,
@@ -10,7 +10,21 @@ import {
 } from "../google";
 import { pushFlex, pushText } from "../line";
 import { db } from "../supabase";
-import { bangkokYmd, TZ } from "../time";
+import { bangkokYmd, fmtThaiDay, TZ } from "../time";
+
+/** Bangkok calendar-day keys (ymd) spanning [minIso, maxIso). Capped to avoid runaway loops. */
+function daysInRange(minIso: string, maxIso: string): string[] {
+  const start = Date.parse(minIso);
+  const end = Date.parse(maxIso);
+  if (Number.isNaN(start) || Number.isNaN(end)) return [];
+  const days: string[] = [];
+  let cursor = new Date(`${bangkokYmd(new Date(start))}T00:00:00+07:00`).getTime();
+  while (cursor < end && days.length < 40) {
+    days.push(bangkokYmd(new Date(cursor)));
+    cursor += 86400_000;
+  }
+  return days;
+}
 
 /** "9:00" style Bangkok time (no leading zero, matches the owner's availability format). */
 function fmtTimeLocal(ms: number): string {
@@ -192,13 +206,14 @@ export const TOOLS: Anthropic.Tool[] = [
   {
     name: "send_schedule_card",
     description:
-      "Fetch events in a time range and push a rich schedule card (same style as the daily brief) to the owner. ALWAYS use this instead of a text list when the owner asks what's on their schedule for a day or range. If it returns events=0 no card is sent — answer briefly in text instead. After the card is sent, keep your final reply to one short line or nothing.",
+      "Fetch events in a time range and push a rich schedule card to the owner. ALWAYS use this instead of a text list when the owner asks what's on their schedule for a day or range. Ranges spanning 2–12 days automatically render as a horizontally swipeable carousel of daily cards (one bubble per day, including empty days); single-day or longer ranges render as one combined card. If it returns events=0 no card is sent — answer briefly in text instead. After the card is sent, keep your final reply to one short line or nothing.",
     input_schema: {
       type: "object",
       properties: {
         time_min: { type: "string", description: "RFC3339 start of range with +07:00 offset" },
         time_max: { type: "string", description: "RFC3339 end of range" },
-        title: { type: "string", description: "Card title, e.g. 'จันทร์ 20 ก.ค.' or 'สัปดาห์นี้'" },
+        title: { type: "string", description: "Card title, e.g. 'จันทร์ 20 ก.ค.' or 'สัปดาห์นี้' — ignored for multi-day carousels (each day gets its own label)" },
+        query: { type: "string", description: "Optional free-text filter (Google Calendar search) for a subset, e.g. 'ข้าว' when the owner asks specifically for a meal/mealtime schedule" },
       },
       required: ["time_min", "time_max", "title"],
     },
@@ -403,21 +418,34 @@ export async function executeTool(
       }
 
       case "send_schedule_card": {
-        const events = await listEvents({ timeMin: input.time_min, timeMax: input.time_max });
+        const events = await listEvents({
+          timeMin: input.time_min,
+          timeMax: input.time_max,
+          q: input.query || undefined,
+        });
         if (events.length === 0) {
           return ok({ events: 0, card_sent: false, note: "No events — answer in text instead." });
         }
-        await pushFlex(
-          `ตารางนัดหมาย ${events.length} รายการ`,
-          buildScheduleCard({
-            header: "Lisa · Schedule",
-            title: String(input.title),
-            subtitle: `${events.length} นัดหมาย`,
-            events,
-          })
-        );
+        const dayKeys = daysInRange(input.time_min, input.time_max);
+        if (dayKeys.length > 1 && dayKeys.length <= 12) {
+          const days = dayKeys.map((key) => ({
+            label: fmtThaiDay(new Date(`${key}T12:00:00+07:00`)),
+            events: events.filter((ev) => bangkokYmd(eventDayStart(ev)) === key),
+          }));
+          await pushFlex(`ตารางนัดหมาย ${events.length} รายการ`, buildWeekCarousel(days));
+        } else {
+          await pushFlex(
+            `ตารางนัดหมาย ${events.length} รายการ`,
+            buildScheduleCard({
+              header: "Lisa · Schedule",
+              title: String(input.title),
+              subtitle: `${events.length} นัดหมาย`,
+              events,
+            })
+          );
+        }
         ctx.pushState.count++;
-        return ok({ events: events.length, card_sent: true });
+        return ok({ events: events.length, card_sent: true, days: dayKeys.length });
       }
 
       case "send_forward_summary": {

@@ -19,6 +19,19 @@ export function verifyLineSignature(rawBody: string, signature: string | null): 
 
 type LineMessage = Record<string, unknown>;
 
+/** Quick-reply shortcuts shown under every message Lisa sends. */
+const QUICK_REPLY_ITEMS: Record<string, unknown>[] = [
+  { type: "action", action: { type: "message", label: "📅 วันนี้", text: "ตารางวันนี้มีอะไรบ้าง" } },
+  { type: "action", action: { type: "message", label: "📅 พรุ่งนี้", text: "ตารางพรุ่งนี้มีอะไรบ้าง" } },
+  { type: "action", action: { type: "message", label: "🗓 สัปดาห์นี้", text: "สรุปตารางสัปดาห์นี้มีอะไรบ้าง" } },
+  { type: "action", action: { type: "message", label: "🕐 เวลาว่าง", text: "ขอตารางว่างประชุมสัปดาห์นี้" } },
+  { type: "action", action: { type: "message", label: "🍽 มื้ออาหาร", text: "ตารางทานข้าวสัปดาห์นี้มีอะไรบ้าง" } },
+];
+
+function withQuickReply(message: LineMessage): LineMessage {
+  return { ...message, quickReply: { items: QUICK_REPLY_ITEMS } };
+}
+
 async function lineFetch(path: string, body: unknown): Promise<void> {
   const res = await fetch(`${LINE_API}${path}`, {
     method: "POST",
@@ -50,16 +63,17 @@ export async function pushText(text: string): Promise<void> {
     chunks.push({ type: "text", text: rest.slice(0, 4900) });
     rest = rest.slice(4900);
   }
+  if (chunks.length > 0) chunks[chunks.length - 1] = withQuickReply(chunks[chunks.length - 1]);
   await pushToOwner(chunks);
 }
 
 export async function replyText(replyToken: string, text: string): Promise<void> {
   await lineFetch("/message/reply", {
     replyToken,
-    messages: [{ type: "text", text: text.slice(0, 4900) }],
+    messages: [withQuickReply({ type: "text", text: text.slice(0, 4900) })],
   });
 }
 
 export async function pushFlex(altText: string, contents: Record<string, unknown>): Promise<void> {
-  await pushToOwner([{ type: "flex", altText, contents }]);
+  await pushToOwner([withQuickReply({ type: "flex", altText, contents })]);
 }
