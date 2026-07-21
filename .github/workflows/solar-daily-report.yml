@@ -2,6 +2,10 @@ name: Solar Daily Report
 
 on:
   workflow_dispatch:
+  push:
+    # Temporary: allows test runs from the dev branch (remove before merge)
+    branches: [claude/solar-dashboard-reports-ai7t4p]
+    paths: ["solar-monitor/**", ".github/workflows/solar-daily-report.yml"]
   schedule:
     # 13:30 UTC = 20:30 Asia/Bangkok — end of the solar generation day
     - cron: "30 13 * * *"
