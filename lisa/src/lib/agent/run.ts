@@ -5,10 +5,12 @@ import { buildDynamicContext, buildStaticSystemPrompt } from "./prompt";
 import { TOOLS, executeTool } from "./tools";
 
 const MAX_TURNS = 10;
-// Trimmed from 30/48h — most turns only need the last hour or two of context;
-// a smaller window means less uncached history resent on every cold (first-of-burst) call.
-const HISTORY_LIMIT = 20;
-const HISTORY_WINDOW_HOURS = 24;
+// Most requests are single-session tasks (book a slot, summarize an appointment) that
+// finish in one back-and-forth, not left for hours and resumed — so the recall window
+// only needs to cover an active session, not a day. Sized to match CACHE_TTL: anything
+// older than the cache lifetime is both stale context and no longer cache-cheap to resend.
+const HISTORY_LIMIT = 10;
+const HISTORY_WINDOW_HOURS = 1;
 
 const CACHE_TTL = "1h" as const;
 
