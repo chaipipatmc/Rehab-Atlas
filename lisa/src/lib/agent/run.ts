@@ -1,12 +1,16 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { CLAUDE_MODEL, requireEnv } from "../env";
 import { db } from "../supabase";
-import { buildSystemPrompt } from "./prompt";
+import { buildDynamicContext, buildStaticSystemPrompt } from "./prompt";
 import { TOOLS, executeTool } from "./tools";
 
 const MAX_TURNS = 10;
-const HISTORY_LIMIT = 30;
-const HISTORY_WINDOW_HOURS = 48;
+// Trimmed from 30/48h — most turns only need the last hour or two of context;
+// a smaller window means less uncached history resent on every cold (first-of-burst) call.
+const HISTORY_LIMIT = 20;
+const HISTORY_WINDOW_HOURS = 24;
+
+const CACHE_TTL = "1h" as const;
 
 async function loadHistory(): Promise<Anthropic.MessageParam[]> {
   const since = new Date(Date.now() - HISTORY_WINDOW_HOURS * 3600_000).toISOString();
@@ -41,11 +45,42 @@ async function loadLocations(): Promise<{ alias: string; full_name: string }[]> 
   return data ?? [];
 }
 
+/**
+ * Marks the last content block of the last message with a cache breakpoint, so the
+ * (tools + static system + this growing history) prefix is cache-read on every
+ * subsequent call — both across tool-loop iterations within one incoming message
+ * and across separate LINE messages sent within the TTL window. Returns a new
+ * array; does not mutate the caller's `messages`.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function withCacheBreakpoint(messages: Anthropic.MessageParam[]): Anthropic.MessageParam[] {
+  if (messages.length === 0) return messages;
+  const cache_control = { type: "ephemeral" as const, ttl: CACHE_TTL };
+  const last = messages[messages.length - 1] as any;
+  const content =
+    typeof last.content === "string"
+      ? [{ type: "text", text: last.content, cache_control }]
+      : last.content.map((block: any, i: number, arr: any[]) =>
+          i === arr.length - 1 ? { ...block, cache_control } : block
+        );
+  return [...messages.slice(0, -1), { ...last, content }];
+}
+
 /** Run Lisa's agent loop for one incoming LINE message; returns the reply text. */
 export async function runLisaAgent(userText: string): Promise<string> {
   const client = new Anthropic({ apiKey: requireEnv("ANTHROPIC_API_KEY") });
   const [history, locations] = await Promise.all([loadHistory(), loadLocations()]);
-  const system = buildSystemPrompt(locations);
+
+  // Static instructions (cached, ~1h TTL) followed by small dynamic context (uncached).
+  // Splitting these is what makes caching actually hit — see prompt.ts for why.
+  const system = [
+    {
+      type: "text" as const,
+      text: buildStaticSystemPrompt(),
+      cache_control: { type: "ephemeral" as const, ttl: CACHE_TTL },
+    },
+    { type: "text" as const, text: buildDynamicContext(locations) },
+  ];
 
   const messages: Anthropic.MessageParam[] = [...history, { role: "user", content: userText }];
   const pushState = { count: 0 };
@@ -57,7 +92,7 @@ export async function runLisaAgent(userText: string): Promise<string> {
       max_tokens: 2048,
       system,
       tools: TOOLS,
-      messages,
+      messages: withCacheBreakpoint(messages),
     });
 
     // Log token usage for the weekly cost summary (best-effort)
