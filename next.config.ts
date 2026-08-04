@@ -12,6 +12,18 @@ const nextConfig: NextConfig = {
     ],
     formats: ["image/avif", "image/webp"],
   },
+  async redirects() {
+    return [
+      {
+        // www serves the full site as a duplicate host and Google indexed
+        // both — 301 everything to the apex domain (matches BASE_URL).
+        source: "/:path*",
+        has: [{ type: "host", value: "www.rehab-atlas.com" }],
+        destination: "https://rehab-atlas.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
