@@ -107,13 +107,19 @@ export async function GET(req: Request) {
   if (!authorized(req)) return new Response("unauthorized", { status: 401 });
 
   const now = new Date();
-  const reminders = await sendReminders(now);
-  let invites = { invites: 0 };
   try {
-    invites = await sendInviteCards(now);
+    const reminders = await sendReminders(now);
+    let invites = { invites: 0 };
+    try {
+      invites = await sendInviteCards(now);
+    } catch (err) {
+      console.error("invite scan failed:", err);
+    }
+    return Response.json({ ok: true, ...reminders, ...invites });
   } catch (err) {
-    console.error("invite scan failed:", err);
+    // getAccessToken() already pushes a throttled LINE alert on auth failures —
+    // just log here and return 200 so a dead token doesn't pile up as 500s every 5 min.
+    console.error("reminders cron failed:", err);
+    return Response.json({ ok: false, error: err instanceof Error ? err.message : String(err) });
   }
-
-  return Response.json({ ok: true, ...reminders, ...invites });
 }

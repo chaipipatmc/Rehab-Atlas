@@ -16,26 +16,33 @@ function authorized(req: Request): boolean {
 export async function GET(req: Request) {
   if (!authorized(req)) return new Response("unauthorized", { status: 401 });
 
-  const { start, end } = bangkokDayRange();
-  const events = await listEvents({
-    timeMin: start.toISOString(),
-    timeMax: end.toISOString(),
-  });
-  const dateLabel = fmtDate(start);
+  try {
+    const { start, end } = bangkokDayRange();
+    const events = await listEvents({
+      timeMin: start.toISOString(),
+      timeMax: end.toISOString(),
+    });
+    const dateLabel = fmtDate(start);
 
-  if (events.length === 0) {
-    await pushText(`🌤 อรุณสวัสดิ์ค่ะ วันนี้ (${dateLabel}) ไม่มีนัดหมายในปฏิทินค่ะ 🎉`);
-    return Response.json({ ok: true, events: 0 });
+    if (events.length === 0) {
+      await pushText(`🌤 อรุณสวัสดิ์ค่ะ วันนี้ (${dateLabel}) ไม่มีนัดหมายในปฏิทินค่ะ 🎉`);
+      return Response.json({ ok: true, events: 0 });
+    }
+
+    await pushFlex(
+      `สรุปนัดหมายวันนี้ ${events.length} รายการ`,
+      buildScheduleCard({
+        header: "Lisa · Daily Brief",
+        title: dateLabel,
+        subtitle: `${events.length} นัดหมายวันนี้`,
+        events,
+      })
+    );
+    return Response.json({ ok: true, events: events.length });
+  } catch (err) {
+    // getAccessToken() already pushes a throttled LINE alert on auth failures —
+    // just log here and return 200 so a dead token doesn't pile up as 500s every day.
+    console.error("daily-brief cron failed:", err);
+    return Response.json({ ok: false, error: err instanceof Error ? err.message : String(err) });
   }
-
-  await pushFlex(
-    `สรุปนัดหมายวันนี้ ${events.length} รายการ`,
-    buildScheduleCard({
-      header: "Lisa · Daily Brief",
-      title: dateLabel,
-      subtitle: `${events.length} นัดหมายวันนี้`,
-      events,
-    })
-  );
-  return Response.json({ ok: true, events: events.length });
 }
