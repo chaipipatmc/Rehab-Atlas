@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { buildScheduleCard, buildWeekCarousel, eventDayStart } from "../flex";
+import { buildInviteConfirmCard, buildScheduleCard, buildWeekCarousel, eventDayStart } from "../flex";
 import {
   createEvent,
   deleteEvent,
@@ -51,15 +51,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   other: "5", // Banana (yellow)
 };
 
-/** The confirmation words the owner must type before invitations go out. */
-export function isConfirmationMessage(text: string): boolean {
-  const t = text.trim().toLowerCase();
-  return t.includes("ยืนยัน") || /(^|[^a-z])(confirm|cf)([^a-z]|$)/.test(t);
-}
-
 export interface ToolContext {
-  /** The owner's latest LINE message — used to enforce the invitation confirmation gate. */
-  latestUserText: string;
   /** Incremented when a tool pushes a LINE message directly (card / forward summary). */
   pushState: { count: number };
 }
@@ -184,7 +176,7 @@ export const TOOLS: Anthropic.Tool[] = [
   {
     name: "request_invitation_confirmation",
     description:
-      "Stage an invitation for an event. Call this AFTER resolving attendee emails. Then ask the owner to reply ยืนยัน / confirm / cf. Nothing is sent yet.",
+      "Stage an invitation for an event and push a Confirm/Cancel button card to the owner. Call this AFTER resolving attendee emails. Nothing is sent until the owner taps Confirm on the card — do not ask them to type a confirmation word, and there is no separate 'send' tool to call afterward.",
     input_schema: {
       type: "object",
       properties: {
@@ -269,12 +261,6 @@ export const TOOLS: Anthropic.Tool[] = [
       },
       required: ["text"],
     },
-  },
-  {
-    name: "send_invitations",
-    description:
-      "Send the most recently staged invitation. ONLY call this when the owner's latest message is a confirmation (ยืนยัน / confirm / cf) — the system rejects it otherwise.",
-    input_schema: { type: "object", properties: {} },
   },
 ];
 
@@ -442,18 +428,37 @@ export async function executeTool(
         if (attendees.length === 0) return fail("attendees list is empty");
         // Verify the event exists before staging
         const ev = await getEvent(input.event_id);
-        const { error } = await db().from("lisa_pending_actions").insert({
-          action_type: "send_invitation",
-          payload: { event_id: input.event_id, attendees },
-          status: "pending",
-          expires_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
-        });
+        // Superseding a card the owner never tapped: cancel any earlier pending
+        // invitation for the same event so a stale button can't fire a stale list.
+        await db()
+          .from("lisa_pending_actions")
+          .update({ status: "cancelled" })
+          .eq("action_type", "send_invitation")
+          .eq("status", "pending")
+          .contains("payload", { event_id: input.event_id });
+        const { data, error } = await db()
+          .from("lisa_pending_actions")
+          .insert({
+            action_type: "send_invitation",
+            payload: { event_id: input.event_id, attendees },
+            status: "pending",
+            expires_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
+          })
+          .select("id")
+          .single();
         if (error) return fail(error.message);
+        await pushFlex(
+          `ยืนยันส่งคำเชิญ: ${ev.summary ?? ""}`,
+          buildInviteConfirmCard(data.id, ev, attendees)
+        );
+        ctx.pushState.count++;
         return ok({
           staged: true,
+          card_sent: true,
           event: simplifyEvent(ev),
           attendees,
-          next_step: "Ask the owner to reply ยืนยัน / confirm / cf to send.",
+          next_step:
+            "A Confirm/Cancel button card was already sent — do NOT ask the owner to type ยืนยัน, and do not call another tool to send it. Reply with nothing or at most one short line.",
         });
       }
 
@@ -530,37 +535,6 @@ export async function executeTool(
         await pushText(text);
         ctx.pushState.count++;
         return ok({ sent: true });
-      }
-
-      case "send_invitations": {
-        if (!isConfirmationMessage(ctx.latestUserText)) {
-          return fail(
-            "REJECTED: the owner's latest message is not a confirmation (ยืนยัน / confirm / cf). Ask them to confirm first."
-          );
-        }
-        const { data: pending, error } = await db()
-          .from("lisa_pending_actions")
-          .select("id, payload")
-          .eq("action_type", "send_invitation")
-          .eq("status", "pending")
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (error) return fail(error.message);
-        if (!pending) return fail("No pending invitation found — stage one with request_invitation_confirmation first.");
-
-        const payload = pending.payload as { event_id: string; attendees: { name: string; email: string }[] };
-        const ev = await patchEvent(
-          payload.event_id,
-          { attendees: payload.attendees.map((a) => ({ email: a.email, displayName: a.name })) },
-          { sendUpdates: "all" }
-        );
-        await db()
-          .from("lisa_pending_actions")
-          .update({ status: "done" })
-          .eq("id", pending.id);
-        return ok({ sent: true, event: simplifyEvent(ev) });
       }
 
       default:

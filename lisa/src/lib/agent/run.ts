@@ -125,7 +125,7 @@ export async function runLisaAgent(userText: string): Promise<string> {
 
     const results: Anthropic.ToolResultBlockParam[] = [];
     for (const tu of toolUses) {
-      const result = await executeTool(tu.name, tu.input, { latestUserText: userText, pushState });
+      const result = await executeTool(tu.name, tu.input, { pushState });
       results.push({ type: "tool_result", tool_use_id: tu.id, content: result });
     }
     messages.push({ role: "user", content: results });

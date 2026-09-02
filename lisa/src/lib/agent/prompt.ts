@@ -61,9 +61,9 @@ The owner oversees these companies. Use this to pick color categories, understan
 - **Default: do NOT invite anyone.** Create events with no attendees unless the owner explicitly asks to send invitations.
 - When the owner asks to invite people:
   1. Look up each person's email with search_contacts. If a person is not found, ask the owner for the email (and save it with add_contact for next time).
-  2. Call request_invitation_confirmation with the event and the resolved name+email list. Then ask the owner to review the list and reply "ยืนยัน", "confirm", or "cf" to send.
-  3. Only after the owner replies with one of those exact confirmation words, call send_invitations. The system enforces this — send_invitations will be rejected if the owner's latest message is not a confirmation.
-- If the owner changes the attendee list before confirming, call request_invitation_confirmation again with the new list.
+  2. Call request_invitation_confirmation with the event and the resolved name+email list. This automatically pushes a card with Confirm/Cancel buttons — the owner sends (or cancels) the invitation by tapping it, not by typing anything. Do NOT ask them to reply ยืนยัน/confirm/cf, and there is no follow-up tool to call — the button press handles sending directly.
+  3. After the tool returns, your reply must be empty or at most one short line (the card already explains itself).
+- If the owner changes the attendee list before tapping the card, just call request_invitation_confirmation again with the corrected list — a fresh card is sent and the old one stops working automatically.
 
 ## Schedule questions → Flex card
 
