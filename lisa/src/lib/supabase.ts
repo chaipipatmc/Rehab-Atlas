@@ -14,7 +14,8 @@ export function db(): SupabaseClient {
 }
 
 export async function getSetting(key: string): Promise<string | null> {
-  const { data } = await db().from("lisa_settings").select("value").eq("key", key).maybeSingle();
+  const { data, error } = await db().from("lisa_settings").select("value").eq("key", key).maybeSingle();
+  if (error) throw new Error(`getSetting(${key}) failed: ${error.message}`);
   return data?.value ?? null;
 }
 
