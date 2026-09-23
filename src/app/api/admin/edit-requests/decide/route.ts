@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEditRequestStatusEmail } from "@/lib/agents/notify";
 import { validateOrigin } from "@/lib/csrf";
+import { applyEditRequestChanges } from "@/lib/edit-requests";
 
 export async function POST(request: Request) {
   const originError = validateOrigin(request);
@@ -57,11 +58,13 @@ export async function POST(request: Request) {
 
   // 1. Apply changes if approving
   if (action === "approved") {
-    const { error: centerError } = await admin
-      .from("centers")
-      .update(req.changes as Record<string, unknown>)
-      .eq("id", req.center_id);
-    if (centerError) {
+    const applied = await applyEditRequestChanges(
+      admin,
+      req.center_id as string,
+      req.changes as Record<string, unknown>
+    );
+    if (applied.error) {
+      console.error("Edit request apply failed:", request_id, applied.error);
       return NextResponse.json({ error: "Failed to apply changes" }, { status: 500 });
     }
   }

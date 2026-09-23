@@ -14,6 +14,7 @@ import { sendApprovedAgreement } from "@/lib/agents/outreach/agreement";
 import { sendEmail as sendGmailReply } from "@/lib/agents/outreach/gmail";
 import { validateOrigin } from "@/lib/csrf";
 import { pingIndexNow } from "@/lib/seo/indexnow";
+import { applyEditRequestChanges } from "@/lib/edit-requests";
 
 function escapeHtml(str: string): string {
   return str
@@ -237,7 +238,16 @@ async function executePostAction(
             .single();
 
           if (editReq) {
-            await admin.from("centers").update(editReq.changes as Record<string, unknown>).eq("id", editReq.center_id);
+            const applied = await applyEditRequestChanges(
+              admin,
+              editReq.center_id as string,
+              editReq.changes as Record<string, unknown>
+            );
+            if (applied.error) {
+              // Do NOT mark approved / email the partner if nothing was applied.
+              console.error("Edit request apply failed:", entityId, applied.error);
+              throw new Error(applied.error);
+            }
             await admin.from("center_edit_requests").update({
               status: "approved",
               reviewed_at: new Date().toISOString(),

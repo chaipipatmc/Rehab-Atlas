@@ -33,7 +33,7 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react` (NOT Radix). K
 
 2. **Leads MUST use service role** — never insert leads from client-side
 
-3. **Partner edits create `center_edit_requests`** — never update centers directly
+3. **Partner edits create `center_edit_requests`** — never update centers directly. The `changes` payload mixes `centers` columns with a `staff` array for `center_staff`; **always apply approvals through `applyEditRequestChanges()` in `src/lib/edit-requests.ts`** (used by `/api/admin/edit-requests/decide` and the agent action route). Passing the raw payload to `centers.update()` fails on the `staff` key and silently marks the request approved with nothing applied (bit IbogaQuest + ZorbaWellness, fixed 2026-09-23)
 
 4. **Blog author tracking** — `author_type` field: 'rehabatlas' or 'partner', with `author_center_id` for backlinks
 
