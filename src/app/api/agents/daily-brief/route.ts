@@ -54,13 +54,18 @@ async function handle(request: Request) {
       });
     }
 
-    const sent = await pushFlex(altText, card);
+    const result = await pushFlex(altText, card);
     await createAdminClient().from("agent_log").insert({
       agent_type: "daily_brief",
-      action: sent ? "sent" : "send_failed",
-      details: { date: metrics.ymd, altText },
+      action: result.ok ? "sent" : "send_failed",
+      details: { date: metrics.ymd, altText, lineStatus: result.status ?? null, lineError: result.error ?? null },
     });
-    return NextResponse.json({ sent, metrics });
+    return NextResponse.json({
+      sent: result.ok,
+      lineStatus: result.status ?? null,
+      lineError: result.error ?? null,
+      metrics,
+    });
   } catch (err) {
     console.error("Daily brief error:", err);
     return NextResponse.json({ error: "Daily brief failed" }, { status: 500 });
