@@ -8,6 +8,7 @@ import { getAppUrl } from "./base";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder_missing_key");
 import { getAdminEmail } from "@/lib/settings";
+import { isLineConfigured, pushText } from "@/lib/line";
 const FROM_EMAIL = "Rehab-Atlas Agent <onboarding@resend.dev>";
 const LINE_TOKEN = process.env.LINE_NOTIFY_TOKEN;
 
@@ -238,6 +239,12 @@ export async function sendDailyDigest(params: {
 // ── LINE Notify ──
 
 export async function sendLineNotify(message: string): Promise<void> {
+  // LINE Notify was discontinued (March 2025). Prefer the Messaging API push
+  // (src/lib/line.ts) when configured; keep the legacy call as a fallback.
+  if (isLineConfigured()) {
+    await pushText(`[Rehab-Atlas] ${message}`);
+    return;
+  }
   if (!LINE_TOKEN) return;
 
   try {

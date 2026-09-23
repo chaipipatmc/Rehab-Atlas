@@ -74,7 +74,7 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 
 ## AI Agent System
 
-12 agents automate workflows. Each can be toggled on/off at `/admin/agents`. When OFF = manual mode. When ON = agents process events → email owner for approval.
+17 toggleable agents automate workflows (registry of record: `DEFAULT_CONFIG` / `getAgentConfig()` in `src/lib/agents/config.ts`). Each can be toggled on/off at `/admin/agents`. When OFF = manual mode. When ON = agents process events → email owner for approval. Content Dedup runs inline inside other agents and has no toggle, so the tables below list 18 rows.
 
 ### Internal Agents
 | Agent | Trigger | What It Does |
@@ -84,6 +84,8 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 | **Content Admin** | DB webhook on `pages` (draft) | Reviews word count, SEO, medical accuracy, promotion level |
 | **Lead Verify** | DB webhook on `leads` (new) | Validates lead, AI match analysis (commission check disabled while pricing is deferred) |
 | **Follow-up** | Daily cron (09:00 Bangkok) | Sends reminders for stale drafts/incomplete profiles |
+| **System Orchestrator** | Every 10 min cron | Read-only health watcher — compares each agent's last run against its expected cadence, writes a health snapshot to `site_settings` |
+| **Daily Brief** | Daily cron (01:00 UTC / 08:00 Bangkok) | Pushes one LINE Flex card to the owner (`src/lib/daily-brief.ts` + `/api/agents/daily-brief`): yesterday's assessments, leads (urgent flagged), partner replies (with sentiment), center page views, plus a needs-action footer (unforwarded leads, pending partner edits). `?preview=1` returns metrics + Flex JSON without sending. Page views come from `center_analytics` because Vercel Web Analytics is not enabled on the project. No toggle; silently no-ops when LINE env vars are missing. |
 
 ### Outreach Pipeline Agents (`src/lib/agents/outreach/`)
 | Agent | Trigger | What It Does |
@@ -98,16 +100,18 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 ### Content Agent
 | Agent | Trigger | What It Does |
 |-------|---------|-------------|
-| **Content Creator** | Daily cron (weekdays, 1 PM Bangkok) | Auto-researches rehab topics, writes 1500-2000 word SEO articles with Unsplash images, auto-links to condition + country hubs, **runs dedup auto-rewrite loop (up to 2 retries) before saving**, saves as draft for admin approval |
+| **Content Creator** | Daily cron (weekdays, 1 PM Bangkok) | Auto-researches rehab topics, writes 1500-2000 word SEO articles with Unsplash images, auto-links to condition + country hubs, **runs dedup auto-rewrite loop (up to 2 retries) before saving**, saves as draft for admin approval. **Generation uses structured outputs** (`output_config.format` json_schema) so article JSON can never fail parsing — the old regex+`JSON.parse` path discarded ~95% of paid generations (July 2026, ~$100). **Every run logs a `run_completed`/`run_skipped_*` row to `agent_log`** so the orchestrator's stall gate backs off even when all saves fail, and failed API calls log `article_generation_failed`. **Daily cost circuit-breaker:** max 12 generation attempts per UTC day (successes from `api_usage` + failures from `agent_log`; tunable via `agent_content_creator_setting_daily_generation_cap`) |
 | **Content Planner** | Monthly cron (25th, 07:00 UTC) **+ content-orchestrator safety net** (any 30-min tick where the *current* month has no calendar — self-heals missed/crashed runs like July 2026) | Plans 2-3 topics per weekday via Claude into `content_calendar`. **Auto-approves the calendar by default** so the creator can draft immediately (`site_settings: agent_content_planner_setting_auto_approve = "false"` to require manual approval); admin can still edit topics at `/admin/content-calendar`. Orchestrator steps (planner/creator/auto-approve/scheduler) are individually try/caught so one failure can't silently kill the whole tick |
 | **Content Auto-Approve** | **Unconditional content-orchestrator step (every 30-min tick)** + after each creator cron run (even zero-draft runs) | Approves drafts passing quality gates (≥800 words, featured image, meta fields, ≥4 tags, ≥2 H2s, FAQ section with 3+ questions) plus a final dedup re-check. Must never be gated on "new drafts written" — that deadlocked the pipeline when the pool filled with unapproved drafts (pool full → creator skipped → auto-approve never ran → scheduler starved; fixed 2026-07-12) |
 | **Content Dedup** | Inline (creator + auto-approve + planner) | Two-tier duplicate detection on `pages.title`: Postgres `pg_trgm` similarity ≥ 0.6 → hard flag without Claude; ≥ 0.35 → Claude Haiku semantic judge against top-5 candidates; < 0.35 → clear. Verdict persisted on `pages.dedup_status/closest_slug/reasoning/retry_count/checked_at`. Admin override resets to `overridden` and exempts the draft from re-checking |
+| **Content Scheduler** | Daily cron (11:00 UTC) | Publishes ~3 approved articles/day with category rotation, pings IndexNow |
+| **Content Orchestrator** | Every 30 min cron | Supervisor — detects stalls (missing calendar, low draft pool, no publishing) and kicks planner/creator/auto-approve/scheduler; each step individually try/caught |
 
 Architecture: `src/lib/agents/` (logic) + `src/app/api/agents/` (routes) + `src/app/admin/agents/` (dashboard)
 
 Key tables: `agent_tasks` (task queue), `agent_follow_ups` (sequences), `agent_log` (audit), `site_settings` (toggles), `outreach_pipeline`, `outreach_emails`, `outreach_blog_counts`, `commission_reports`
 
-Notifications: Email (Resend) + LINE Notify (urgent items) + Gmail API (outreach emails via info@rehab-atlas.com). Owner approves/rejects via dashboard or email action links (HMAC-signed, 24h TTL).
+Notifications: Email (Resend) + LINE Messaging API push to the owner (`src/lib/line.ts`, env `LINE_CHANNEL_ACCESS_TOKEN` + `LINE_OWNER_USER_ID`; LINE Notify is discontinued and kept only as a fallback) + Gmail API (outreach emails via info@rehab-atlas.com). Owner approves/rejects via dashboard or email action links (HMAC-signed, 24h TTL).
 
 ## Database Schema
 
