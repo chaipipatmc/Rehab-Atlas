@@ -1,7 +1,31 @@
 import crypto from "crypto";
 import { requireEnv } from "./env";
+import { pushText } from "./line";
 import { getSetting, setSetting } from "./supabase";
 import { TZ } from "./time";
+
+const AUTH_ALERT_THROTTLE_MS = 6 * 3600_000; // don't spam the owner more than once per 6h
+
+/** Cron routes call getAccessToken() every 5 minutes — without a throttled alert, a dead
+ *  refresh token fails silently forever. Pushes a LINE message with the reconnect link. */
+async function notifyAuthBroken(detail: string): Promise<void> {
+  try {
+    const lastAlert = await getSetting("google_auth_alert_sent_at");
+    if (lastAlert && Date.now() - Date.parse(lastAlert) < AUTH_ALERT_THROTTLE_MS) return;
+    await setSetting("google_auth_alert_sent_at", new Date().toISOString());
+
+    const base = requireEnv("LISA_BASE_URL").replace(/\/$/, "");
+    const authUrl = `${base}/api/google/auth?key=${requireEnv("CRON_SECRET")}`;
+    await pushText(
+      `⚠️ Lisa เชื่อมต่อ Google Calendar ไม่ได้ค่ะ (${detail})\n\n` +
+        `เตือนก่อนนัด, สรุปตารางเช้า, และคำสั่งเกี่ยวกับปฏิทินทั้งหมดจะใช้ไม่ได้จนกว่าจะเชื่อมต่อใหม่\n\n` +
+        `กดลิงก์นี้เพื่อ authorize ใหม่:\n${authUrl}\n\n` +
+        `ถ้าปัญหานี้เกิดซ้ำทุกสัปดาห์ ให้ไปที่ Google Cloud Console → OAuth consent screen → Publish App เป็น "In production" เพื่อไม่ให้ token หมดอายุอัตโนมัติทุก 7 วันค่ะ`
+    );
+  } catch (e) {
+    console.error("notifyAuthBroken failed:", e);
+  }
+}
 
 const CAL_API = "https://www.googleapis.com/calendar/v3";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -56,6 +80,7 @@ export async function getAccessToken(): Promise<string> {
 
   const refreshToken = await getSetting("google_refresh_token");
   if (!refreshToken) {
+    await notifyAuthBroken("ยังไม่เคย authorize");
     throw new Error("Google Calendar not connected yet — open /api/google/auth?key=<CRON_SECRET> to authorize.");
   }
 
@@ -69,7 +94,11 @@ export async function getAccessToken(): Promise<string> {
       grant_type: "refresh_token",
     }),
   });
-  if (!res.ok) throw new Error(`Token refresh failed (${res.status}): ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    await notifyAuthBroken(`refresh token หมดอายุหรือถูกยกเลิก (${res.status})`);
+    throw new Error(`Token refresh failed (${res.status}): ${body}`);
+  }
   const data = (await res.json()) as { access_token: string; expires_in: number };
 
   await setSetting("google_access_token", data.access_token);

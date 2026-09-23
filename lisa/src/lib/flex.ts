@@ -150,6 +150,90 @@ export function buildWeekCarousel(days: { label: string; events: GcalEvent[] }[]
   };
 }
 
+/** Confirm/Cancel card for a staged outbound invitation the owner asked Lisa to send. */
+export function buildInviteConfirmCard(
+  pendingId: string,
+  ev: GcalEvent,
+  attendees: { name: string; email: string }[]
+): Record<string, unknown> {
+  const start = ev.start?.dateTime ? new Date(ev.start.dateTime) : null;
+  const end = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
+  const time = start
+    ? `${fmtThaiDay(start)} · ${fmtTime(start)}${end ? ` – ${fmtTime(end)}` : ""}`
+    : `${ev.start?.date ?? ""} (ทั้งวัน)`;
+  const title = ev.summary ?? "(ไม่มีชื่อ)";
+  const link = extractMeetingLink(ev);
+
+  const body: Record<string, unknown>[] = [
+    { type: "text", text: time, weight: "bold", size: "sm", color: OLIVE },
+    { type: "text", text: title, size: "md", weight: "bold", wrap: true, color: "#333333", margin: "sm" },
+  ];
+  if (ev.location) {
+    body.push({ type: "text", text: `📍 ${shortLocation(ev.location)}`, size: "xs", color: MUTED, wrap: true, margin: "sm" });
+  }
+  if (link) {
+    body.push({ type: "text", text: "🔗 มีลิงก์ประชุมออนไลน์", size: "xs", color: OLIVE, margin: "xs" });
+  }
+  body.push({ type: "separator", margin: "lg", color: "#EEEEE8" });
+  body.push({ type: "text", text: "ผู้ถูกเชิญ", size: "xs", weight: "bold", color: MUTED, margin: "lg" });
+  attendees.forEach((a) => {
+    body.push({
+      type: "text",
+      text: `• ${a.name} (${a.email})`,
+      size: "xs",
+      color: "#333333",
+      wrap: true,
+      margin: "xs",
+    });
+  });
+
+  return {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: OLIVE,
+      paddingAll: "16px",
+      contents: [
+        { type: "text", text: "Lisa · Send Invitation", color: "#ffffffcc", size: "xs" },
+        { type: "text", text: "ยืนยันส่งคำเชิญ?", color: "#ffffff", size: "lg", weight: "bold", margin: "xs" },
+      ],
+    },
+    body: { type: "box", layout: "vertical", paddingAll: "16px", contents: body },
+    footer: {
+      type: "box",
+      layout: "horizontal",
+      spacing: "md",
+      paddingAll: "12px",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: OLIVE,
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "ยืนยัน ✓",
+            data: `send_invite:confirm:${pendingId}`,
+            displayText: "ยืนยันส่งคำเชิญ",
+          },
+        },
+        {
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "ยกเลิก ✕",
+            data: `send_invite:cancel:${pendingId}`,
+            displayText: "ยกเลิกคำเชิญ",
+          },
+        },
+      ],
+    },
+  };
+}
+
 /** Invitation card with Accept/Decline postback buttons and a conflict summary. */
 export function buildInviteCard(ev: GcalEvent, conflicts: GcalEvent[]): Record<string, unknown> {
   const start = ev.start?.dateTime ? new Date(ev.start.dateTime) : null;

@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { env } from "@/lib/env";
-import { respondToInvite } from "@/lib/google";
+import { patchEvent, respondToInvite, simplifyEvent } from "@/lib/google";
 import { pushText, replyText, verifyLineSignature } from "@/lib/line";
 import { db } from "@/lib/supabase";
 import { runLisaAgent } from "@/lib/agent/run";
@@ -37,6 +37,54 @@ async function handleInvitePostback(data: string): Promise<void> {
   }
 }
 
+/** Handle Confirm/Cancel button presses on a staged outbound-invitation card. */
+async function handleSendInvitePostback(data: string): Promise<void> {
+  const m = data.match(/^send_invite:(confirm|cancel):(.+)$/);
+  if (!m) return;
+  const [, decision, pendingId] = m;
+  try {
+    const { data: pending, error } = await db()
+      .from("lisa_pending_actions")
+      .select("id, payload, status, expires_at")
+      .eq("id", pendingId)
+      .eq("action_type", "send_invitation")
+      .maybeSingle();
+    if (error || !pending) {
+      await pushText("ขอโทษค่ะ ไม่พบคำเชิญนี้แล้วค่ะ");
+      return;
+    }
+    if (pending.status !== "pending") {
+      await pushText("คำเชิญนี้ไม่พร้อมใช้งานแล้วค่ะ (อาจถูกยกเลิกหรือแทนที่ด้วยรายการใหม่) ลองขอให้ Lisa เตรียมคำเชิญใหม่นะคะ");
+      return;
+    }
+
+    if (decision === "cancel") {
+      await db().from("lisa_pending_actions").update({ status: "cancelled" }).eq("id", pendingId);
+      await pushText("❌ ยกเลิกการส่งคำเชิญเรียบร้อยค่ะ");
+      return;
+    }
+
+    if (new Date(pending.expires_at).getTime() < Date.now()) {
+      await db().from("lisa_pending_actions").update({ status: "cancelled" }).eq("id", pendingId);
+      await pushText("คำเชิญนี้หมดอายุแล้วค่ะ (เกิน 24 ชม.) รบกวนขอให้ Lisa เตรียมคำเชิญใหม่นะคะ");
+      return;
+    }
+
+    const payload = pending.payload as { event_id: string; attendees: { name: string; email: string }[] };
+    const ev = await patchEvent(
+      payload.event_id,
+      { attendees: payload.attendees.map((a) => ({ email: a.email, displayName: a.name })) },
+      { sendUpdates: "all" }
+    );
+    await db().from("lisa_pending_actions").update({ status: "done" }).eq("id", pendingId);
+    const names = payload.attendees.map((a) => a.name).join(", ");
+    await pushText(`✅ ส่งคำเชิญ "${simplifyEvent(ev).title}" ให้ ${names} เรียบร้อยค่ะ`);
+  } catch (err) {
+    console.error("send_invite postback failed:", err);
+    await pushText("ขอโทษค่ะ ส่งคำเชิญไม่สำเร็จ ลองกดอีกครั้งได้นะคะ 🙏");
+  }
+}
+
 async function handleEvent(event: LineEvent): Promise<void> {
   const ownerId = env("LINE_OWNER_USER_ID");
   const senderId = event.source?.userId ?? "";
@@ -57,7 +105,12 @@ async function handleEvent(event: LineEvent): Promise<void> {
   if (senderId !== ownerId) return;
 
   if (event.type === "postback") {
-    await handleInvitePostback(event.postback?.data ?? "");
+    const data = event.postback?.data ?? "";
+    if (data.startsWith("send_invite:")) {
+      await handleSendInvitePostback(data);
+    } else {
+      await handleInvitePostback(data);
+    }
     return;
   }
 
