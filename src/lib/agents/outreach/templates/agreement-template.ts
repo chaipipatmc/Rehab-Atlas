@@ -5,6 +5,7 @@
  */
 
 import type { AgreementDetails, BlogTier } from "@/types/agent";
+import { DEFAULT_PERSONA } from "../persona";
 
 /**
  * Build agreement details from pipeline data and center info.
@@ -70,7 +71,7 @@ export function generateAgreementNoticeEmail(params: {
   commissionRate?: number;
   persona?: string;
 }): { subject: string; bodyText: string } {
-  const persona = params.persona || process.env.OUTREACH_PERSONA_NAME || "Sarah";
+  const persona = params.persona || DEFAULT_PERSONA;
   const greeting = params.contactPerson
     ? `Hi ${params.contactPerson.split(" ")[0]},`
     : `Hi there,`;

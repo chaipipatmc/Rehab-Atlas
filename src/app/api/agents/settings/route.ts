@@ -9,6 +9,7 @@ import {
   getAllAgentSettings,
   setAgentSetting,
 } from "@/lib/agents/config";
+import { resolveFromAddress } from "@/lib/agents/outreach/persona";
 import type { AgentType } from "@/types/agent";
 
 const VALID_AGENTS: AgentType[] = [
@@ -71,8 +72,8 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const settings = await getAllAgentSettings();
-  return NextResponse.json({ settings, allowedKeys: ALLOWED_KEYS });
+  const [settings, outreachFrom] = await Promise.all([getAllAgentSettings(), resolveFromAddress()]);
+  return NextResponse.json({ settings, allowedKeys: ALLOWED_KEYS, outreachFrom });
 }
 
 export async function POST(request: Request) {

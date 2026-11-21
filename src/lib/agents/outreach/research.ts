@@ -1,5 +1,5 @@
 /**
- * Agent 1 — Research & Outreach ("Sarah")
+ * Agent 1 — Research & Outreach
  * Researches center websites, drafts personalized outreach emails.
  * Creates agent_task requiring super admin approval before sending.
  */
@@ -21,14 +21,9 @@ import {
   getOutreachUserPrompt,
 } from "./templates/outreach-email";
 import type { CenterResearch, OutreachPipeline } from "@/types/agent";
-
 // Persona name — admin can override via /admin/agents → settings, falling
-// back to env var, then to "Sarah".
-const DEFAULT_PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
-async function resolvePersona(): Promise<string> {
-  const { getAgentSettingString } = await import("../config");
-  return getAgentSettingString("outreach_research", "persona_name", DEFAULT_PERSONA);
-}
+// back to env var, then to "The Rehab-Atlas Team".
+import { resolvePersona } from "./persona";
 
 // --- Zod schemas for Claude responses ---
 
@@ -287,7 +282,7 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
     }
   }
 
-  // Resolve persona (settings override → env var → "Sarah")
+  // Resolve persona (settings override → env var → default)
   const persona = await resolvePersona();
 
   // Try Claude for personalized email

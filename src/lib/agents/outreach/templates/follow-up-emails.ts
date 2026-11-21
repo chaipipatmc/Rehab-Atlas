@@ -7,7 +7,9 @@
  * Value = free listing + admin-vetted inquiries + author backlinks.
  */
 
-const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+import { DEFAULT_PERSONA } from "../persona";
+
+const PERSONA = DEFAULT_PERSONA;
 
 interface FollowUpParams {
   centerName: string;

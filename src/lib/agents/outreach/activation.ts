@@ -9,8 +9,9 @@ import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { sendAgentEmail } from "@/lib/agents/notify";
 import { sendOutreachEmail, withUnsubscribeFooter } from "./policy";
 import type { OutreachPipeline, CenterResearch } from "@/types/agent";
+import { DEFAULT_PERSONA } from "./persona";
 
-const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+const PERSONA = DEFAULT_PERSONA;
 
 /**
  * Activate a center after both parties have signed the agreement.

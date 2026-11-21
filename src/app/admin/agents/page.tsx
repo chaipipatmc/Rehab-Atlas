@@ -141,7 +141,7 @@ const AGENT_KNOBS: Record<string, AgentKnob[]> = {
       label: "Persona first name",
       description: "First name used in outreach email signatures and AI tone.",
       type: "text",
-      default: "Sarah",
+      default: "The Rehab-Atlas Team",
     },
     {
       key: "allowed_countries",
@@ -270,6 +270,8 @@ export default function AdminAgentsPage() {
   const [bulkActioning, setBulkActioning] = useState(false);
   const [agentStats, setAgentStats] = useState<Record<string, { pending: number; recent: number; detail: string }>>({});
   const [agentSettings, setAgentSettings] = useState<Record<string, Record<string, string>>>({});
+  // Exact From header the next outreach email will use (resolved server-side).
+  const [outreachFrom, setOutreachFrom] = useState<string>("");
   const [draftSettings, setDraftSettings] = useState<Record<string, Record<string, string>>>({});
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [savingSetting, setSavingSetting] = useState<string | null>(null);
@@ -393,6 +395,7 @@ export default function AdminAgentsPage() {
     if (res.ok) {
       const json = await res.json();
       setAgentSettings(json.settings || {});
+      setOutreachFrom(typeof json.outreachFrom === "string" ? json.outreachFrom : "");
     }
   }
 
@@ -493,15 +496,25 @@ export default function AdminAgentsPage() {
   async function handleAction(taskId: string, token: string, decision: string) {
     setActioning(taskId);
     try {
-      const form = new FormData();
-      form.append("token", token);
-      form.append("decision", decision);
-      const res = await fetch("/api/agents/action", { method: "POST", body: form });
+      // JSON body → the action route answers with JSON errors (e.g. "Not sent: …")
+      // instead of an HTML page, so the real reason can be shown below.
+      const res = await fetch("/api/agents/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, decision }),
+      });
       if (res.ok) {
         toast.success(`Task ${decision}`);
         await loadTasks();
       } else {
-        toast.error("Action failed");
+        let detail = "";
+        try {
+          const json = await res.json();
+          if (typeof json?.error === "string") detail = json.error;
+        } catch {
+          // non-JSON response — fall back to the generic message
+        }
+        toast.error(detail ? `Action failed: ${detail}` : "Action failed");
       }
     } catch {
       toast.error("Action failed");
@@ -734,6 +747,7 @@ export default function AdminAgentsPage() {
                             )}
                           <TaskCard
                             task={task}
+                            outreachFrom={outreachFrom}
                             isExpanded={expandedTask === task.id}
                             onToggle={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
                             isEditing={editingDraft === task.id}
@@ -1018,7 +1032,7 @@ export default function AdminAgentsPage() {
 function TaskCard({
   task: initialTask, isExpanded, onToggle, isEditing, editedSubject, editedBody,
   onEditStart, onEditCancel, onEditSubject, onEditBody, onEditSave,
-  actioning, onAction,
+  actioning, onAction, outreachFrom,
 }: {
   task: AgentTaskRow;
   isExpanded: boolean;
@@ -1033,6 +1047,7 @@ function TaskCard({
   onEditSave: () => void;
   actioning: boolean;
   onAction: (decision: string) => void;
+  outreachFrom: string;
 }) {
   const [task, setTask] = useState(initialTask);
   const [feedbackMode, setFeedbackMode] = useState(false);
@@ -1143,7 +1158,7 @@ function TaskCard({
                 </div>
                 <div className="flex gap-2">
                   <span className="text-muted-foreground font-medium w-12 shrink-0">From:</span>
-                  <span className="text-foreground">Sarah &lt;info@rehab-atlas.com&gt;</span>
+                  <span className="text-foreground">{outreachFrom || "Loading…"}</span>
                 </div>
                 <div className="flex gap-2">
                   <span className="text-muted-foreground font-medium w-12 shrink-0">Subj:</span>

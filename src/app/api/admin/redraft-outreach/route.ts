@@ -7,9 +7,8 @@ import {
   getOutreachSystemPrompt,
   getOutreachUserPrompt,
 } from "@/lib/agents/outreach/templates/outreach-email";
+import { resolvePersona } from "@/lib/agents/outreach/persona";
 import type { CenterResearch } from "@/types/agent";
-
-const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
 
 /**
  * Delete all drafted outreach emails and re-create them with the new template.
@@ -60,6 +59,7 @@ export async function POST(request: Request) {
   }
 
   // 5. Re-draft each email fresh
+  const persona = await resolvePersona();
   let redrafted = 0;
   let failed = 0;
 
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
             model: "claude-sonnet-5",
             thinking: { type: "disabled" },
             max_tokens: 1200,
-            system: getOutreachSystemPrompt(),
+            system: getOutreachSystemPrompt(persona),
             messages: [{
               role: "user",
               content: getOutreachUserPrompt({
@@ -107,12 +107,12 @@ export async function POST(request: Request) {
             throw new Error("No JSON in response");
           }
         } catch {
-          const tmpl = generateInitialOutreach({ centerName: center.name, contactPerson, research });
+          const tmpl = generateInitialOutreach({ centerName: center.name, contactPerson, research, persona });
           subject = tmpl.subject;
           bodyText = tmpl.bodyText;
         }
       } else {
-        const tmpl = generateInitialOutreach({ centerName: center.name, contactPerson, research });
+        const tmpl = generateInitialOutreach({ centerName: center.name, contactPerson, research, persona });
         subject = tmpl.subject;
         bodyText = tmpl.bodyText;
       }

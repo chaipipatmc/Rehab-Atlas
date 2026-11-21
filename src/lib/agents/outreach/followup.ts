@@ -24,15 +24,15 @@ import {
   getFollowUpSystemPrompt,
 } from "./templates/follow-up-emails";
 import type { OutreachPipeline, CenterResearch } from "@/types/agent";
+import { DEFAULT_PERSONA } from "./persona";
 
 // Persona + follow-up cadence — admin can override via /admin/agents → settings.
-const DEFAULT_PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
 const DEFAULT_FOLLOW_UP_DAYS = [3, 7, 14];
 
 async function resolvePersona(): Promise<string> {
   const { getAgentSettingString } = await import("../config");
   // Persona is shared with research; read from outreach_research key first,
-  // then fall back to outreach_followup, then to env var/Sarah.
+  // then fall back to outreach_followup, then to env var/default.
   const fromResearch = await getAgentSettingString(
     "outreach_research",
     "persona_name",
