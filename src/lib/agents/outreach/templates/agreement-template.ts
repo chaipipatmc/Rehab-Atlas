@@ -80,13 +80,13 @@ export function generateAgreementNoticeEmail(params: {
     subject: `Partnership agreement for ${params.centerName} - ready for your signature`,
     bodyText: `${greeting}
 
-Great news — I've prepared our partnership agreement based on what we discussed. You should receive it via PandaDoc shortly.
+Great news — we've prepared our partnership agreement based on what we discussed. You should receive it via PandaDoc shortly.
 
-Please take a look when you get a chance. If anything needs adjusting, just let me know and I'll update it right away.
+Please take a look when you get a chance. If anything needs adjusting, just let us know and we'll update it right away.
 
 Once both sides have signed, we'll get ${params.centerName} set up on the platform. Inquiries are reviewed by our team first, and we'll pass on the ones that fit what you offer.
 
-Thanks for choosing to partner with us — I'm looking forward to working together.
+Thanks for choosing to partner with us — we're looking forward to working together.
 
 Best,
 ${persona}

@@ -42,9 +42,9 @@ export function generateInitialOutreach(params: TemplateParams): {
 
   const bodyText = `${greeting}
 
-I came across ${params.centerName} while researching ${specialty} providers, and I was genuinely impressed by ${usp}.
+We came across ${params.centerName} while researching ${specialty} providers, and we were genuinely impressed by ${usp}.
 
-My name is ${persona}, and I'm reaching out from Rehab-Atlas. We're building a new platform with a simple goal — making it easier for people looking for rehabilitation to find the right center for themselves or their loved ones.
+This is ${persona} at Rehab-Atlas. We're building a new platform with a simple goal — making it easier for people looking for rehabilitation to find the right center for themselves or their loved ones.
 
 We believe that many people who need help simply don't know where to look, and great centers like yours don't always get the visibility they deserve. That's the problem we're trying to solve.
 
@@ -54,7 +54,7 @@ When someone is searching for rehab and their needs match what you offer, they c
 
 There's no cost and no strings attached. We're focused on building a trusted directory where people in need can find quality care, and your center would be a valuable addition.
 
-If you're interested in being part of this journey, just reply to this email and let me know. We'll send you an invitation to set up your account and walk you through getting your center profile set up with 100% completeness — so people searching for help can find everything they need to know about ${params.centerName}.
+If you're interested in being part of this journey, just reply to this email and let us know. We'll send you an invitation to set up your account and walk you through getting your center profile set up with 100% completeness — so people searching for help can find everything they need to know about ${params.centerName}.
 
 Best,
 ${persona}
@@ -69,7 +69,7 @@ rehab-atlas.com`;
  * Claude AI system prompt for generating personalized outreach emails.
  */
 export function getOutreachSystemPrompt(persona: string = PERSONA): string {
-  return `You are ${persona} from the Partnerships team at Rehab-Atlas, a new platform that helps people find the right rehabilitation center for themselves or their loved ones.
+  return `You write on behalf of ${persona} (the Partnerships team at Rehab-Atlas); write in first person plural ('we'), sign as ${persona}. Rehab-Atlas is a new platform that helps people find the right rehabilitation center for themselves or their loved ones.
 
 WHAT REHAB-ATLAS IS:
 - A new platform focused on making rehabilitation accessible and discoverable
