@@ -11,7 +11,18 @@ import type { AgentType, AgentRecommendation, AgentTask } from "@/types/agent";
 // and webhook verification fail closed (nothing is accepted).
 const HMAC_KEY: string | null = process.env.SUPABASE_SERVICE_ROLE_KEY || null;
 const TOKEN_TTL_HOURS = 24;
-const WEBHOOK_SECRET: string | null = process.env.AGENT_WEBHOOK_SECRET || null;
+
+/**
+ * Read a shared secret from env, trimmed of surrounding whitespace/newlines
+ * (values pasted via `pbcopy` etc. often carry a trailing "\n").
+ * Empty after trim = not configured = null (callers fail closed).
+ */
+export function readSecretEnv(name: string): string | null {
+  const v = (process.env[name] ?? "").trim();
+  return v.length > 0 ? v : null;
+}
+
+const WEBHOOK_SECRET: string | null = readSecretEnv("AGENT_WEBHOOK_SECRET");
 
 /** Constant-time string comparison (false on length mismatch). */
 function safeEqual(a: string, b: string): boolean {
@@ -190,9 +201,25 @@ export async function logAgentAction(params: {
 
 export function verifyWebhookSecret(request: Request): boolean {
   if (!WEBHOOK_SECRET) return false;
-  const secret = request.headers.get("x-webhook-secret");
+  const secret = (request.headers.get("x-webhook-secret") ?? "").trim();
   if (!secret) return false;
   return safeEqual(secret, WEBHOOK_SECRET);
+}
+
+/**
+ * Verify `Authorization: Bearer <CRON_SECRET>` (Vercel cron / maintenance
+ * scripts). Both sides trimmed, constant-time compare, fails closed when
+ * CRON_SECRET is unset or empty.
+ */
+export function verifyCronSecret(request: Request): boolean {
+  const cronSecret = readSecretEnv("CRON_SECRET");
+  if (!cronSecret) return false;
+  const header = (request.headers.get("authorization") ?? "").trim();
+  const m = /^Bearer\s+(.+)$/i.exec(header);
+  if (!m) return false;
+  const token = m[1].trim();
+  if (!token) return false;
+  return safeEqual(token, cronSecret);
 }
 
 // ── Helpers ──

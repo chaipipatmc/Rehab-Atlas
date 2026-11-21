@@ -6,19 +6,17 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { verifyWebhookSecret } from "@/lib/agents/base";
+import { verifyWebhookSecret, verifyCronSecret } from "@/lib/agents/base";
 import { createArticleDraft } from "@/lib/agents/content-creator";
 import { autoApproveContent } from "@/lib/agents/content-auto-approve";
 
 export const maxDuration = 300;
 
-const CRON_SECRET = process.env.CRON_SECRET;
 // Max articles per single serverless invocation (budget ~60s each, 4.5min safety)
 const BATCH_SIZE = 4;
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const isCron = !!CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = verifyCronSecret(request);
   const isWebhook = verifyWebhookSecret(request);
 
   if (!isCron && !isWebhook) {

@@ -5,16 +5,13 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { verifyWebhookSecret } from "@/lib/agents/base";
+import { verifyWebhookSecret, verifyCronSecret } from "@/lib/agents/base";
 import { publishFromPool, getPoolStats } from "@/lib/agents/content-scheduler";
 
 export const maxDuration = 30;
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const isCron = !!CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = verifyCronSecret(request);
   const isWebhook = verifyWebhookSecret(request);
 
   if (!isCron && !isWebhook) {

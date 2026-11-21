@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { verifyCronSecret } from "@/lib/agents/base";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +23,7 @@ export async function POST(request: Request) {
   // 1. Logged-in admin user (used from /admin/content button)
   // 2. CRON_SECRET in Authorization header (used by maintenance scripts /
   //    one-off flush requests after bulk DB edits like dedup cleanup)
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
-  const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+  const isCron = verifyCronSecret(request);
 
   if (!isCron) {
     const supabase = await createClient();

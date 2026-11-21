@@ -7,17 +7,12 @@
 import { NextResponse } from "next/server";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { processFollowUp } from "@/lib/agents/follow-up";
-import { verifyWebhookSecret } from "@/lib/agents/base";
+import { verifyWebhookSecret, verifyCronSecret } from "@/lib/agents/base";
 
 export async function POST(request: Request) {
   // Verify either webhook secret or Vercel cron authorization
   // Fails closed: with no AGENT_WEBHOOK_SECRET / CRON_SECRET set, nothing is accepted.
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  const isAuthorized =
-    verifyWebhookSecret(request) ||
-    (!!cronSecret && authHeader === `Bearer ${cronSecret}`);
+  const isAuthorized = verifyWebhookSecret(request) || verifyCronSecret(request);
 
   if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

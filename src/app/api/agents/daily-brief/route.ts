@@ -14,14 +14,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectBriefMetrics, buildDailyBriefCard, buildDailyBriefAltText } from "@/lib/daily-brief";
 import { isLineConfigured, pushFlex } from "@/lib/line";
+import { verifyCronSecret } from "@/lib/agents/base";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 async function authorize(request: Request): Promise<NextResponse | null> {
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return null;
+  if (verifyCronSecret(request)) return null;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
