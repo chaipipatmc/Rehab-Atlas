@@ -381,6 +381,12 @@ export async function sendApprovedOutreach(
     pipelineId,
   });
 
+  // null = Gmail credentials/token unavailable: nothing was sent, so do not
+  // mark the pipeline as sent or log an outbound email.
+  if (!result) {
+    throw new Error("Gmail send unavailable (no credentials/access token) — email not sent");
+  }
+
   const now = new Date().toISOString();
 
   // Calculate first follow-up date (3 days from now)
@@ -392,8 +398,8 @@ export async function sendApprovedOutreach(
     .from("outreach_pipeline")
     .update({
       stage: "outreach_sent",
-      outreach_email_id: result?.messageId || null,
-      outreach_thread_id: result?.threadId || null,
+      outreach_email_id: result.messageId || null,
+      outreach_thread_id: result.threadId || null,
       outreach_sent_at: now,
       next_follow_up_at: nextFollowUp.toISOString(),
     })
@@ -404,8 +410,8 @@ export async function sendApprovedOutreach(
     pipeline_id: pipelineId,
     center_id: pipeline.center_id,
     direction: "outbound",
-    gmail_message_id: result?.messageId || null,
-    gmail_thread_id: result?.threadId || null,
+    gmail_message_id: result.messageId || null,
+    gmail_thread_id: result.threadId || null,
     from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
     to_email: emailData.to_email,
     subject: emailData.subject,
@@ -419,11 +425,52 @@ export async function sendApprovedOutreach(
     details: {
       pipeline_id: pipelineId,
       center_id: pipeline.center_id,
-      gmail_sent: !!result,
+      gmail_sent: true,
     },
   });
 
   return true;
+}
+
+/**
+ * Region filter for new outreach (board decision D1). Returns a lowercase
+ * country list from agent_outreach_research_setting_allowed_countries
+ * (comma-separated), or null when no filter is configured.
+ */
+export async function getAllowedCountries(): Promise<string[] | null> {
+  const { getAgentSettingString } = await import("../config");
+  const raw = await getAgentSettingString("outreach_research", "allowed_countries", "");
+  const list = raw
+    .split(",")
+    .map((c) => c.trim().toLowerCase())
+    .filter(Boolean);
+  return list.length > 0 ? list : null;
+}
+
+/**
+ * Pick the oldest "new" pipeline centers that pass the region filter.
+ * Shared by the orchestrator and the manual batch route so both apply the
+ * same allowed_countries rule. Centers outside the list simply stay "new".
+ */
+export async function selectNextNewCenterIds(limit = 1): Promise<string[]> {
+  const admin = createAdminClient();
+  const allowedCountries = await getAllowedCountries();
+  const { data: candidates } = await admin
+    .from("outreach_pipeline")
+    .select("center_id, centers(country)")
+    .eq("stage", "new")
+    .order("created_at", { ascending: true })
+    .limit(allowedCountries ? Math.max(50, limit) : limit);
+
+  return (candidates || [])
+    .filter((entry) => {
+      if (!allowedCountries) return true;
+      const rel = (entry as { centers?: { country?: string | null } | { country?: string | null }[] | null }).centers;
+      const country = Array.isArray(rel) ? rel[0]?.country : rel?.country;
+      return !!country && allowedCountries.includes(country.trim().toLowerCase());
+    })
+    .slice(0, limit)
+    .map((entry) => entry.center_id as string);
 }
 
 /**

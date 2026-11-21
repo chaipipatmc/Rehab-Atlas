@@ -1,8 +1,10 @@
 /**
  * Bulk Action Endpoint
  * Processes multiple agent tasks at once.
- * For outreach emails: marks all as approved immediately, then sends
- * emails sequentially (non-blocking — response returns before all send).
+ * Bulk approve supports only outreach_research (sends the initial email) and
+ * content_admin (publishes). Other types are rejected with a clear error.
+ * Outreach emails are sent sequentially within the request; any task whose
+ * send is blocked or fails is put back to awaiting_owner.
  */
 
 import { NextResponse } from "next/server";
@@ -15,6 +17,8 @@ import { validateOrigin } from "@/lib/csrf";
 import { pingIndexNow } from "@/lib/seo/indexnow";
 
 export const maxDuration = 300; // 5 minutes for bulk sends
+
+const BULK_APPROVE_TYPES = new Set(["outreach_research", "content_admin"]);
 
 export async function POST(request: Request) {
   const originError = validateOrigin(request);
@@ -64,6 +68,26 @@ export async function POST(request: Request) {
       { error: "No awaiting tasks found" },
       { status: 404 }
     );
+  }
+
+  // 1b. Bulk APPROVE only supports types whose side effects are implemented
+  // here: outreach_research (send initial email) and content_admin (publish).
+  // Any other type (follow-up / response / activation / agreement drafts,
+  // center/lead/data reviews) must be approved one by one so it is actually
+  // sent/applied — never silently marked approved without its side effect.
+  if (decision === "approve") {
+    const unsupported = tasks.filter((t) => !BULK_APPROVE_TYPES.has(t.agent_type as string));
+    if (unsupported.length > 0) {
+      const types = [...new Set(unsupported.map((t) => t.agent_type as string))];
+      return NextResponse.json(
+        {
+          error: `Bulk approve is not supported for: ${types.join(", ")}. Approve these tasks one at a time. Nothing was changed.`,
+          unsupported_task_ids: unsupported.map((t) => t.id),
+          unsupported_types: types,
+        },
+        { status: 400 }
+      );
+    }
   }
 
   // 2. Mark ALL tasks as approved/rejected immediately
@@ -127,6 +151,9 @@ export async function POST(request: Request) {
   let emailsFailed = 0;
   let blockedReason: string | null = null;
   const requeueIds: string[] = [];
+  // Non-policy send failures: nothing was sent, so the task goes back to
+  // awaiting approval with the error recorded (never left as "approved").
+  const failed: { id: string; error: string }[] = [];
 
   for (const task of outreachTasks) {
     if (blockedReason) {
@@ -135,7 +162,11 @@ export async function POST(request: Request) {
     }
 
     const cl = task.checklist as Record<string, unknown> | null;
-    if (!cl?.to_email || !cl?.body_text) continue;
+    if (!cl?.to_email || !cl?.body_text) {
+      emailsFailed++;
+      failed.push({ id: task.id, error: "No email draft (to_email/body_text missing)" });
+      continue;
+    }
 
     try {
       const ok = await sendApprovedOutreach(task.entity_id as string, {
@@ -144,7 +175,10 @@ export async function POST(request: Request) {
         body_text: cl.body_text as string,
       });
       if (ok) emailsSent++;
-      else emailsFailed++;
+      else {
+        emailsFailed++;
+        failed.push({ id: task.id, error: "Pipeline not found — not sent" });
+      }
     } catch (err) {
       if (err instanceof OutreachBlockedError) {
         requeueIds.push(task.id);
@@ -155,6 +189,7 @@ export async function POST(request: Request) {
         continue;
       }
       emailsFailed++;
+      failed.push({ id: task.id, error: (err as Error).message || String(err) });
       console.error("Bulk email send error:", (err as Error).message);
     }
 
@@ -169,6 +204,18 @@ export async function POST(request: Request) {
       .in("id", requeueIds);
   }
 
+  for (const f of failed) {
+    await admin
+      .from("agent_tasks")
+      .update({
+        status: "awaiting_owner",
+        owner_decision: null,
+        decided_at: null,
+        error_message: f.error.slice(0, 1000),
+      })
+      .eq("id", f.id);
+  }
+
   // Log bulk action
   await logAgentAction({
     agent_type: "center_admin" as const, // reuse existing type for logging
@@ -178,6 +225,7 @@ export async function POST(request: Request) {
       emails_sent: emailsSent,
       emails_failed: emailsFailed,
       emails_requeued: requeueIds.length,
+      emails_failed_requeued: failed.length,
       blocked_reason: blockedReason,
     },
   });

@@ -14,7 +14,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization");
-  const isCron = authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = !!CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
   const isWebhook = verifyWebhookSecret(request);
 
   if (!isCron && !isWebhook) {

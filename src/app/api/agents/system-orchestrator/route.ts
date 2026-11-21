@@ -33,7 +33,7 @@ async function isAdminUser(): Promise<boolean> {
 // POST runs the health check now. GET reads the cached snapshot (cheap).
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization");
-  const isCron = authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = !!CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
   const isWebhook = verifyWebhookSecret(request);
 
   if (!isCron && !isWebhook && !(await isAdminUser())) {
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
   // run a fresh check. Admin reads of the snapshot are cheap and don't trigger
   // a new check.
   const authHeader = request.headers.get("authorization");
-  const isCron = authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = !!CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
   if (isCron) return POST(request);
 
   if (!(await isAdminUser())) {

@@ -161,6 +161,11 @@ export async function sendApprovedActivationEmail(
     pipelineId,
   });
 
+  // null = Gmail credentials/token unavailable: nothing was sent.
+  if (!result) {
+    throw new Error("Gmail send unavailable (no credentials/access token) — email not sent");
+  }
+
   await admin.from("outreach_emails").insert({
     pipeline_id: pipelineId,
     center_id: pipeline.center_id,
