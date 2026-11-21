@@ -30,8 +30,9 @@ export async function POST(request: Request) {
   }
 
   if (action === "blog_tiers") {
-    await calculateMonthlyBlogTiers();
-    return NextResponse.json({ success: true, action: "blog_tiers" });
+    // No-op while BLOG_TIERS_ENABLED=false in orchestrator.ts (logs only).
+    const result = await calculateMonthlyBlogTiers();
+    return NextResponse.json({ success: true, action: "blog_tiers", ...result });
   }
 
   // Default: run orchestrator

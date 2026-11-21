@@ -1,20 +1,22 @@
 /**
  * Agent 3 — Response Handler
  * Detects inbound replies, analyzes sentiment, updates pipeline.
- * If center asks questions → drafts reply for admin approval.
- * If center agrees → transitions to terms_agreed.
+ * This agent NEVER sends email. Every outbound reply is queued as an
+ * agent_task and only goes out after admin approval (board decision D6).
+ * - "unsubscribe" / opt-out reply → pipeline marked opted out, no further mail.
+ * - Questions → drafts a reply for admin approval.
+ * - Decline → admin task only (no automatic win-back email).
+ * - Agreement → terms_agreed + admin task to invite the contact manually
+ *   (no auto-created accounts, no passwords by email).
  */
 
-import crypto from "crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { analyzeWithClaude } from "@/lib/agents/claude";
-import { getLatestInboundReply, getThreadMessages, sendEmail } from "./gmail";
+import { getLatestInboundReply } from "./gmail";
+import { isOptOutReply, OPTED_OUT_MARKER } from "./policy";
 import type { OutreachPipeline, ResponseSentiment } from "@/types/agent";
-
-const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rehab-atlas.com";
 
 const responseAnalysisSchema = z.object({
   sentiment: z.enum(["positive", "neutral", "negative", "question"]),
@@ -81,6 +83,22 @@ export async function processInboundReplies(): Promise<{
 }
 
 /**
+ * Expire open approval tasks for a pipeline (e.g. a follow-up draft that is
+ * now stale because the center replied).
+ */
+async function expireOpenTasks(pipelineId: string, agentTypes?: string[]): Promise<void> {
+  const admin = createAdminClient();
+  let q = admin
+    .from("agent_tasks")
+    .update({ status: "expired", completed_at: new Date().toISOString() })
+    .eq("entity_type", "outreach_pipeline")
+    .eq("entity_id", pipelineId)
+    .in("status", ["pending", "processing", "awaiting_owner"]);
+  if (agentTypes?.length) q = q.in("agent_type", agentTypes);
+  await q;
+}
+
+/**
  * Process a single inbound reply.
  */
 async function processReply(
@@ -111,11 +129,38 @@ async function processReply(
     sent_at: reply.date,
   });
 
+  // Opt-out: stop everything for this center, no reply, no further tasks.
+  if (isOptOutReply(reply.body)) {
+    const nowIso = new Date().toISOString();
+    await admin
+      .from("outreach_pipeline")
+      .update({
+        stage: "declined",
+        responded_at: nowIso,
+        response_summary: "Opted out (unsubscribe reply)",
+        response_sentiment: "negative",
+        next_follow_up_at: null,
+        notes: `${OPTED_OUT_MARKER} ${nowIso} via reply${pipeline.notes ? `\n${pipeline.notes}` : ""}`,
+      })
+      .eq("id", pipeline.id);
+    await expireOpenTasks(pipeline.id);
+    await logAgentAction({
+      agent_type: "outreach_response",
+      action: "opted_out",
+      details: { pipeline_id: pipeline.id, center_id: pipeline.center_id, center_name: center?.name },
+    });
+    return;
+  }
+
+  // The center replied — any queued follow-up draft is now stale.
+  await expireOpenTasks(pipeline.id, ["outreach_followup"]);
+
   // Analyze with Claude
   const analysis = await analyzeWithClaude<ResponseAnalysis>({
     systemPrompt: `You analyze inbound email replies from rehabilitation centers being invited to join Rehab-Atlas, a free platform that helps people find rehab centers.
 Determine the sender's intent and sentiment. We invited them to join our platform for free — create a profile, share their programs, and optionally publish educational blog articles.
-There is NO commission or fee discussed yet. This is purely about onboarding their center profile.
+There is NO commission, fee or pricing discussion — never mention commission, fees, pricing or referral costs in a suggested reply. This is purely about onboarding their center profile.
+Never offer phone calls. Never include passwords or login credentials in a suggested reply.
 Return JSON with: sentiment, summary, key_points, agreed_to_partner, has_questions, counter_offer_rate (always null), suggested_reply (null if no reply needed).`,
     userPrompt: `Center: ${center?.name || "Unknown"}
 Their reply:
@@ -131,21 +176,22 @@ Previous context: We invited them to join Rehab-Atlas for free — set up their 
   // Fallback analysis
   const sentiment: ResponseSentiment = analysis?.sentiment || "neutral";
   const summary = analysis?.summary || `Reply received from ${center?.name || "center"}`;
+  const declined = sentiment === "negative" && !analysis?.has_questions && !analysis?.agreed_to_partner;
 
   // Determine next stage
   let nextStage: string;
   if (analysis?.agreed_to_partner) {
     nextStage = "terms_agreed";
-  } else if (sentiment === "negative" && !analysis?.has_questions) {
-    // Don't immediately decline — send a polite follow-up to understand why and try to convince
-    nextStage = "negotiating";
-  } else if (analysis?.has_questions || analysis?.counter_offer_rate) {
+  } else if (declined) {
+    // No automatic win-back. Admin decides whether to reply at all.
+    nextStage = "declined";
+  } else if (analysis?.has_questions) {
     nextStage = "negotiating";
   } else {
     nextStage = "responded";
   }
 
-  // Update pipeline
+  // Update pipeline (commission fields intentionally not written — policy)
   await admin
     .from("outreach_pipeline")
     .update({
@@ -154,87 +200,11 @@ Previous context: We invited them to join Rehab-Atlas for free — set up their 
       response_summary: summary,
       response_sentiment: sentiment,
       next_follow_up_at: null,
-      ...(analysis?.counter_offer_rate ? { proposed_commission_rate: analysis.counter_offer_rate } : {}),
-      ...(analysis?.agreed_to_partner
-        ? {
-            agreed_commission_rate: analysis.counter_offer_rate || pipeline.proposed_commission_rate,
-            agreed_commission_type: "percentage",
-          }
-        : {}),
     })
     .eq("id", pipeline.id);
 
-  // If negative, send a polite follow-up to understand why and try to re-engage
-  if (sentiment === "negative" && !analysis?.has_questions) {
-    try {
-      const winBackReply = await analyzeWithClaude<{ body_text: string }>({
-        systemPrompt: `You are ${PERSONA} from Rehab-Atlas Partnerships. A rehab center has declined or expressed disinterest in joining our free platform. Write a short, respectful reply that:
-1. Thanks them for their honesty
-2. Asks politely what their concern is — is it the timing, relevance, or something else?
-3. Reminds them joining is completely free — no fees, no commission, no strings attached
-4. Mentions the benefit: their center gets visibility + blog articles with SEO backlinks
-5. Keeps the door open without being pushy
-6. Max 4-5 sentences. Sound human, not desperate.
-7. NO phone calls — email only
-Return JSON: { "body_text": "..." }`,
-        userPrompt: `Center: ${center?.name || "Unknown"}
-Their reply: ${reply.body}
-Context: We invited them to join Rehab-Atlas for free to set up their center profile and publish educational articles.`,
-        responseSchema: z.object({ body_text: z.string() }),
-        maxTokens: 400,
-        agentType: "outreach_response",
-        operation: "win_back_reply",
-      });
-
-      const fallbackBody = `Hi,
-
-Thanks for getting back to me — I appreciate you taking the time.
-
-If you don't mind me asking, was there something specific that didn't feel right? I'd genuinely like to understand, whether it's the timing, relevance, or something else.
-
-Just to clarify — joining Rehab-Atlas is completely free. There are no fees or commitments. We simply want to help more people find quality care, and having your center on our platform would be a great addition. You'd also have the option to publish educational articles with backlinks to your website, which helps with your SEO.
-
-Either way, no hard feelings. If anything changes down the road, we'd love to hear from you.
-
-Best,
-${PERSONA}
-Partnerships, Rehab-Atlas
-info@rehab-atlas.com
-rehab-atlas.com`;
-
-      const bodyText = winBackReply?.body_text || fallbackBody;
-
-      await sendEmail({
-        to: reply.from.match(/<([^>]+)>/)?.[1] || reply.from,
-        subject: `Re: ${reply.subject}`,
-        bodyText,
-        threadId: pipeline.outreach_thread_id || undefined,
-      });
-
-      await admin.from("outreach_emails").insert({
-        pipeline_id: pipeline.id,
-        center_id: pipeline.center_id,
-        direction: "outbound",
-        gmail_thread_id: pipeline.outreach_thread_id,
-        from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
-        to_email: reply.from.match(/<([^>]+)>/)?.[1] || reply.from,
-        subject: `Re: ${reply.subject}`,
-        body_text: bodyText,
-        email_type: "negotiation",
-      });
-
-      await logAgentAction({
-        agent_type: "outreach_response",
-        action: "win_back_sent",
-        details: { pipeline_id: pipeline.id, center_name: center?.name },
-      });
-    } catch (err) {
-      console.error("Win-back reply failed:", err);
-    }
-  }
-
-  // If they have questions or it needs negotiation, create task for admin
-  if (analysis?.has_questions || nextStage === "negotiating") {
+  if (declined) {
+    // Decision task for admin — nothing is drafted or sent automatically.
     await createAgentTask({
       agent_type: "outreach_response",
       entity_type: "outreach_pipeline",
@@ -246,7 +216,26 @@ rehab-atlas.com`;
         sentiment,
         summary,
         key_points: analysis?.key_points || [],
-        counter_offer_rate: analysis?.counter_offer_rate,
+        admin_decision:
+          "Center declined. No reply was sent. Pipeline set to declined. Reply manually only if you decide it is appropriate.",
+      },
+      ai_summary: `${center?.name || "Center"} declined: ${summary}. No automatic reply sent — admin decides.`,
+      ai_recommendation: "needs_info",
+      confidence: analysis ? 0.8 : 0.5,
+    });
+  } else if (analysis?.has_questions || nextStage === "negotiating" || (analysis?.agreed_to_partner && analysis?.suggested_reply)) {
+    // Drafted reply for admin approval (sent only via the approval endpoint)
+    await createAgentTask({
+      agent_type: "outreach_response",
+      entity_type: "outreach_pipeline",
+      entity_id: pipeline.id,
+      checklist: {
+        center_name: center?.name,
+        reply_from: reply.from,
+        reply_body: reply.body,
+        sentiment,
+        summary,
+        key_points: analysis?.key_points || [],
         suggested_reply: analysis?.suggested_reply,
       },
       ai_summary: `Reply from ${center?.name}: ${summary}`,
@@ -255,28 +244,28 @@ rehab-atlas.com`;
     });
   }
 
-  // If they agreed, auto-onboard: create partner account + send credentials
+  // Agreed: admin invites the contact manually. No account is created here
+  // and no password is generated or emailed.
   if (analysis?.agreed_to_partner) {
-    try {
-      await autoOnboardPartner(pipeline, center?.name || "", reply.from);
-    } catch (err) {
-      console.error("Auto-onboard failed:", err);
-    }
+    const contactEmail = (reply.from.match(/<([^>]+)>/)?.[1] || reply.from).trim().toLowerCase();
+    const contactName = reply.from.match(/^([^<]+)</)?.[1]?.trim() || contactEmail.split("@")[0];
 
-    // Also create task for admin visibility
     await createAgentTask({
       agent_type: "outreach_response",
-      entity_type: "outreach_pipeline",
+      entity_type: "outreach_partner_invite",
       entity_id: pipeline.id,
       checklist: {
         center_name: center?.name,
-        agreed: true,
+        center_id: pipeline.center_id,
+        contact_name: contactName,
+        contact_email: contactEmail,
         summary,
-        auto_onboarded: true,
+        admin_action:
+          "Verify the contact really represents this center, then invite them as a partner yourself (Supabase Auth invite link, role=partner, center_id above). Do NOT set or email a password.",
       },
-      ai_summary: `${center?.name} agreed to join! Account created and credentials sent. Ready to set up their profile.`,
+      ai_summary: `${center?.name} agreed to join. Admin to verify the contact and send a partner invite manually.`,
       ai_recommendation: "approve",
-      confidence: 0.95,
+      confidence: analysis ? 0.85 : 0.5,
     });
   }
 
@@ -315,159 +304,4 @@ export async function processThreadReply(threadId: string): Promise<void> {
   if (new Date(reply.date) <= new Date(lastCheck)) return;
 
   await processReply(pipelineData, reply);
-}
-
-/**
- * Auto-onboard a partner when they agree:
- * 1. Create Supabase auth user with temp password
- * 2. Set profile as partner linked to center
- * 3. Send credentials + instructions email
- * 4. Update pipeline stage to terms_agreed
- */
-async function autoOnboardPartner(
-  pipeline: OutreachPipeline,
-  centerName: string,
-  replyFromEmail: string
-): Promise<void> {
-  const admin = createAdminClient();
-
-  // Extract clean email from "Name <email>" format
-  const emailMatch = replyFromEmail.match(/<([^>]+)>/) || [null, replyFromEmail];
-  const contactEmail = (emailMatch[1] || replyFromEmail).trim().toLowerCase();
-
-  // Extract contact name from reply email
-  const nameMatch = replyFromEmail.match(/^([^<]+)</);
-  const contactName = nameMatch ? nameMatch[1].trim() : contactEmail.split("@")[0];
-
-  // Generate password based on center name: PascalCase + year + !
-  const namePart = centerName
-    .replace(/[^a-zA-Z0-9\s]/g, "")
-    .split(/\s+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join("")
-    .slice(0, 20);
-  const tempPassword = `${namePart}${new Date().getFullYear()}!`;
-
-  // Verify center exists before creating account
-  const { data: centerCheck } = await admin
-    .from("centers")
-    .select("id, name")
-    .eq("id", pipeline.center_id)
-    .single();
-
-  if (!centerCheck) {
-    console.error("Auto-onboard: center not found:", pipeline.center_id);
-    return;
-  }
-
-  console.log(`Auto-onboard: creating account for ${contactName} → center "${centerCheck.name}" (${pipeline.center_id})`);
-
-  // Check if user already exists
-  const { data: { users } } = await admin.auth.admin.listUsers();
-  const existing = users?.find((u) => u.email === contactEmail);
-
-  let userId: string;
-
-  if (existing) {
-    userId = existing.id;
-    // Update to partner role
-    await admin.from("profiles").upsert({
-      id: userId,
-      role: "partner",
-      center_id: pipeline.center_id,
-      full_name: contactName,
-    });
-  } else {
-    // Create new user
-    const { data: newUser, error } = await admin.auth.admin.createUser({
-      email: contactEmail,
-      password: tempPassword,
-      email_confirm: true,
-    });
-
-    if (error || !newUser.user) {
-      console.error("Failed to create partner user:", error?.message);
-      return;
-    }
-
-    userId = newUser.user.id;
-
-    await admin.from("profiles").upsert({
-      id: userId,
-      role: "partner",
-      center_id: pipeline.center_id,
-      full_name: contactName,
-    });
-  }
-
-  // Send credentials email
-  const credentialsBody = `Hi ${contactName.split(" ")[0]},
-
-That's great to hear — welcome to Rehab-Atlas!
-
-I've set up your partner account. Here are your login details:
-
-Website: ${APP_URL}/auth/login
-Email: ${contactEmail}
-Password: ${tempPassword}
-
-Please change your password right after your first login. Once you're in, you'll find your Partner Dashboard where you can:
-
-- Set up your center profile (description, photos, services, pricing)
-- Start writing and submitting blog articles (each one gets a backlink to your website)
-- Share your programs and specialties with people searching for help
-
-Our goal is to get your profile to 100% completeness so people can find everything they need to know about your center. Feel free to start building it out whenever you're ready — I'm here to help if you need anything.
-
-If you have any questions along the way, just reply to this email.
-
-Best,
-${PERSONA}
-Partnerships, Rehab-Atlas
-info@rehab-atlas.com
-rehab-atlas.com`;
-
-  await sendEmail({
-    to: contactEmail,
-    subject: `Re: Welcome to Rehab-Atlas - your partner account is ready`,
-    bodyText: credentialsBody,
-    threadId: pipeline.outreach_thread_id || undefined,
-  });
-
-  // Log the email
-  await admin.from("outreach_emails").insert({
-    pipeline_id: pipeline.id,
-    center_id: pipeline.center_id,
-    direction: "outbound",
-    gmail_thread_id: pipeline.outreach_thread_id,
-    from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
-    to_email: contactEmail,
-    subject: "Re: Welcome to Rehab-Atlas - your partner account is ready",
-    body_text: credentialsBody,
-    email_type: "negotiation",
-  });
-
-  // Update pipeline to active (onboarded, agreement comes later)
-  await admin.from("outreach_pipeline").update({
-    stage: "active",
-  }).eq("id", pipeline.id);
-
-  // Update research data with contact info
-  const research = pipeline.research_data || {};
-  await admin.from("outreach_pipeline").update({
-    research_data: { ...research, contact_person_name: contactName } as unknown as Record<string, unknown>,
-  }).eq("id", pipeline.id);
-
-  await logAgentAction({
-    agent_type: "outreach_response",
-    action: "partner_auto_onboarded",
-    details: {
-      pipeline_id: pipeline.id,
-      center_id: pipeline.center_id,
-      center_name: centerName,
-      contact_email: contactEmail,
-      contact_name: contactName,
-      user_id: userId,
-    },
-  });
 }

@@ -1,7 +1,10 @@
 /**
  * Follow-up Email Templates
  * Three follow-ups with escalating urgency but always respectful tone.
- * Auto-sent on Day 3, Day 7, Day 14 after initial outreach.
+ * Drafted on Day 3, Day 7, Day 14 after initial outreach and queued for
+ * admin approval — never auto-sent.
+ * Policy (2026-05-17): no commission, fees, pricing or referral-cost talk.
+ * Value = free listing + admin-vetted inquiries + author backlinks.
  */
 
 const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
@@ -27,7 +30,7 @@ export function generateFollowUp1(params: FollowUpParams): { subject: string; bo
 
 Just wanted to make sure my previous message didn't get buried — I know inboxes can be overwhelming.
 
-I reached out a few days ago about listing ${params.centerName} on Rehab-Atlas. We're a referral platform that connects people seeking treatment with centers like yours, and I think there's a real opportunity here.
+I reached out a few days ago about listing ${params.centerName} on Rehab-Atlas. We're a free directory that helps people seeking treatment find centers like yours, and I think there's a real opportunity here.
 
 If you're interested, just reply to this email and I'll share more details about how it works. No pressure at all.
 
@@ -54,7 +57,7 @@ export function generateFollowUp2(params: FollowUpParams): { subject: string; bo
 
 Following up one more time — I wanted to share a quick update that might be relevant.
 
-We've recently onboarded several centers in your region, and the early feedback has been positive. Partners are seeing inquiries come through within the first few weeks, and some have found the blog publishing option helpful for building their online presence while reducing their referral costs.
+We're steadily adding centers to the platform. A listing is free, inquiries are reviewed by our team before they're passed on so you only hear from people whose needs fit what you offer, and partners can publish educational articles that credit them as the author with a backlink to their own website.
 
 If the timing works, just drop me a reply and I'll fill you in on the details.
 
@@ -108,7 +111,8 @@ Tone: ${toneGuide}
 
 Rules:
 - This is a reply in the same thread (use "Re:" subject)
-- Don't repeat the full commission structure — they already have it
+- NEVER mention commission, fees, pricing, referral costs or any payment terms
+- The offer is: a free listing, inquiries vetted by our team before they reach the center, and optional educational articles with author credit + a backlink to their website
 - Sound genuinely human, not automated
 - No guilt-tripping or desperation
 - NEVER suggest a phone call or video call — email only

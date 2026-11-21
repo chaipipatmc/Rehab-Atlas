@@ -71,9 +71,9 @@ const AGENT_INFO: Record<string, { label: string; description: string; icon: typ
   data_verifier: { label: "Data Verifier", description: "Nightly: cross-checks each center's facts against its official website and verifies photo provenance via Claude Vision. Flags mismatches and suspicious photos for one-click review.", icon: ShieldCheck, color: "text-emerald-700" },
   content_admin: { label: "Content Admin", description: "Reviews blog posts for relevance, medical accuracy, and SEO quality.", icon: FileText, color: "text-emerald-600" },
   lead_verify: { label: "Lead Verify", description: "Validates inquiries, checks commission agreements, verifies match quality.", icon: UserSearch, color: "text-amber-600" },
-  follow_up: { label: "Follow-up", description: "Sends daily reminders for incomplete profiles and stale content.", icon: Clock, color: "text-violet-600" },
+  follow_up: { label: "Follow-up", description: "Drafts reminders for incomplete profiles and stale content and queues them for your approval.", icon: Clock, color: "text-violet-600" },
   outreach_research: { label: "Research & Draft", description: "Researches center websites and drafts personalized outreach emails.", icon: Search, color: "text-sky-600" },
-  outreach_followup: { label: "Follow-up", description: "Auto-sends follow-up emails (Day 3, 7, 14) to unresponsive centers.", icon: Send, color: "text-sky-600" },
+  outreach_followup: { label: "Follow-up", description: "Drafts follow-up emails (Day 3, 7, 14) to unresponsive centers and queues them for your approval.", icon: Send, color: "text-sky-600" },
   outreach_response: { label: "Response Handler", description: "Detects inbound replies, analyzes sentiment, routes next steps.", icon: MessageSquare, color: "text-emerald-600" },
   outreach_agreement: { label: "Agreement", description: "Prepares partnership agreements via PandaDoc for e-signature.", icon: FileSignature, color: "text-violet-600" },
   outreach_activation: { label: "Activation", description: "Updates center data after agreement signing. Sends welcome emails.", icon: Activity, color: "text-emerald-600" },
@@ -142,6 +142,13 @@ const AGENT_KNOBS: Record<string, AgentKnob[]> = {
       description: "First name used in outreach email signatures and AI tone.",
       type: "text",
       default: "Sarah",
+    },
+    {
+      key: "allowed_countries",
+      label: "Allowed countries",
+      description: "Comma-separated country names (as stored on centers.country) eligible for new outreach. Empty = no region filter.",
+      type: "text",
+      default: "",
     },
   ],
   outreach_followup: [
@@ -1036,7 +1043,10 @@ function TaskCard({
   const StatusIcon = statusInfo.icon;
   const isAwaiting = task.status === "awaiting_owner";
   const checklist = task.checklist as Record<string, unknown> | null;
-  const isOutreachEmail = task.agent_type === "outreach_research" && !!checklist?.body_text;
+  // Any queued email draft (initial outreach, follow-up, welcome, admin reminder) gets the email preview/edit view
+  const isOutreachEmail =
+    ["outreach_research", "outreach_followup", "outreach_activation", "follow_up"].includes(task.agent_type) &&
+    !!checklist?.body_text;
   const isReplyTask = task.agent_type === "outreach_response" && !!checklist?.suggested_reply;
   const centerName = checklist?.center_name ? String(checklist.center_name) : null;
   const feedbackHistory = (checklist?.feedback_history as string[]) || [];

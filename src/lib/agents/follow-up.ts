@@ -1,11 +1,18 @@
 /**
  * Follow-up Admin Agent
- * Scans for stale items and sends follow-up emails to users.
+ * Scans for stale items, drafts reminder emails to partners/authors and
+ * queues each one as an agent_task for admin approval (board decision D6:
+ * no email goes out without an explicit yes). Nothing is sent from the cron.
  * Triggered by: Daily cron (09:00 Bangkok / 02:00 UTC)
+ *
+ * agent_follow_ups.status lifecycle:
+ *   pending  → draft queued, awaiting admin approval (not re-drafted)
+ *   sent     → approved + sent; next_follow_up = when the next draft is due
+ *   abandoned→ max attempts reached or admin rejected the draft
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { logAgentAction } from "./base";
+import { createAgentTask, logAgentAction } from "./base";
 import { sendFollowUpEmail, sendDailyDigest, sendLineNotify } from "./notify";
 import { analyzeWithClaude } from "./claude";
 import { z } from "zod";
@@ -126,6 +133,73 @@ Return JSON: { "subject": "email subject", "body": "email body text" }`,
   };
 }
 
+// ── Approval queue helpers ──
+
+function toHtml(body: string): string {
+  const escaped = body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<p style="font-size:14px;line-height:1.6;white-space:pre-wrap;">${escaped.replace(/\n/g, "<br>")}</p>`;
+}
+
+async function queueFollowUpTask(params: {
+  followUpId: string;
+  item: StaleItem;
+  attemptNumber: number;
+  msg: { subject: string; body: string };
+}): Promise<boolean> {
+  const task = await createAgentTask({
+    agent_type: "follow_up",
+    entity_type: "agent_follow_up",
+    entity_id: params.followUpId,
+    checklist: {
+      target: params.item.label,
+      entity_type: params.item.entityType,
+      to_email: params.item.email,
+      subject: params.msg.subject,
+      body_text: params.msg.body,
+      attempt_number: params.attemptNumber,
+    },
+    ai_summary: `Reminder #${params.attemptNumber} drafted for ${params.item.email} (${params.item.entityType}: ${params.item.label}) — awaiting approval.`,
+    ai_recommendation: "approve",
+    confidence: 0.7,
+  });
+  return !!task;
+}
+
+/**
+ * Send an admin-approved reminder. Called from the approval endpoint only.
+ */
+export async function sendApprovedFollowUpEmail(
+  followUpId: string,
+  emailData: { to_email: string; subject: string; body_text: string; attempt_number: number }
+): Promise<void> {
+  const admin = createAdminClient();
+
+  await sendFollowUpEmail({
+    to: emailData.to_email,
+    subject: emailData.subject,
+    bodyHtml: toHtml(emailData.body_text),
+  });
+
+  await admin.from("agent_follow_ups").update({
+    status: "sent",
+    attempt_number: emailData.attempt_number,
+    message_sent: emailData.body_text,
+    next_follow_up: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+  }).eq("id", followUpId);
+
+  await logAgentAction({
+    agent_type: "follow_up",
+    action: "follow_up_sent",
+    details: { follow_up_id: followUpId, attempt: emailData.attempt_number, approved: true },
+  });
+}
+
+/** Admin rejected a reminder draft → stop this reminder sequence. */
+export async function abandonFollowUp(followUpId: string): Promise<void> {
+  const admin = createAdminClient();
+  await admin.from("agent_follow_ups").update({ status: "abandoned", next_follow_up: null }).eq("id", followUpId);
+}
+
 // ── Main Agent Function ──
 
 export async function processFollowUp(): Promise<void> {
@@ -137,11 +211,11 @@ export async function processFollowUp(): Promise<void> {
     details: { timestamp: new Date().toISOString() },
   });
 
-  let followUpsSent = 0;
+  let followUpsSent = 0; // drafts queued for approval (digest field name kept)
   let followUpsAbandoned = 0;
   const digestItems: Array<{ label: string; status: string; detail: string }> = [];
 
-  // 1. Process existing active follow-ups that are due
+  // 1. Existing sequences whose next reminder is due → draft + queue
   const { data: dueFollowUps } = await admin
     .from("agent_follow_ups")
     .select("*")
@@ -161,41 +235,33 @@ export async function processFollowUp(): Promise<void> {
       continue;
     }
 
-    // Send next follow-up
-    const msg = await generateFollowUpMessage(
-      {
-        entityType: fu.entity_type,
-        entityId: fu.entity_id,
-        label: fu.reason,
-        email: fu.target_email,
-        userId: fu.target_user_id,
-        reason: fu.reason,
-        daysSinceCreated: Math.floor((Date.now() - new Date(fu.created_at).getTime()) / (24 * 60 * 60 * 1000)),
-      },
-      fu.attempt_number + 1
-    );
+    const item: StaleItem = {
+      entityType: fu.entity_type,
+      entityId: fu.entity_id,
+      label: fu.reason,
+      email: fu.target_email,
+      userId: fu.target_user_id,
+      reason: fu.reason,
+      daysSinceCreated: Math.floor((Date.now() - new Date(fu.created_at).getTime()) / (24 * 60 * 60 * 1000)),
+    };
+    const attemptNumber = fu.attempt_number + 1;
+    const msg = await generateFollowUpMessage(item, attemptNumber);
 
-    await sendFollowUpEmail({
-      to: fu.target_email,
-      subject: msg.subject,
-      bodyHtml: `<p style="font-size:14px;line-height:1.6;white-space:pre-wrap;">${msg.body.replace(/\n/g, "<br>")}</p>`,
-    });
+    const queued = await queueFollowUpTask({ followUpId: fu.id, item, attemptNumber, msg });
+    if (!queued) continue;
 
-    await admin.from("agent_follow_ups").update({
-      attempt_number: fu.attempt_number + 1,
-      message_sent: msg.body,
-      next_follow_up: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    }).eq("id", fu.id);
+    // Park the sequence until the admin decides (prevents re-drafting)
+    await admin.from("agent_follow_ups").update({ status: "pending", next_follow_up: null }).eq("id", fu.id);
 
     followUpsSent++;
     digestItems.push({
       label: fu.target_email,
-      status: `Attempt ${fu.attempt_number + 1}/${fu.max_attempts}`,
+      status: `Draft ${attemptNumber}/${fu.max_attempts} awaiting approval`,
       detail: msg.subject,
     });
   }
 
-  // 2. Find new stale items and create follow-up sequences
+  // 2. Find new stale items and create follow-up sequences (draft only)
   const staleItems = await findStaleItems();
 
   for (const item of staleItems) {
@@ -211,31 +277,38 @@ export async function processFollowUp(): Promise<void> {
 
     if (existing) continue; // Already tracking
 
-    // Create new follow-up and send first message
     const msg = await generateFollowUpMessage(item, 1);
 
-    await sendFollowUpEmail({
-      to: item.email,
-      subject: msg.subject,
-      bodyHtml: `<p style="font-size:14px;line-height:1.6;white-space:pre-wrap;">${msg.body.replace(/\n/g, "<br>")}</p>`,
-    });
+    // attempt_number stays 0 until the first reminder is approved and sent
+    const { data: fuRow, error: insertError } = await admin
+      .from("agent_follow_ups")
+      .insert({
+        entity_type: item.entityType,
+        entity_id: item.entityId,
+        target_user_id: item.userId,
+        target_email: item.email,
+        reason: item.reason,
+        message_sent: null,
+        attempt_number: 0,
+        status: "pending",
+        next_follow_up: null,
+      })
+      .select("id")
+      .single();
 
-    await admin.from("agent_follow_ups").insert({
-      entity_type: item.entityType,
-      entity_id: item.entityId,
-      target_user_id: item.userId,
-      target_email: item.email,
-      reason: item.reason,
-      message_sent: msg.body,
-      attempt_number: 1,
-      status: "sent",
-      next_follow_up: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    });
+    if (insertError || !fuRow) continue;
+
+    const queued = await queueFollowUpTask({ followUpId: fuRow.id as string, item, attemptNumber: 1, msg });
+    if (!queued) {
+      // Could not queue for approval — park the row so it is not left dangling
+      await abandonFollowUp(fuRow.id as string);
+      continue;
+    }
 
     followUpsSent++;
     digestItems.push({
       label: item.label,
-      status: "New follow-up",
+      status: "Draft awaiting approval",
       detail: `${item.entityType} — ${item.email}`,
     });
   }
