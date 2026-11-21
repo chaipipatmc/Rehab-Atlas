@@ -37,7 +37,7 @@ const ALLOWED_KEYS: Partial<Record<AgentType, string[]>> = {
   content_creator: ["pool_target", "articles_per_run"],
   content_scheduler: ["daily_publish_count"],
   content_planner: ["topics_per_day"],
-  outreach_research: ["persona_name", "max_drafts_per_run"],
+  outreach_research: ["persona_name", "max_drafts_per_run", "allowed_countries"],
   outreach_followup: ["follow_up_days"],
   content_orchestrator: ["creator_stall_hours"],
   system_orchestrator: ["stale_threshold_multiplier"],

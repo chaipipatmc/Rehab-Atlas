@@ -13,6 +13,7 @@ import { processFollowUps } from "./followup";
 import { processInboundReplies } from "./response-handler";
 import { prepareAgreement, checkAgreementStatus } from "./agreement";
 import { activateCenter } from "./activation";
+import { getExclusionReason, type ExclusionCandidate } from "./policy";
 import type { OutreachStage, PipelineFunnelMetrics } from "@/types/agent";
 
 /**
@@ -32,15 +33,28 @@ export async function runOrchestrator(): Promise<void> {
   });
 
   // 1. Process new centers → start research (1 at a time to stay within serverless timeout)
+  //    Optional region filter (board D1): only centers whose country is in
+  //    agent_outreach_research_setting_allowed_countries (comma-separated,
+  //    empty = no filter). Centers outside the list simply stay "new".
   if (await isAgentEnabled("outreach_research")) {
-    const { data: newEntries } = await admin
+    const allowedCountries = await getAllowedCountries();
+    const { data: candidates } = await admin
       .from("outreach_pipeline")
-      .select("center_id")
+      .select("center_id, centers(country)")
       .eq("stage", "new")
       .order("created_at", { ascending: true })
-      .limit(1);
+      .limit(allowedCountries ? 50 : 1);
 
-    for (const entry of newEntries || []) {
+    const newEntries = (candidates || [])
+      .filter((entry) => {
+        if (!allowedCountries) return true;
+        const rel = (entry as { centers?: { country?: string | null } | { country?: string | null }[] | null }).centers;
+        const country = Array.isArray(rel) ? rel[0]?.country : rel?.country;
+        return !!country && allowedCountries.includes(country.trim().toLowerCase());
+      })
+      .slice(0, 1);
+
+    for (const entry of newEntries) {
       try {
         await processResearchAndDraft(entry.center_id as string);
       } catch (err) {
@@ -133,6 +147,20 @@ export async function runOrchestrator(): Promise<void> {
 }
 
 /**
+ * Region filter for new outreach (board decision D1). Returns a lowercase
+ * country list, or null when no filter is configured.
+ */
+async function getAllowedCountries(): Promise<string[] | null> {
+  const { getAgentSettingString } = await import("../config");
+  const raw = await getAgentSettingString("outreach_research", "allowed_countries", "");
+  const list = raw
+    .split(",")
+    .map((c) => c.trim().toLowerCase())
+    .filter(Boolean);
+  return list.length > 0 ? list : null;
+}
+
+/**
  * Calculate pipeline funnel metrics.
  */
 export async function getFunnelMetrics(): Promise<PipelineFunnelMetrics> {
@@ -213,10 +241,30 @@ export async function getFunnelMetrics(): Promise<PipelineFunnelMetrics> {
 }
 
 /**
+ * Kill switch for the monthly blog-tier job. While false the job is a no-op
+ * (it only logs) and never writes centers.commission_rate or
+ * outreach_blog_counts — policy since 2026-05-17: commission schema stays
+ * dormant and must not be populated by new flows. The cron entry in
+ * vercel.json is left in place on purpose so re-enabling is a one-line
+ * change here (no Vercel config change needed either way).
+ */
+const BLOG_TIERS_ENABLED: boolean = false;
+
+/**
  * Monthly blog tier calculation.
  * Run on the 1st of each month to count approved partner blogs and adjust commission.
+ * Currently disabled — see BLOG_TIERS_ENABLED.
  */
-export async function calculateMonthlyBlogTiers(): Promise<void> {
+export async function calculateMonthlyBlogTiers(): Promise<{ skipped: boolean }> {
+  if (!BLOG_TIERS_ENABLED) {
+    await logAgentAction({
+      agent_type: "outreach_orchestrator",
+      action: "blog_tiers_skipped",
+      details: { reason: "disabled: commission writes paused by policy (2026-05-17)" },
+    });
+    return { skipped: true };
+  }
+
   const admin = createAdminClient();
 
   // Calculate for last month
@@ -311,6 +359,8 @@ export async function calculateMonthlyBlogTiers(): Promise<void> {
     action: "blog_tiers_calculated",
     details: { year_month: yearMonth, centers_processed: Object.keys(counts).length },
   });
+
+  return { skipped: false };
 }
 
 /**
@@ -376,7 +426,21 @@ export async function addCentersToPipeline(centerIds: string[]): Promise<number>
   const admin = createAdminClient();
   let added = 0;
 
+  let excludedCount = 0;
+
   for (const centerId of centerIds) {
+    // Related-party / configured exclusions never enter the pipeline
+    const { data: center, error: centerError } = await admin
+      .from("centers")
+      .select("name, slug, email, inquiry_email, website_url")
+      .eq("id", centerId)
+      .maybeSingle();
+    if (centerError || !center) continue;
+    if (await getExclusionReason(center as ExclusionCandidate)) {
+      excludedCount++;
+      continue;
+    }
+
     // Check if already in pipeline
     const { data: existing } = await admin
       .from("outreach_pipeline")
@@ -397,7 +461,7 @@ export async function addCentersToPipeline(centerIds: string[]): Promise<number>
     await logAgentAction({
       agent_type: "outreach_orchestrator",
       action: "centers_added_to_pipeline",
-      details: { count: added, center_ids: centerIds },
+      details: { count: added, excluded: excludedCount, center_ids: centerIds },
     });
   }
 

@@ -53,7 +53,7 @@ When someone is searching for rehab and their needs match what you offer, they c
 
 There's no cost and no strings attached. We're focused on building a trusted directory where people in need can find quality care, and your center would be a valuable addition.
 
-If you're interested in being part of this journey, just reply to this email and let me know. I'll send you your login credentials and walk you through getting your center profile set up with 100% completeness — so people searching for help can find everything they need to know about ${params.centerName}.
+If you're interested in being part of this journey, just reply to this email and let me know. We'll send you an invitation to set up your account and walk you through getting your center profile set up with 100% completeness — so people searching for help can find everything they need to know about ${params.centerName}.
 
 Best,
 ${persona}
@@ -101,7 +101,7 @@ Your emails should:
 - Frame the invitation around helping more people find quality care
 - Keep it concise — 4-5 short paragraphs max
 - Soft-place the country hub link (if provided) as a glance-worthy side-mention, not the headline ask
-- End with: if they're interested in being part of this journey, reply and we'll send them login credentials and walk them through getting their center profile to 100% completeness
+- End with: if they're interested in being part of this journey, reply and we'll send them an invitation to set up their account and walk them through getting their center profile to 100% completeness
 - Use the signature: "${persona}\\nPartnerships, Rehab-Atlas\\ninfo@rehab-atlas.com\\nrehab-atlas.com"
 
 Return a JSON object with:
@@ -151,7 +151,7 @@ RULES:
 - Mention blog opportunity naturally: they can publish articles with backlinks to their site + author credit (SEO benefit)
 - Mention the inquiry benefit: people searching for rehab who match the center's services can send inquiries directly through our platform — potential clients coming to them
 - If a country hub link was provided above, place it naturally in the second-to-last paragraph as a soft side-mention — e.g. "if you're curious, here's how centers in [Country] currently appear on the platform: [link]". The PRIMARY call-to-action is still the reply, NOT the click. Never make the link the headline.
-- End with: if interested, reply and we'll send login credentials + walk them through getting their profile to 100% completeness
+- End with: if interested, reply and we'll send an account invitation + walk them through getting their profile to 100% completeness
 - Keep it short — 4-5 paragraphs max
 - Make it sound like a real person who genuinely spent time learning about their center
 

@@ -9,7 +9,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { logAgentAction } from "@/lib/agents/base";
-import { sendEmail } from "@/lib/agents/outreach/gmail";
+import { sendApprovedOutreach } from "@/lib/agents/outreach/research";
+import { OutreachBlockedError } from "@/lib/agents/outreach/policy";
 import { validateOrigin } from "@/lib/csrf";
 import { pingIndexNow } from "@/lib/seo/indexnow";
 
@@ -118,56 +119,54 @@ export async function POST(request: Request) {
       .eq("id", task.entity_id);
   }
 
-  // 4. Send outreach emails sequentially (within this request)
+  // 4. Send outreach emails sequentially (within this request).
+  // Each send goes through the policy guard (exclusions, opt-out, per-email
+  // daily cap). When a send is blocked, that task and every task not yet
+  // sent are put back to awaiting_owner so nothing is silently lost.
   let emailsSent = 0;
   let emailsFailed = 0;
+  let blockedReason: string | null = null;
+  const requeueIds: string[] = [];
 
   for (const task of outreachTasks) {
+    if (blockedReason) {
+      requeueIds.push(task.id);
+      continue;
+    }
+
     const cl = task.checklist as Record<string, unknown> | null;
     if (!cl?.to_email || !cl?.body_text) continue;
 
     try {
-      const result = await sendEmail({
-        to: cl.to_email as string,
+      const ok = await sendApprovedOutreach(task.entity_id as string, {
+        to_email: cl.to_email as string,
         subject: (cl.subject as string) || "Partnership with Rehab-Atlas",
-        bodyText: cl.body_text as string,
+        body_text: cl.body_text as string,
       });
-
-      if (result) {
-        emailsSent++;
-
-        // Update pipeline stage
-        await admin
-          .from("outreach_pipeline")
-          .update({
-            stage: "outreach_sent",
-            outreach_sent_at: new Date().toISOString(),
-            gmail_thread_id: result.threadId || null,
-          })
-          .eq("id", task.entity_id);
-
-        // Log email
-        await admin.from("outreach_emails").insert({
-          pipeline_id: task.entity_id,
-          direction: "outbound",
-          from_email: "info@rehab-atlas.com",
-          to_email: cl.to_email as string,
-          subject: cl.subject as string,
-          body_text: cl.body_text as string,
-          email_type: "initial_outreach",
-          gmail_message_id: result.messageId,
-          gmail_thread_id: result.threadId,
-        });
-      } else {
-        emailsFailed++;
-      }
+      if (ok) emailsSent++;
+      else emailsFailed++;
     } catch (err) {
+      if (err instanceof OutreachBlockedError) {
+        requeueIds.push(task.id);
+        // Daily cap / unverifiable count → stop the whole batch.
+        // Per-recipient block (excluded, opted out) → skip just this one.
+        if (err.scope === "global") blockedReason = err.reason;
+        else console.warn("Bulk send skipped (recipient blocked):", err.reason);
+        continue;
+      }
       emailsFailed++;
       console.error("Bulk email send error:", (err as Error).message);
     }
 
     // Small delay between sends to avoid rate limits
     await new Promise((r) => setTimeout(r, 500));
+  }
+
+  if (requeueIds.length > 0) {
+    await admin
+      .from("agent_tasks")
+      .update({ status: "awaiting_owner", owner_decision: null, decided_at: null })
+      .in("id", requeueIds);
   }
 
   // Log bulk action
@@ -178,6 +177,8 @@ export async function POST(request: Request) {
       task_count: tasks.length,
       emails_sent: emailsSent,
       emails_failed: emailsFailed,
+      emails_requeued: requeueIds.length,
+      blocked_reason: blockedReason,
     },
   });
 
@@ -186,5 +187,7 @@ export async function POST(request: Request) {
     emails_queued: outreachTasks.length,
     emails_sent: emailsSent,
     emails_failed: emailsFailed,
+    emails_requeued: requeueIds.length,
+    blocked_reason: blockedReason,
   });
 }

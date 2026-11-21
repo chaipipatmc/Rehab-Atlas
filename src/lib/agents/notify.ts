@@ -202,7 +202,7 @@ export async function sendDailyDigest(params: {
   const bodyHtml = `
     <div style="background:#f4f6f7;border-radius:12px;padding:20px;margin-bottom:16px;">
       <table style="width:100%;font-size:14px;">
-        <tr><td style="color:#6b7d82;">Follow-ups sent today</td><td style="font-weight:600;text-align:right;">${params.followUpsSent}</td></tr>
+        <tr><td style="color:#6b7d82;">Follow-up drafts queued for approval</td><td style="font-weight:600;text-align:right;">${params.followUpsSent}</td></tr>
         <tr><td style="color:#6b7d82;">Items abandoned</td><td style="font-weight:600;text-align:right;color:${params.followUpsAbandoned > 0 ? "#dc2626" : "#45636b"};">${params.followUpsAbandoned}</td></tr>
         <tr><td style="color:#6b7d82;">Pending agent tasks</td><td style="font-weight:600;text-align:right;">${params.pendingTasks}</td></tr>
       </table>

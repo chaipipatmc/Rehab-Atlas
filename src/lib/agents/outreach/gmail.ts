@@ -269,31 +269,41 @@ export async function getLatestInboundReply(threadId: string): Promise<{
 }
 
 /**
- * Check daily send count against limit.
+ * Count emails sent from the outreach mailbox today.
+ * Returns null when the count cannot be determined (no credentials, API
+ * error, network failure) so callers can fail closed.
  */
-export async function getDailySendCount(): Promise<number> {
+export async function getDailySendCount(): Promise<number | null> {
   const token = await getAccessToken();
-  if (!token) return 0;
+  if (!token) return null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const afterEpoch = Math.floor(today.getTime() / 1000);
 
-  const response = await fetch(
-    `${GMAIL_API}/messages?q=${encodeURIComponent(`from:${OUTREACH_EMAIL} after:${afterEpoch}`)}&maxResults=100`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  try {
+    const response = await fetch(
+      `${GMAIL_API}/messages?q=${encodeURIComponent(`from:${OUTREACH_EMAIL} after:${afterEpoch}`)}&maxResults=100`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-  if (!response.ok) return 0;
-  const data = await response.json();
-  return data.resultSizeEstimate || 0;
+    if (!response.ok) return null;
+    const data = await response.json();
+    const listed = Array.isArray(data?.messages) ? data.messages.length : 0;
+    const estimate = typeof data?.resultSizeEstimate === "number" ? data.resultSizeEstimate : 0;
+    return Math.max(listed, estimate);
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Check if we can still send emails today (respects daily limit).
+ * Fails closed: returns false when the count cannot be determined.
  */
 export async function canSendToday(dailyLimit: number): Promise<boolean> {
   const sent = await getDailySendCount();
+  if (sent === null) return false;
   return sent < dailyLimit;
 }
 

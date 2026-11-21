@@ -7,7 +7,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { createAgreement, sendForSignature, getDocumentStatus, mapPandaDocStatus } from "./esign";
-import { sendEmail } from "./gmail";
+import { sendOutreachEmail, withUnsubscribeFooter, OutreachBlockedError } from "./policy";
 import {
   buildAgreementDetails,
   getBlogTierFromRate,
@@ -168,24 +168,36 @@ export async function sendApprovedAgreement(
         commissionRate: pipeline.agreed_commission_rate as number,
       });
 
-      await sendEmail({
-        to: center.email || center.inquiry_email || agreementDetails.contact_email,
-        subject: notice.subject,
-        bodyText: notice.bodyText,
-        threadId: (pipeline.outreach_thread_id as string) || undefined,
-      });
+      // The PandaDoc document has already gone out at this point, so a blocked
+      // notice must NOT throw (a retry would re-send the agreement). Log it.
+      try {
+        await sendOutreachEmail({
+          to: center.email || center.inquiry_email || agreementDetails.contact_email,
+          subject: notice.subject,
+          bodyText: notice.bodyText,
+          threadId: (pipeline.outreach_thread_id as string) || undefined,
+          pipelineId,
+        });
 
-      // Log notification email
-      await admin.from("outreach_emails").insert({
-        pipeline_id: pipelineId,
-        center_id: pipeline.center_id,
-        direction: "outbound",
-        from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
-        to_email: center.email || center.inquiry_email || agreementDetails.contact_email,
-        subject: notice.subject,
-        body_text: notice.bodyText,
-        email_type: "agreement_notice",
-      });
+        // Log notification email
+        await admin.from("outreach_emails").insert({
+          pipeline_id: pipelineId,
+          center_id: pipeline.center_id,
+          direction: "outbound",
+          from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
+          to_email: center.email || center.inquiry_email || agreementDetails.contact_email,
+          subject: notice.subject,
+          body_text: withUnsubscribeFooter(notice.bodyText),
+          email_type: "agreement_notice",
+        });
+      } catch (err) {
+        if (!(err instanceof OutreachBlockedError)) throw err;
+        await logAgentAction({
+          agent_type: "outreach_agreement",
+          action: "agreement_notice_blocked",
+          details: { pipeline_id: pipelineId, reason: err.reason },
+        });
+      }
     }
   }
 

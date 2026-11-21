@@ -66,7 +66,8 @@ export function getCommissionDescription(rate: number, blogTier: BlogTier): stri
 export function generateAgreementNoticeEmail(params: {
   centerName: string;
   contactPerson: string | null;
-  commissionRate: number;
+  /** @deprecated Not rendered — partner emails must not mention commission (policy 2026-05-17). */
+  commissionRate?: number;
   persona?: string;
 }): { subject: string; bodyText: string } {
   const persona = params.persona || process.env.OUTREACH_PERSONA_NAME || "Sarah";
@@ -78,16 +79,11 @@ export function generateAgreementNoticeEmail(params: {
     subject: `Partnership agreement for ${params.centerName} - ready for your signature`,
     bodyText: `${greeting}
 
-Great news — I've prepared our partnership agreement based on the terms we discussed. You should receive it via PandaDoc shortly.
-
-Quick summary of what we agreed:
-- ${params.commissionRate}% referral commission
-- 12-month partnership term
-- No upfront costs
+Great news — I've prepared our partnership agreement based on what we discussed. You should receive it via PandaDoc shortly.
 
 Please take a look when you get a chance. If anything needs adjusting, just let me know and I'll update it right away.
 
-Once both sides have signed, we'll get ${params.centerName} set up on the platform and start matching you with potential clients.
+Once both sides have signed, we'll get ${params.centerName} set up on the platform. Inquiries are reviewed by our team first, and we'll pass on the ones that fit what you offer.
 
 Thanks for choosing to partner with us — I'm looking forward to working together.
 

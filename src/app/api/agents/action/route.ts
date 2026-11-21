@@ -11,7 +11,10 @@ import { sendLeadForwardEmail } from "@/lib/email/send";
 import { sendEditRequestStatusEmail } from "@/lib/agents/notify";
 import { sendApprovedOutreach } from "@/lib/agents/outreach/research";
 import { sendApprovedAgreement } from "@/lib/agents/outreach/agreement";
-import { sendEmail as sendGmailReply } from "@/lib/agents/outreach/gmail";
+import { sendApprovedFollowUp } from "@/lib/agents/outreach/followup";
+import { sendApprovedActivationEmail } from "@/lib/agents/outreach/activation";
+import { sendOutreachEmail, OutreachBlockedError } from "@/lib/agents/outreach/policy";
+import { sendApprovedFollowUpEmail, abandonFollowUp } from "@/lib/agents/follow-up";
 import { validateOrigin } from "@/lib/csrf";
 import { pingIndexNow } from "@/lib/seo/indexnow";
 import { applyEditRequestChanges } from "@/lib/edit-requests";
@@ -209,6 +212,15 @@ export async function POST(request: Request) {
     }
     return brandedPage(`${icon} ${label}`, `The ${task.entity_type.replace(/_/g, " ")} has been ${label.toLowerCase()} successfully.`, 200);
   } catch (err) {
+    if (err instanceof OutreachBlockedError) {
+      // Policy block (daily cap, opt-out, exclusion): nothing was sent and the
+      // task stays undecided so it can be approved again later.
+      console.warn("Agent action blocked:", err.reason);
+      if (contentType.includes("application/json")) {
+        return NextResponse.json({ error: `Not sent: ${err.reason}` }, { status: 409 });
+      }
+      return brandedPage("Not Sent", `Email was not sent: ${escapeHtml(err.reason)}. The task is still awaiting approval — try again later.`, 409);
+    }
     console.error("Agent action failed:", err);
     if (contentType.includes("application/json")) {
       return NextResponse.json({ error: "Action failed" }, { status: 500 });
@@ -366,6 +378,8 @@ async function executePostAction(
               body_text: checklist.body_text as string,
             });
           } catch (emailErr) {
+            // Policy blocks must not be recorded as "sent" — surface them.
+            if (emailErr instanceof OutreachBlockedError) throw emailErr;
             console.error("Gmail send failed (email logged for manual send):", emailErr);
             // Still update pipeline stage so it doesn't block
             const adminDb = createAdminClient();
@@ -411,16 +425,17 @@ async function executePostAction(
           // Find the original thread to reply in-thread
           const { data: pipeline } = await admin
             .from("outreach_pipeline")
-            .select("gmail_thread_id")
+            .select("outreach_thread_id")
             .eq("id", entityId)
             .single();
 
           try {
-            await sendGmailReply({
+            await sendOutreachEmail({
               to: toEmail,
               subject: `Re: ${centerName || "Partnership"} - Rehab-Atlas`,
               bodyText: replyText,
-              threadId: pipeline?.gmail_thread_id || undefined,
+              threadId: (pipeline?.outreach_thread_id as string) || undefined,
+              pipelineId: entityId,
             });
 
             // Log the reply in outreach_emails
@@ -440,7 +455,51 @@ async function executePostAction(
               .update({ stage: "responded", last_activity_at: new Date().toISOString() })
               .eq("id", entityId);
           } catch (replyErr) {
+            if (replyErr instanceof OutreachBlockedError) throw replyErr;
             console.error("Gmail reply send failed:", replyErr);
+          }
+        }
+        break;
+      }
+
+      case "outreach_followup": {
+        // Send the approved (possibly edited) follow-up draft
+        const fuChecklist = task.checklist as Record<string, unknown> | null;
+        if (fuChecklist?.to_email && fuChecklist?.body_text) {
+          await sendApprovedFollowUp(entityId, {
+            to_email: fuChecklist.to_email as string,
+            subject: (fuChecklist.subject as string) || "Following up - Rehab-Atlas",
+            body_text: fuChecklist.body_text as string,
+            attempt_number: (fuChecklist.attempt_number as number) || undefined,
+          });
+        }
+        break;
+      }
+
+      case "outreach_activation": {
+        // Send the approved welcome email
+        const actChecklist = task.checklist as Record<string, unknown> | null;
+        if (actChecklist?.to_email && actChecklist?.body_text) {
+          await sendApprovedActivationEmail(entityId, {
+            to_email: actChecklist.to_email as string,
+            subject: (actChecklist.subject as string) || "Welcome to Rehab-Atlas",
+            body_text: actChecklist.body_text as string,
+          });
+        }
+        break;
+      }
+
+      case "follow_up": {
+        // Admin follow-up reminder (partner/author) — send only after approval
+        if (entityType === "agent_follow_up") {
+          const fChecklist = task.checklist as Record<string, unknown> | null;
+          if (fChecklist?.to_email && fChecklist?.body_text) {
+            await sendApprovedFollowUpEmail(entityId, {
+              to_email: fChecklist.to_email as string,
+              subject: (fChecklist.subject as string) || "Reminder from Rehab-Atlas",
+              body_text: fChecklist.body_text as string,
+              attempt_number: (fChecklist.attempt_number as number) || 1,
+            });
           }
         }
         break;
@@ -456,6 +515,17 @@ async function executePostAction(
         .from("outreach_pipeline")
         .update({ stage: "declined" })
         .eq("id", entityId);
+    }
+    // Rejecting a follow-up draft stops the follow-up sequence for that center
+    if (agentType === "outreach_followup") {
+      await admin
+        .from("outreach_pipeline")
+        .update({ stage: "stalled", next_follow_up_at: null })
+        .eq("id", entityId);
+    }
+    // Rejecting an admin reminder abandons that reminder sequence
+    if (agentType === "follow_up" && entityType === "agent_follow_up") {
+      await abandonFollowUp(entityId);
     }
   }
 

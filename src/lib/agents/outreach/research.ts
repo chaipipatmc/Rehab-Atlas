@@ -9,7 +9,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { analyzeWithClaude } from "@/lib/agents/claude";
 import { countryToSlug } from "@/lib/utils";
-import { sendEmail } from "./gmail";
+import {
+  getCenterExclusionReason,
+  markPipelineExcluded,
+  sendOutreachEmail,
+  withUnsubscribeFooter,
+} from "./policy";
 import {
   generateInitialOutreach,
   getOutreachSystemPrompt,
@@ -245,6 +250,13 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
   const pipelineData = pipeline as unknown as OutreachPipeline;
   const research = pipelineData.research_data as CenterResearch;
 
+  // Exclusion check also here (drafting can be triggered on its own)
+  const excluded = await getCenterExclusionReason(centerId);
+  if (excluded) {
+    await markPipelineExcluded(pipelineData.id, excluded);
+    return false;
+  }
+
   // Get center email
   const { data: center } = await admin
     .from("centers")
@@ -320,7 +332,7 @@ export async function draftOutreachEmail(centerId: string): Promise<boolean> {
       center_name: center.name,
       to_email: toEmail,
       subject: draft.subject,
-      body_text: draft.bodyText,
+      body_text: withUnsubscribeFooter(draft.bodyText),
       persona,
       personalization_points: aiDraft?.personalization_points || [],
     },
@@ -360,11 +372,13 @@ export async function sendApprovedOutreach(
 
   if (!pipeline) return false;
 
-  // Send via Gmail
-  const result = await sendEmail({
+  // Send via Gmail — policy-guarded (exclusions, opt-out, per-email daily cap).
+  // Throws OutreachBlockedError if blocked; nothing is sent in that case.
+  const result = await sendOutreachEmail({
     to: emailData.to_email,
     subject: emailData.subject,
     bodyText: emailData.body_text,
+    pipelineId,
   });
 
   const now = new Date().toISOString();
@@ -395,7 +409,7 @@ export async function sendApprovedOutreach(
     from_email: process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com",
     to_email: emailData.to_email,
     subject: emailData.subject,
-    body_text: emailData.body_text,
+    body_text: withUnsubscribeFooter(emailData.body_text),
     email_type: "initial_outreach",
   });
 
@@ -417,6 +431,19 @@ export async function sendApprovedOutreach(
  * Called by the orchestrator or manually from dashboard.
  */
 export async function processResearchAndDraft(centerId: string): Promise<boolean> {
+  // Related-party / configured exclusions never enter research or drafting
+  const excluded = await getCenterExclusionReason(centerId);
+  if (excluded) {
+    const admin = createAdminClient();
+    const { data: pipeline } = await admin
+      .from("outreach_pipeline")
+      .select("id")
+      .eq("center_id", centerId)
+      .maybeSingle();
+    if (pipeline?.id) await markPipelineExcluded(pipeline.id as string, excluded);
+    return false;
+  }
+
   const research = await researchCenter(centerId);
   if (!research) return false;
 
