@@ -4,16 +4,13 @@
  */
 
 import { NextResponse } from "next/server";
-import { verifyWebhookSecret } from "@/lib/agents/base";
+import { verifyWebhookSecret, verifyCronSecret } from "@/lib/agents/base";
 import { runOrchestrator, sendDailyDigest, calculateMonthlyBlogTiers } from "@/lib/agents/outreach/orchestrator";
 
 export const maxDuration = 300; // Vercel Pro: up to 300s
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const isCron = authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = verifyCronSecret(request);
   const isWebhook = verifyWebhookSecret(request);
 
   if (!isCron && !isWebhook) {

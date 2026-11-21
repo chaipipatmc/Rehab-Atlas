@@ -6,15 +6,13 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { verifyWebhookSecret } from "@/lib/agents/base";
+import { verifyWebhookSecret, verifyCronSecret } from "@/lib/agents/base";
 import {
   runSystemOrchestrator,
   getSystemHealthSnapshot,
 } from "@/lib/agents/system-orchestrator";
 
 export const maxDuration = 60;
-
-const CRON_SECRET = process.env.CRON_SECRET;
 
 async function isAdminUser(): Promise<boolean> {
   const supabase = await createClient();
@@ -32,8 +30,7 @@ async function isAdminUser(): Promise<boolean> {
 
 // POST runs the health check now. GET reads the cached snapshot (cheap).
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const isCron = authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = verifyCronSecret(request);
   const isWebhook = verifyWebhookSecret(request);
 
   if (!isCron && !isWebhook && !(await isAdminUser())) {
@@ -53,8 +50,7 @@ export async function GET(request: Request) {
   // Cron triggers (Vercel sends Authorization header with CRON_SECRET) should
   // run a fresh check. Admin reads of the snapshot are cheap and don't trigger
   // a new check.
-  const authHeader = request.headers.get("authorization");
-  const isCron = authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = verifyCronSecret(request);
   if (isCron) return POST(request);
 
   if (!(await isAdminUser())) {

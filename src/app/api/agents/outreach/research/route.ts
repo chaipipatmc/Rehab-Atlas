@@ -6,8 +6,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { verifyWebhookSecret } from "@/lib/agents/base";
-import { processResearchAndDraft } from "@/lib/agents/outreach/research";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { processResearchAndDraft, selectNextNewCenterIds } from "@/lib/agents/outreach/research";
 
 export const maxDuration = 300;
 
@@ -35,22 +34,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "center_id required" }, { status: 400 });
   }
 
-  // Batch mode: pick the next "new" center from the pipeline
+  // Batch mode: pick the next "new" center from the pipeline, applying the
+  // same allowed_countries region filter as the orchestrator.
   if (center_id === "__batch__") {
-    const admin = createAdminClient();
-    const { data: next } = await admin
-      .from("outreach_pipeline")
-      .select("center_id")
-      .eq("stage", "new")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .single();
+    const [nextCenterId] = await selectNextNewCenterIds(1);
 
-    if (!next) return NextResponse.json({ success: false, reason: "No new centers" });
+    if (!nextCenterId) return NextResponse.json({ success: false, reason: "No new centers in allowed regions" });
 
     try {
-      const success = await processResearchAndDraft(next.center_id as string);
-      return NextResponse.json({ success, center_id: next.center_id });
+      const success = await processResearchAndDraft(nextCenterId);
+      return NextResponse.json({ success, center_id: nextCenterId });
     } catch (err) {
       console.error("Batch research failed:", err);
       return NextResponse.json({ success: false, error: String(err) });

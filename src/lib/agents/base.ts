@@ -3,13 +3,34 @@
  * Token generation, task CRUD, webhook verification, logging.
  */
 
-import { createHmac, randomUUID, randomBytes } from "crypto";
+import { createHmac, randomUUID, randomBytes, timingSafeEqual } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AgentType, AgentRecommendation, AgentTask } from "@/types/agent";
 
-const HMAC_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "agent-fallback-key";
+// No hard-coded fallbacks: when a secret is missing, token signing/validation
+// and webhook verification fail closed (nothing is accepted).
+const HMAC_KEY: string | null = process.env.SUPABASE_SERVICE_ROLE_KEY || null;
 const TOKEN_TTL_HOURS = 24;
-const WEBHOOK_SECRET = process.env.AGENT_WEBHOOK_SECRET || "rehab-atlas-agent-secret";
+
+/**
+ * Read a shared secret from env, trimmed of surrounding whitespace/newlines
+ * (values pasted via `pbcopy` etc. often carry a trailing "\n").
+ * Empty after trim = not configured = null (callers fail closed).
+ */
+export function readSecretEnv(name: string): string | null {
+  const v = (process.env[name] ?? "").trim();
+  return v.length > 0 ? v : null;
+}
+
+const WEBHOOK_SECRET: string | null = readSecretEnv("AGENT_WEBHOOK_SECRET");
+
+/** Constant-time string comparison (false on length mismatch). */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 // ── Token Management ──
 
@@ -19,6 +40,7 @@ export function generateShortCode(): string {
 }
 
 export function generateActionToken(taskId: string): string {
+  if (!HMAC_KEY) throw new Error("Action token signing key is not configured");
   const payload = `${taskId}.${Date.now()}`;
   const sig = createHmac("sha256", HMAC_KEY).update(payload).digest("hex").slice(0, 32);
   return `${payload}.${sig}`;
@@ -31,6 +53,8 @@ export function validateActionToken(token: string): { taskId: string } | null {
     return null;
   }
 
+  if (!HMAC_KEY) return null;
+
   const parts = token.split(".");
   if (parts.length !== 3) return null;
 
@@ -38,7 +62,7 @@ export function validateActionToken(token: string): { taskId: string } | null {
   const payload = `${taskId}.${timestamp}`;
   const expectedSig = createHmac("sha256", HMAC_KEY).update(payload).digest("hex").slice(0, 32);
 
-  if (sig !== expectedSig) return null;
+  if (!safeEqual(sig, expectedSig)) return null;
 
   // Check expiry
   const created = parseInt(timestamp, 10);
@@ -176,8 +200,26 @@ export async function logAgentAction(params: {
 // ── Webhook Verification ──
 
 export function verifyWebhookSecret(request: Request): boolean {
-  const secret = request.headers.get("x-webhook-secret");
-  return secret === WEBHOOK_SECRET;
+  if (!WEBHOOK_SECRET) return false;
+  const secret = (request.headers.get("x-webhook-secret") ?? "").trim();
+  if (!secret) return false;
+  return safeEqual(secret, WEBHOOK_SECRET);
+}
+
+/**
+ * Verify `Authorization: Bearer <CRON_SECRET>` (Vercel cron / maintenance
+ * scripts). Both sides trimmed, constant-time compare, fails closed when
+ * CRON_SECRET is unset or empty.
+ */
+export function verifyCronSecret(request: Request): boolean {
+  const cronSecret = readSecretEnv("CRON_SECRET");
+  if (!cronSecret) return false;
+  const header = (request.headers.get("authorization") ?? "").trim();
+  const m = /^Bearer\s+(.+)$/i.exec(header);
+  if (!m) return false;
+  const token = m[1].trim();
+  if (!token) return false;
+  return safeEqual(token, cronSecret);
 }
 
 // ── Helpers ──

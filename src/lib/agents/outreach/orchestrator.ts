@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { sendAgentEmail } from "@/lib/agents/notify";
-import { processResearchAndDraft } from "./research";
+import { processResearchAndDraft, selectNextNewCenterIds } from "./research";
 import { processFollowUps } from "./followup";
 import { processInboundReplies } from "./response-handler";
 import { prepareAgreement, checkAgreementStatus } from "./agreement";
@@ -37,28 +37,13 @@ export async function runOrchestrator(): Promise<void> {
   //    agent_outreach_research_setting_allowed_countries (comma-separated,
   //    empty = no filter). Centers outside the list simply stay "new".
   if (await isAgentEnabled("outreach_research")) {
-    const allowedCountries = await getAllowedCountries();
-    const { data: candidates } = await admin
-      .from("outreach_pipeline")
-      .select("center_id, centers(country)")
-      .eq("stage", "new")
-      .order("created_at", { ascending: true })
-      .limit(allowedCountries ? 50 : 1);
+    const newCenterIds = await selectNextNewCenterIds(1);
 
-    const newEntries = (candidates || [])
-      .filter((entry) => {
-        if (!allowedCountries) return true;
-        const rel = (entry as { centers?: { country?: string | null } | { country?: string | null }[] | null }).centers;
-        const country = Array.isArray(rel) ? rel[0]?.country : rel?.country;
-        return !!country && allowedCountries.includes(country.trim().toLowerCase());
-      })
-      .slice(0, 1);
-
-    for (const entry of newEntries) {
+    for (const centerId of newCenterIds) {
       try {
-        await processResearchAndDraft(entry.center_id as string);
+        await processResearchAndDraft(centerId);
       } catch (err) {
-        console.error("Research failed for center:", entry.center_id, err);
+        console.error("Research failed for center:", centerId, err);
       }
     }
   }
@@ -98,16 +83,19 @@ export async function runOrchestrator(): Promise<void> {
     console.error("Agreement processing failed:", err);
   }
 
-  // 5. Check agreement signing status
+  // 5. Check agreement signing status (PandaDoc) — only while the agreement
+  //    agent is switched on; otherwise no PandaDoc calls / stage changes.
   try {
-    const { data: sentAgreements } = await admin
-      .from("outreach_pipeline")
-      .select("id")
-      .eq("stage", "agreement_sent")
-      .limit(20);
+    if (await isAgentEnabled("outreach_agreement")) {
+      const { data: sentAgreements } = await admin
+        .from("outreach_pipeline")
+        .select("id")
+        .eq("stage", "agreement_sent")
+        .limit(20);
 
-    for (const entry of sentAgreements || []) {
-      await checkAgreementStatus(entry.id as string);
+      for (const entry of sentAgreements || []) {
+        await checkAgreementStatus(entry.id as string);
+      }
     }
   } catch (err) {
     console.error("Agreement status check failed:", err);
@@ -130,34 +118,23 @@ export async function runOrchestrator(): Promise<void> {
     console.error("Activation failed:", err);
   }
 
-  // 7. Detect stalled pipelines (no update in 30 days)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  // 7. Detect stalled pipelines (no update in 30 days) — only while the
+  //    follow-up agent is switched on.
+  if (await isAgentEnabled("outreach_followup")) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  await admin
-    .from("outreach_pipeline")
-    .update({ stage: "stalled" })
-    .in("stage", ["responded", "negotiating"])
-    .lt("updated_at", thirtyDaysAgo.toISOString());
+    await admin
+      .from("outreach_pipeline")
+      .update({ stage: "stalled" })
+      .in("stage", ["responded", "negotiating"])
+      .lt("updated_at", thirtyDaysAgo.toISOString());
+  }
 
   await logAgentAction({
     agent_type: "outreach_orchestrator",
     action: "orchestrator_run_completed",
   });
-}
-
-/**
- * Region filter for new outreach (board decision D1). Returns a lowercase
- * country list, or null when no filter is configured.
- */
-async function getAllowedCountries(): Promise<string[] | null> {
-  const { getAgentSettingString } = await import("../config");
-  const raw = await getAgentSettingString("outreach_research", "allowed_countries", "");
-  const list = raw
-    .split(",")
-    .map((c) => c.trim().toLowerCase())
-    .filter(Boolean);
-  return list.length > 0 ? list : null;
 }
 
 /**

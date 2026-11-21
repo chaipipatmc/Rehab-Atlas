@@ -5,15 +5,12 @@
 
 import { NextResponse } from "next/server";
 import { isAgentEnabled } from "@/lib/agents/config";
-import { verifyWebhookSecret } from "@/lib/agents/base";
+import { verifyWebhookSecret, verifyCronSecret } from "@/lib/agents/base";
 import { processFollowUps } from "@/lib/agents/outreach/followup";
-
-const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function POST(request: Request) {
   // Accept Vercel Cron auth OR webhook secret
-  const authHeader = request.headers.get("authorization");
-  const isCron = authHeader === `Bearer ${CRON_SECRET}`;
+  const isCron = verifyCronSecret(request);
   const isWebhook = verifyWebhookSecret(request);
 
   if (!isCron && !isWebhook) {

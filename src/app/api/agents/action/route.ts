@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { validateActionToken, findTaskByShortCode, updateTaskStatus, logAgentAction, getAppUrl } from "@/lib/agents/base";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { sendLeadForwardEmail } from "@/lib/email/send";
 import { sendEditRequestStatusEmail } from "@/lib/agents/notify";
 import { sendApprovedOutreach } from "@/lib/agents/outreach/research";
@@ -18,6 +19,51 @@ import { sendApprovedFollowUpEmail, abandonFollowUp } from "@/lib/agents/follow-
 import { validateOrigin } from "@/lib/csrf";
 import { pingIndexNow } from "@/lib/seo/indexnow";
 import { applyEditRequestChanges } from "@/lib/edit-requests";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** True only for a logged-in user whose profile role is "admin" (same check as other admin routes). */
+async function isAdminSession(): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    return profile?.role === "admin";
+  } catch {
+    return false;
+  }
+}
+
+/** Email-link tokens (short code or HMAC) are valid only until token_expires; missing expiry = expired (fail closed). */
+function isEmailTokenExpired(task: Record<string, unknown>): boolean {
+  const expires = task.token_expires as string | null | undefined;
+  if (!expires) return true;
+  const t = new Date(expires).getTime();
+  return isNaN(t) || t < Date.now();
+}
+
+/**
+ * Resolve a task from an email-link token: 12-char short code or HMAC token.
+ * UUIDs are never accepted here (dashboard path only, admin session required).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function findTaskByEmailToken(token: string, admin: ReturnType<typeof createAdminClient>): Promise<any> {
+  if (UUID_RE.test(token)) return null;
+  if (!token.includes(".")) {
+    return findTaskByShortCode(token);
+  }
+  const parsed = validateActionToken(token);
+  if (!parsed) return null;
+  const { data } = await admin.from("agent_tasks").select("*").eq("id", parsed.taskId).single();
+  return data;
+}
 
 function escapeHtml(str: string): string {
   return str
@@ -44,36 +90,20 @@ export async function GET(request: Request) {
     return brandedPage("Invalid Request", "Missing or invalid parameters.", 400);
   }
 
-  // Look up task by short code first, fall back to HMAC token
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let task: any = null;
+  // GET only renders a confirmation page; it never executes. Email links
+  // must carry an unexpired short code / HMAC token. A logged-in admin
+  // (dashboard) is not subject to the 24h link expiry.
   const admin = createAdminClient();
+  const isAdmin = await isAdminSession();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const task: any = await findTaskByEmailToken(token, admin);
 
-  if (!token.includes(".")) {
-    task = await findTaskByShortCode(token);
-  } else {
-    const parsed = validateActionToken(token);
-    if (parsed) {
-      const { data } = await admin.from("agent_tasks").select("*").eq("id", parsed.taskId).single();
-      task = data;
-    }
-  }
-
-  if (!task) {
+  if (!task || (!isAdmin && isEmailTokenExpired(task))) {
     return brandedPage("Link Expired", "This action link has expired (24h) or is invalid. Please use the admin dashboard instead.", 410);
   }
 
-  // Check token expiry for short codes
-  if (task.token_expires && new Date(task.token_expires as string) < new Date()) {
-    return brandedPage("Link Expired", "This action link has expired (24h). Please use the admin dashboard instead.", 410);
-  }
-
-  if (!task) {
-    return brandedPage("Task Not Found", "This task no longer exists.", 404);
-  }
-
   if (task.owner_decision) {
-    return brandedPage("Already Decided", `This task was already <strong>${task.owner_decision}</strong>. No further action needed.`, 200);
+    return brandedPage("Already Decided", `This task was already <strong>${escapeHtml(String(task.owner_decision))}</strong>. No further action needed.`, 200);
   }
 
   // Show confirmation page with a POST form
@@ -152,36 +182,42 @@ export async function POST(request: Request) {
     return brandedPage("Invalid Request", "Missing or invalid parameters.", 400);
   }
 
-  // Look up task by UUID, short code, or HMAC token
+  // Two paths:
+  //  - Dashboard (JSON body or task UUID): requires a logged-in admin session.
+  //    The 24h email-link expiry does not apply.
+  //  - Email link (form POST from the confirmation page): accepts only an
+  //    unexpired short code or HMAC token — never a raw task UUID.
+  //    A logged-in admin using the short code from the dashboard is also
+  //    exempt from the 24h expiry.
+  const isJson = contentType.includes("application/json");
+  const isUUID = UUID_RE.test(token);
+  const isAdmin = await isAdminSession();
+
+  if ((isJson || isUUID) && !isAdmin) {
+    if (isJson) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return brandedPage("Unauthorized", "Please sign in to the admin dashboard to take this action.", 401);
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let task: any = null;
   const admin = createAdminClient();
 
-  // Check if token is a UUID (from dashboard JSON requests)
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token || "");
-
   if (isUUID) {
     const { data } = await admin.from("agent_tasks").select("*").eq("id", token).single();
     task = data;
-  } else if (token && !token.includes(".")) {
-    task = await findTaskByShortCode(token);
-  } else if (token) {
-    const parsed = validateActionToken(token);
-    if (parsed) {
-      const { data } = await admin.from("agent_tasks").select("*").eq("id", parsed.taskId).single();
-      task = data;
-    }
+  } else {
+    task = await findTaskByEmailToken(token, admin);
   }
 
   if (!task) {
-    if (contentType.includes("application/json")) {
+    if (isJson) {
       return NextResponse.json({ error: "Task not found or expired" }, { status: 410 });
     }
     return brandedPage("Link Expired", "This action link has expired or is invalid.", 410);
   }
 
-  // Check token expiry
-  if (task.token_expires && new Date(task.token_expires as string) < new Date()) {
+  // 24h expiry applies to email links only (not to an admin session)
+  if (!isAdmin && isEmailTokenExpired(task)) {
     return brandedPage("Link Expired", "This action link has expired (24h). Please use the admin dashboard instead.", 410);
   }
 
@@ -207,7 +243,7 @@ export async function POST(request: Request) {
 
     const label = decision === "approved" ? "Approved ✓" : decision === "rejected" ? "Rejected" : "Marked for Follow-up";
     const icon = decision === "approved" ? "✅" : decision === "rejected" ? "❌" : "📝";
-    if (contentType.includes("application/json")) {
+    if (isJson) {
       return NextResponse.json({ success: true, decision, label });
     }
     return brandedPage(`${icon} ${label}`, `The ${task.entity_type.replace(/_/g, " ")} has been ${label.toLowerCase()} successfully.`, 200);
@@ -216,16 +252,33 @@ export async function POST(request: Request) {
       // Policy block (daily cap, opt-out, exclusion): nothing was sent and the
       // task stays undecided so it can be approved again later.
       console.warn("Agent action blocked:", err.reason);
-      if (contentType.includes("application/json")) {
+      if (isJson) {
         return NextResponse.json({ error: `Not sent: ${err.reason}` }, { status: 409 });
       }
       return brandedPage("Not Sent", `Email was not sent: ${escapeHtml(err.reason)}. The task is still awaiting approval — try again later.`, 409);
     }
+    // Any other failure (e.g. Gmail send error): nothing is marked as sent,
+    // the task stays awaiting approval and the error is recorded on it.
     console.error("Agent action failed:", err);
-    if (contentType.includes("application/json")) {
-      return NextResponse.json({ error: "Action failed" }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    try {
+      await admin
+        .from("agent_tasks")
+        .update({ error_message: message.slice(0, 1000), updated_at: new Date().toISOString() })
+        .eq("id", task.id);
+      await logAgentAction({
+        agent_type: task.agent_type,
+        task_id: task.id,
+        action: `owner_${decision}_failed`,
+        details: { error: message.slice(0, 500), center_id: centerId },
+      });
+    } catch (recordErr) {
+      console.error("Failed to record action error:", recordErr);
     }
-    return brandedPage("Action Failed", "Something went wrong. Please try again from the admin dashboard.", 500);
+    if (isJson) {
+      return NextResponse.json({ error: "Action failed — nothing was sent; the task is still awaiting approval" }, { status: 502 });
+    }
+    return brandedPage("Action Failed", "Nothing was sent. The task is still awaiting approval — please try again from the admin dashboard.", 502);
   }
 }
 
@@ -368,33 +421,18 @@ async function executePostAction(
   if (decision === "approved") {
     switch (agentType) {
       case "outreach_research": {
-        // Send approved outreach email (graceful if Gmail fails)
+        // Send the approved outreach email. Any failure (policy block or
+        // Gmail error) propagates: the pipeline is NOT marked outreach_sent,
+        // no outbound email is logged, and the task stays awaiting approval.
         const checklist = task.checklist as Record<string, unknown> | null;
-        if (checklist) {
-          try {
-            await sendApprovedOutreach(entityId, {
-              to_email: checklist.to_email as string,
-              subject: checklist.subject as string,
-              body_text: checklist.body_text as string,
-            });
-          } catch (emailErr) {
-            // Policy blocks must not be recorded as "sent" — surface them.
-            if (emailErr instanceof OutreachBlockedError) throw emailErr;
-            console.error("Gmail send failed (email logged for manual send):", emailErr);
-            // Still update pipeline stage so it doesn't block
-            const adminDb = createAdminClient();
-            await adminDb.from("outreach_pipeline").update({ stage: "outreach_sent", outreach_sent_at: new Date().toISOString() }).eq("id", entityId);
-            await adminDb.from("outreach_emails").insert({
-              pipeline_id: entityId,
-              direction: "outbound",
-              from_email: "info@rehab-atlas.com",
-              to_email: checklist.to_email as string,
-              subject: checklist.subject as string,
-              body_text: checklist.body_text as string,
-              email_type: "initial_outreach",
-            });
-          }
+        if (!checklist?.to_email || !checklist?.body_text) {
+          throw new Error("Outreach task has no email draft (to_email/body_text missing)");
         }
+        await sendApprovedOutreach(entityId, {
+          to_email: checklist.to_email as string,
+          subject: (checklist.subject as string) || "Partnership with Rehab-Atlas",
+          body_text: checklist.body_text as string,
+        });
         break;
       }
 
@@ -429,35 +467,34 @@ async function executePostAction(
             .eq("id", entityId)
             .single();
 
-          try {
-            await sendOutreachEmail({
-              to: toEmail,
-              subject: `Re: ${centerName || "Partnership"} - Rehab-Atlas`,
-              bodyText: replyText,
-              threadId: (pipeline?.outreach_thread_id as string) || undefined,
-              pipelineId: entityId,
-            });
-
-            // Log the reply in outreach_emails
-            await admin.from("outreach_emails").insert({
-              pipeline_id: entityId,
-              direction: "outbound",
-              from_email: "info@rehab-atlas.com",
-              to_email: toEmail,
-              subject: `Re: ${centerName || "Partnership"} - Rehab-Atlas`,
-              body_text: replyText,
-              email_type: "reply",
-            });
-
-            // Update pipeline stage
-            await admin
-              .from("outreach_pipeline")
-              .update({ stage: "responded", last_activity_at: new Date().toISOString() })
-              .eq("id", entityId);
-          } catch (replyErr) {
-            if (replyErr instanceof OutreachBlockedError) throw replyErr;
-            console.error("Gmail reply send failed:", replyErr);
+          // Failures propagate (task stays awaiting approval, nothing logged as sent)
+          const sent = await sendOutreachEmail({
+            to: toEmail,
+            subject: `Re: ${centerName || "Partnership"} - Rehab-Atlas`,
+            bodyText: replyText,
+            threadId: (pipeline?.outreach_thread_id as string) || undefined,
+            pipelineId: entityId,
+          });
+          if (!sent) {
+            throw new Error("Gmail send unavailable (no credentials/access token) — reply not sent");
           }
+
+          // Log the reply in outreach_emails
+          await admin.from("outreach_emails").insert({
+            pipeline_id: entityId,
+            direction: "outbound",
+            from_email: "info@rehab-atlas.com",
+            to_email: toEmail,
+            subject: `Re: ${centerName || "Partnership"} - Rehab-Atlas`,
+            body_text: replyText,
+            email_type: "reply",
+          });
+
+          // Update pipeline stage
+          await admin
+            .from("outreach_pipeline")
+            .update({ stage: "responded", last_activity_at: new Date().toISOString() })
+            .eq("id", entityId);
         }
         break;
       }

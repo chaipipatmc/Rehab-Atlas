@@ -269,6 +269,11 @@ export async function sendApprovedFollowUp(
     pipelineId,
   });
 
+  // null = Gmail credentials/token unavailable: nothing was sent.
+  if (!result) {
+    throw new Error("Gmail send unavailable (no credentials/access token) — email not sent");
+  }
+
   // Calculate next follow-up
   const followUpDays = await resolveFollowUpDays();
   const nextFollowUpDays = followUpDays[attemptNumber] || null;
