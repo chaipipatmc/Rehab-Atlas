@@ -100,13 +100,21 @@ A global rehab center discovery and referral marketplace built with Next.js, Sup
    ```
 6. Open http://localhost:3000
 
-### Seed Data
+### Checks (run before every commit)
 ```bash
-node scripts/import-50.js      # Import 50 centers from Excel
-node scripts/update-urls.js     # Fix center website URLs
-node scripts/scrape-photos.js   # Scrape facility photos
-node scripts/seed-articles.js   # Seed education blog articles
-node scripts/seed-pages.js      # Seed legal & static pages
+npm run typecheck   # tsc --noEmit
+npm run lint        # ESLint incl. project guardrail rules (eslint-rules/rehab.mjs)
+npm test            # vitest: outreach policy, secrets, copy rules, lint-rule tests
+```
+
+### Seed Data
+Scripts read Supabase keys from env (never hard-coded):
+```bash
+node --env-file=.env.local scripts/import-50.js      # Import 50 centers from Excel
+node --env-file=.env.local scripts/update-urls.js     # Fix center website URLs
+node --env-file=.env.local scripts/scrape-photos.js   # Scrape facility photos
+node --env-file=.env.local scripts/seed-articles.js   # Seed education blog articles
+node --env-file=.env.local scripts/seed-pages.js      # Seed legal & static pages
 ```
 
 ### Admin Login
