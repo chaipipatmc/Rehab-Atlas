@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +17,19 @@ function getConsent(): boolean | null {
   if (v === "true") return true;
   if (v === "false") return false;
   return null;
+}
+
+// Consent as stored when the page loaded. Read once per page load, so (as
+// before) accepting the banner takes effect for analytics on the next load.
+let consentAtLoad: boolean | null | undefined;
+function getConsentAtLoad(): boolean | null {
+  if (consentAtLoad === undefined) consentAtLoad = getConsent();
+  return consentAtLoad;
+}
+const subscribeNever = () => () => {};
+/** undefined on the server / during hydration; the stored value after. */
+function useConsentAtLoad(): boolean | null | undefined {
+  return useSyncExternalStore<boolean | null | undefined>(subscribeNever, getConsentAtLoad, () => undefined);
 }
 
 // ── Google Analytics page view ──
@@ -58,11 +72,7 @@ export function trackAssessmentComplete() {
 // ── Analytics Scripts ──
 export function Analytics() {
   const pathname = usePathname();
-  const [consent, setConsent] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setConsent(getConsent());
-  }, []);
+  const consent = useConsentAtLoad();
 
   // Track page views on route change
   useEffect(() => {
@@ -117,28 +127,21 @@ export function Analytics() {
 
 // ── Cookie Consent Banner ──
 export function CookieConsent() {
-  const [consent, setConsent] = useState<boolean | null>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const stored = getConsent();
-    setConsent(stored);
-    if (stored === null) setVisible(true);
-  }, []);
+  const stored = useConsentAtLoad();
+  const [decided, setDecided] = useState(false);
 
   function accept() {
     localStorage.setItem(CONSENT_KEY, "true");
-    setConsent(true);
-    setVisible(false);
+    setDecided(true);
   }
 
   function decline() {
     localStorage.setItem(CONSENT_KEY, "false");
-    setConsent(false);
-    setVisible(false);
+    setDecided(true);
   }
 
-  if (!visible || consent !== null) return null;
+  // Shown only after hydration, and only when no choice was stored at load.
+  if (decided || stored !== null) return null;
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 p-4">
@@ -162,7 +165,7 @@ export function CookieConsent() {
           </button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-2 text-center">
-          <a href="/pages/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>
+          <Link href="/pages/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>
         </p>
       </div>
     </div>

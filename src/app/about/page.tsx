@@ -2,8 +2,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
-  Shield, Search, Heart, Users, BookOpen, CheckCircle,
-  ArrowRight, Eye, Pencil, Brain, Globe,
+  Shield,
+  Search,
+  Heart,
+  Users,
+  CheckCircle,
+  ArrowRight,
+  Eye,
+  Brain,
+  Globe,
 } from "lucide-react";
 import type { Metadata } from "next";
 

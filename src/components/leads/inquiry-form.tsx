@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -246,7 +247,7 @@ export function InquiryForm({ centerId, centerName, prefill }: InquiryFormProps)
         <Checkbox id="consent" name="consent" required className="mt-0.5" />
         <Label htmlFor="consent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
           I consent to Rehab-Atlas processing my data according to the{" "}
-          <a href="/pages/privacy-policy" className="text-primary underline">Privacy Policy</a>.
+          <Link href="/pages/privacy-policy" className="text-primary underline">Privacy Policy</Link>.
           I understand that my information is encrypted and only shared with selected treatment centers under strict confidentiality agreements.
         </Label>
       </div>

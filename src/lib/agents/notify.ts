@@ -3,10 +3,10 @@
  * Email (Resend) + LINE Notify for agent communications.
  */
 
-import { Resend } from "resend";
+import { createResendClient } from "@/lib/email/resend";
 import { getAppUrl } from "./base";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder_missing_key");
+const resend = createResendClient();
 import { getAdminEmail } from "@/lib/settings";
 import { isLineConfigured, pushText } from "@/lib/line";
 const FROM_EMAIL = "Rehab-Atlas Agent <onboarding@resend.dev>";

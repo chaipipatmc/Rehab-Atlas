@@ -8,9 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Send, MessageSquare, FileSignature, CheckCircle2,
-  Globe, Mail, MapPin, Clock, Pencil, AlertTriangle, User,
-  TrendingUp, FileText,
+  ArrowLeft,
+  Send,
+  FileSignature,
+  CheckCircle2,
+  Globe,
+  Mail,
+  MapPin,
+  Pencil,
+  AlertTriangle,
+  User,
+  TrendingUp,
+  FileText,
 } from "lucide-react";
 
 interface PipelineDetail {

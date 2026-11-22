@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Pencil, Image, Clock, Eye, ExternalLink, BookOpen, CheckCircle, FileText, MousePointerClick, TrendingUp, Percent, ArrowDown } from "lucide-react";
+import { Pencil, Image, Clock, Eye, ExternalLink, BookOpen, CheckCircle, FileText, MousePointerClick, TrendingUp, Percent } from "lucide-react";
 
 export default async function PartnerDashboard() {
   const supabase = await createClient();

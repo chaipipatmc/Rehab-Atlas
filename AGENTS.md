@@ -31,9 +31,9 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react` (NOT Radix). K
    - `src/lib/supabase/server.ts` — server (with cookies)
    - `src/lib/supabase/admin.ts` — service role (bypasses RLS)
 
-2. **Leads MUST use service role** — never insert leads from client-side
+2. **Leads MUST use service role** — never insert leads from client-side (lint: lead inserts allowed only in `src/app/api/**`; service-role client blocked in `"use client"` files)
 
-3. **Partner edits create `center_edit_requests`** — never update centers directly. The `changes` payload mixes `centers` columns with a `staff` array for `center_staff`; **always apply approvals through `applyEditRequestChanges()` in `src/lib/edit-requests.ts`** (used by `/api/admin/edit-requests/decide` and the agent action route). Passing the raw payload to `centers.update()` fails on the `staff` key and silently marks the request approved with nothing applied (bit IbogaQuest + ZorbaWellness, fixed 2026-09-23)
+3. **Partner edits create `center_edit_requests`** — never update centers directly. The `changes` payload mixes `centers` columns with a `staff` array for `center_staff`; **always apply approvals through `applyEditRequestChanges()` in `src/lib/edit-requests.ts`** (lint blocks `centers.update(<changes>)`) (used by `/api/admin/edit-requests/decide` and the agent action route). Passing the raw payload to `centers.update()` fails on the `staff` key and silently marks the request approved with nothing applied (bit IbogaQuest + ZorbaWellness, fixed 2026-09-23)
 
 4. **Blog author tracking** — `author_type` field: 'rehabatlas' or 'partner', with `author_center_id` for backlinks
 
@@ -43,7 +43,7 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react` (NOT Radix). K
 
 7. **Outreach pipeline** — `outreach_pipeline` table tracks center recruitment stages (new → researching → outreach_drafted → outreach_sent → responded → terms_agreed → agreement_sent → active)
 
-8. **Gmail API** — outreach emails sent via direct fetch calls to Gmail REST API (NOT googleapis SDK). Token refresh handled manually. All emails CC'd to info@rehab-atlas.com
+8. **Gmail API** — outreach emails sent via direct fetch calls to Gmail REST API (NOT googleapis SDK), only from `src/lib/agents/outreach/gmail.ts`. Token refresh handled manually. All emails CC'd to info@rehab-atlas.com. Every outbound partner email goes through `sendOutreachEmail()` in `policy.ts` after admin approval (lint blocks importing the raw `sendEmail`)
 
 9. **PandaDoc** — partnership agreements use template `Ctzua6xmeLzCVnMwsmYR9L` with tokens for center details
 

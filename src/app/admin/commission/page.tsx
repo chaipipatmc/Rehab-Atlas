@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
-import { Receipt, Building2, CheckCircle, Clock, AlertCircle, DollarSign } from "lucide-react";
+import { Receipt, CheckCircle, AlertCircle, DollarSign } from "lucide-react";
 
 const PAYMENT_COLORS: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800",

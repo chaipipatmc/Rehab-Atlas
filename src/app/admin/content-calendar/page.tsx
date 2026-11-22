@@ -95,6 +95,16 @@ function dayMeta(date: string) {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+async function fetchCalendarEntries(): Promise<CalendarEntry[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("content_calendar")
+    .select("*")
+    .order("planned_date", { ascending: true })
+    .order("created_at", { ascending: true });
+  return (data || []) as CalendarEntry[];
+}
+
 export default function ContentCalendarPage() {
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,21 +116,19 @@ export default function ContentCalendarPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    loadCalendar();
-  }, []);
-
   async function loadCalendar() {
     setLoading(true);
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("content_calendar")
-      .select("*")
-      .order("planned_date", { ascending: true })
-      .order("created_at", { ascending: true });
-    setEntries((data || []) as CalendarEntry[]);
+    setEntries(await fetchCalendarEntries());
     setLoading(false);
   }
+
+  // Initial load: `loading` already starts true.
+  useEffect(() => {
+    fetchCalendarEntries().then((rows) => {
+      setEntries(rows);
+      setLoading(false);
+    });
+  }, []);
 
   // ─── Derived data ────────────────────────────────────────────────────────
 

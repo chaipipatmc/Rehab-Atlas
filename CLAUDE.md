@@ -72,6 +72,16 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 - **Session signing:** Assessment session cookies are HMAC-signed to prevent forgery
 - **AI optional:** Assessment matching works with templates by default; Claude API enhances explanations when configured
 
+### Guardrails enforced in code (run `npm run lint` + `npm test` before every commit)
+
+Mistakes that already happened are blocked by lint rules (`eslint.config.mjs`, local rules in `eslint-rules/rehab.mjs`) and tests (`tests/`, vitest). The lint message says how to fix the root cause — follow it; do not add `eslint-disable`. Need a real exception? Add a file-scoped override in `eslint.config.mjs` with a one-line reason.
+
+- Secrets: no hard-coded keys/JWTs or literal fallbacks for secret env vars; compare secrets only via `safeEqual()` / `verifyCronSecret()` / `verifyWebhookSecret()` (`src/lib/secrets.ts`, trims env); never log env values, tokens or raw HTTP bodies (`summarizeHttpError()` in `src/lib/http-error.ts`)
+- Outreach: only `sendOutreachEmail()` (`policy.ts`) may reach the raw Gmail sender — exclusions (The Hills), opt-out, unsubscribe footer, fail-closed daily cap; tested in `tests/outreach-policy.test.ts`. Partner copy has no commission/pricing and no individual persona (`tests/outreach-copy.test.ts`)
+- Single entry points: `createResendClient()`, `postAgentAction()` / `parseAgentActionRequest()` for `/api/agents/action`, `signAssessmentSession()` / `verifyAssessmentSession()`, `applyEditRequestChanges()`
+- Leads inserted only in `src/app/api/**`; no service-role client in `"use client"` files; no hard-coded site domain in pages/components (`BASE_URL`)
+- Scripts read keys with `requireEnv()` (`scripts/lib/require-env.cjs`), never literals
+
 ## AI Agent System
 
 17 toggleable agents automate workflows (registry of record: `DEFAULT_CONFIG` / `getAgentConfig()` in `src/lib/agents/config.ts`). Each can be toggled on/off at `/admin/agents`. When OFF = manual mode. When ON = agents process events → email owner for approval. Content Dedup runs inline inside other agents and has no toggle, so the tables below list 18 rows.
@@ -90,7 +100,7 @@ RehabAtlas is a global rehab center discovery and referral marketplace. Users br
 ### Outreach Pipeline Agents (`src/lib/agents/outreach/`)
 | Agent | Trigger | What It Does |
 |-------|---------|-------------|
-| **Research & Outreach** ("Sarah") | Orchestrator | Scrapes center websites, drafts personalized outreach emails via Claude AI |
+| **Research & Outreach** (persona "The Rehab-Atlas Team") | Orchestrator | Scrapes center websites, drafts personalized outreach emails via Claude AI |
 | **Follow-up** | Daily cron | Auto-sends Day 3/7/14 follow-ups to unresponsive centers |
 | **Response Handler** | Every 15 min cron | Detects Gmail replies, analyzes sentiment, auto-onboards positive responses |
 | **Agreement** | Pipeline stage | Prepares PandaDoc agreements for admin approval before e-signature |
@@ -136,7 +146,7 @@ Blog author fields on `pages`: `author_type` (rehabatlas/partner), `author_name`
 - Partner activation confirmation
 
 **Outreach (Gmail API via info@rehab-atlas.com):**
-- Personalized outreach emails to rehab centers (persona: "Sarah")
+- Personalized outreach emails to rehab centers (persona: "The Rehab-Atlas Team" — `src/lib/agents/outreach/persona.ts`; individual names are lint-blocked)
 - Follow-up emails (Day 3, 7, 14)
 - Win-back replies for negative responses
 - Partner onboarding credentials

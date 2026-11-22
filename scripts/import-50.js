@@ -1,9 +1,10 @@
 const XLSX = require('xlsx');
 const { createClient } = require('@supabase/supabase-js');
+const { requireEnv } = require("./lib/require-env.cjs");
 
 const supabase = createClient(
-  'https://jfpxyaajmarlfhcngszh.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmcHh5YWFqbWFybGZoY25nc3poIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzg5NDkyNCwiZXhwIjoyMDg5NDcwOTI0fQ.v0b7BQ8gv5SCmU23UHrEIg4-kJ8cicmKEoi7yirQgqI'
+  requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
+  requireEnv("SUPABASE_SERVICE_ROLE_KEY")
 );
 
 const wb = XLSX.readFile('Rehab Centers Database.xlsx');

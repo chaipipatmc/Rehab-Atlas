@@ -87,7 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let blogPages: MetadataRoute.Sitemap = [];
   let comparePages: MetadataRoute.Sitemap = [];
   let cityPages: MetadataRoute.Sitemap = [];
-  let cityConditionPages: MetadataRoute.Sitemap = [];
+  const cityConditionPages: MetadataRoute.Sitemap = [];
 
   try {
     const supabase = createAdminClient();

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+
 import { Upload, X, Image as ImageIcon, Loader2, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 

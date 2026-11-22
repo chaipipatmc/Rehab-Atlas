@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import { toast } from "sonner";
 import {
   User, Shield, Building2, Search, CheckCircle, ArrowUpRight, KeyRound, Loader2,

@@ -9,6 +9,8 @@
  *   LINE_OWNER_USER_ID         the owner's LINE user ID (recipient)
  */
 
+import { summarizeHttpError } from "@/lib/http-error";
+
 const LINE_API = "https://api.line.me/v2/bot";
 
 type LineMessage = Record<string, unknown>;
@@ -34,8 +36,8 @@ async function lineFetch(path: string, body: unknown): Promise<LineResult> {
       body: JSON.stringify(body),
     });
     if (!res.ok) {
-      const text = (await res.text().catch(() => "")).slice(0, 500);
-      console.error(`LINE API ${path} failed (${res.status}): ${text}`);
+      const text = (await res.clone().text().catch(() => "")).slice(0, 500);
+      console.error(`LINE API ${path} failed: ${await summarizeHttpError(res)}`);
       return { ok: false, status: res.status, error: text || res.statusText };
     }
     return { ok: true, status: res.status };

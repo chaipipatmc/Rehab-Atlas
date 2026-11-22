@@ -3,34 +3,19 @@
  * Token generation, task CRUD, webhook verification, logging.
  */
 
-import { createHmac, randomUUID, randomBytes, timingSafeEqual } from "crypto";
+import { createHmac, randomUUID, randomBytes } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AgentType, AgentRecommendation, AgentTask } from "@/types/agent";
+import { readSecretEnv, safeEqual } from "@/lib/secrets";
+
+export { readSecretEnv };
 
 // No hard-coded fallbacks: when a secret is missing, token signing/validation
 // and webhook verification fail closed (nothing is accepted).
 const HMAC_KEY: string | null = process.env.SUPABASE_SERVICE_ROLE_KEY || null;
 const TOKEN_TTL_HOURS = 24;
 
-/**
- * Read a shared secret from env, trimmed of surrounding whitespace/newlines
- * (values pasted via `pbcopy` etc. often carry a trailing "\n").
- * Empty after trim = not configured = null (callers fail closed).
- */
-export function readSecretEnv(name: string): string | null {
-  const v = (process.env[name] ?? "").trim();
-  return v.length > 0 ? v : null;
-}
-
 const WEBHOOK_SECRET: string | null = readSecretEnv("AGENT_WEBHOOK_SECRET");
-
-/** Constant-time string comparison (false on length mismatch). */
-function safeEqual(a: string, b: string): boolean {
-  const ab = Buffer.from(a);
-  const bb = Buffer.from(b);
-  if (ab.length !== bb.length) return false;
-  return timingSafeEqual(ab, bb);
-}
 
 // ── Token Management ──
 

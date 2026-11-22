@@ -19,6 +19,7 @@ import { sendApprovedFollowUpEmail, abandonFollowUp } from "@/lib/agents/follow-
 import { validateOrigin } from "@/lib/csrf";
 import { pingIndexNow } from "@/lib/seo/indexnow";
 import { applyEditRequestChanges } from "@/lib/edit-requests";
+import { parseAgentActionRequest } from "@/lib/agents/action-request";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -157,26 +158,9 @@ export async function POST(request: Request) {
   const originError = validateOrigin(request);
   if (originError) return originError;
 
-  // Support both FormData (from email confirmation page) and JSON (from dashboard)
-  let token: string | null = null;
-  let decision: string | null = null;
-  let centerId: string | null = null;
-  let note = "";
-
-  const contentType = request.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    const json = await request.json();
-    token = json.task_id || json.token;
-    decision = json.decision === "approve" ? "approved" : json.decision === "reject" ? "rejected" : json.decision;
-    centerId = json.center_id || null;
-    note = json.note || json.reason || "";
-  } else {
-    const formData = await request.formData();
-    token = formData.get("token") as string;
-    decision = formData.get("decision") as string;
-    centerId = (formData.get("center_id") as string) || null;
-    note = (formData.get("note") as string) || "";
-  }
+  // Body: JSON from the dashboard (postAgentAction) or a form POST from the
+  // email confirmation page — contract in @/lib/agents/action-request.
+  const { token, decision, centerId, note, isJson } = await parseAgentActionRequest(request);
 
   if (!token || !decision || !["approved", "rejected", "needs_info"].includes(decision)) {
     return brandedPage("Invalid Request", "Missing or invalid parameters.", 400);
@@ -189,7 +173,6 @@ export async function POST(request: Request) {
   //    unexpired short code or HMAC token — never a raw task UUID.
   //    A logged-in admin using the short code from the dashboard is also
   //    exempt from the 24h expiry.
-  const isJson = contentType.includes("application/json");
   const isUUID = UUID_RE.test(token);
   const isAdmin = await isAdminSession();
 

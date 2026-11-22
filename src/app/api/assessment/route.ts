@@ -5,7 +5,8 @@ import { rankCenters } from "@/lib/matching/scoring";
 import { generateExplanations } from "@/lib/matching/explain";
 import { assessmentSchema } from "@/lib/validators";
 import type { Center } from "@/types/center";
-import { randomUUID, createHmac } from "crypto";
+import { randomUUID } from "crypto";
+import { signAssessmentSession, verifyAssessmentSession } from "@/lib/assessment-session";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { validateOrigin } from "@/lib/csrf";
 import { sendAssessmentConfirmation, sendAssessmentAdminNotification } from "@/lib/email/send";
@@ -96,20 +97,15 @@ export async function POST(request: Request) {
 
     // Verify existing session signature
     if (sessionId) {
-      const [id, sig] = sessionId.split(".");
-      const expectedSig = createHmac("sha256", hmacKey).update(id).digest("hex").slice(0, 16);
-      if (sig !== expectedSig) {
-        sessionId = undefined; // Invalid signature, generate new
-      } else {
-        sessionId = id; // Strip signature for DB storage
-      }
+      // Valid signature → bare id for DB storage; invalid → generate a new one
+      sessionId = verifyAssessmentSession(sessionId, hmacKey) ?? undefined;
     }
 
     if (!sessionId) {
       sessionId = randomUUID();
     }
 
-    const signedSession = `${sessionId}.${createHmac("sha256", hmacKey).update(sessionId).digest("hex").slice(0, 16)}`;
+    const signedSession = signAssessmentSession(sessionId, hmacKey);
 
     // Build match scores
     const matchScores: Record<string, number> = {};

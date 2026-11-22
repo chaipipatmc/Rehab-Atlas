@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import { cookies } from "next/headers";
-import { createHmac } from "crypto";
+import { verifyAssessmentSession } from "@/lib/assessment-session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InquiryForm, type InquiryPrefill } from "@/components/leads/inquiry-form";
@@ -70,9 +70,8 @@ async function loadAssessmentPrefill(
   const signedSession = cookieStore.get("assessment_session")?.value;
   if (!signedSession) return undefined;
 
-  const [sid, sig] = signedSession.split(".");
-  const expectedSig = createHmac("sha256", hmacKey).update(sid).digest("hex").slice(0, 16);
-  if (sig !== expectedSig) return undefined;
+  const sid = verifyAssessmentSession(signedSession, hmacKey);
+  if (sid === null) return undefined;
 
   const admin = createAdminClient();
   const { data: assessment } = await admin
