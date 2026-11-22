@@ -5,8 +5,9 @@
  */
 
 import type { CenterResearch } from "@/types/agent";
+import { DEFAULT_PERSONA } from "../persona";
 
-const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+const PERSONA = DEFAULT_PERSONA;
 
 interface TemplateParams {
   centerName: string;
@@ -41,9 +42,9 @@ export function generateInitialOutreach(params: TemplateParams): {
 
   const bodyText = `${greeting}
 
-I came across ${params.centerName} while researching ${specialty} providers, and I was genuinely impressed by ${usp}.
+We came across ${params.centerName} while researching ${specialty} providers, and we were genuinely impressed by ${usp}.
 
-My name is ${persona}, and I'm reaching out from Rehab-Atlas. We're building a new platform with a simple goal — making it easier for people looking for rehabilitation to find the right center for themselves or their loved ones.
+This is ${persona} at Rehab-Atlas. We're building a new platform with a simple goal — making it easier for people looking for rehabilitation to find the right center for themselves or their loved ones.
 
 We believe that many people who need help simply don't know where to look, and great centers like yours don't always get the visibility they deserve. That's the problem we're trying to solve.
 
@@ -53,7 +54,7 @@ When someone is searching for rehab and their needs match what you offer, they c
 
 There's no cost and no strings attached. We're focused on building a trusted directory where people in need can find quality care, and your center would be a valuable addition.
 
-If you're interested in being part of this journey, just reply to this email and let me know. We'll send you an invitation to set up your account and walk you through getting your center profile set up with 100% completeness — so people searching for help can find everything they need to know about ${params.centerName}.
+If you're interested in being part of this journey, just reply to this email and let us know. We'll send you an invitation to set up your account and walk you through getting your center profile set up with 100% completeness — so people searching for help can find everything they need to know about ${params.centerName}.
 
 Best,
 ${persona}
@@ -68,7 +69,7 @@ rehab-atlas.com`;
  * Claude AI system prompt for generating personalized outreach emails.
  */
 export function getOutreachSystemPrompt(persona: string = PERSONA): string {
-  return `You are ${persona} from the Partnerships team at Rehab-Atlas, a new platform that helps people find the right rehabilitation center for themselves or their loved ones.
+  return `You write on behalf of ${persona} (the Partnerships team at Rehab-Atlas); write in first person plural ('we'), sign as ${persona}. Rehab-Atlas is a new platform that helps people find the right rehabilitation center for themselves or their loved ones.
 
 WHAT REHAB-ATLAS IS:
 - A new platform focused on making rehabilitation accessible and discoverable
@@ -77,6 +78,7 @@ WHAT REHAB-ATLAS IS:
 - Centers can also publish educational blog articles on our platform
 - Each article includes a backlink to the center's website + author credit (SEO benefit)
 - We are in early stages, actively building our network of partner centers
+- Positioning: Rehab-Atlas is built for families across Asia-Pacific, Europe and Canada looking for treatment abroad
 
 CRITICAL RULES:
 1. DO NOT mention any commission, fees, or payment structure. There is NO commission discussion in this email. We are focused on onboarding centers first.
@@ -86,6 +88,7 @@ CRITICAL RULES:
 5. Mention the blog/article opportunity naturally — it's good for their SEO (backlinks + author credit).
 6. Mention the inquiry benefit: when someone searches for rehab and their conditions match the center's services, they can send an inquiry directly to the center through our platform. This brings potential clients to them.
 7. INCLUDE A CLICK-DRIVER LINK to https://rehab-atlas.com/rehab-in/[country-slug] when a country slug is provided. Frame it naturally — e.g. "you can see how centers in [Country] currently appear on our platform here: [link]" or "here's what the [Country] hub looks like today: [link]". Do NOT make it the primary call-to-action (that's still the reply). Place it as a soft side-mention in the second-to-last paragraph. If no country slug is provided, omit the link entirely — never invent a URL.
+8. When describing who we serve, say Rehab-Atlas is built for families across Asia-Pacific, Europe and Canada looking for treatment abroad. NEVER overstate traction or volume — no claims like "we work with many families", "thousands of users", "a large network" or any number of families, referrals or partners.
 
 You write emails that sound natural and human — like a real person typing at their desk. Never use:
 - Corporate jargon ("leverage", "synergize", "maximize", "optimize", "empower")

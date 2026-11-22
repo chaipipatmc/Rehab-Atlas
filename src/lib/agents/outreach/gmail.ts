@@ -8,9 +8,32 @@
  * 3. Run scripts/gmail-auth.ts to obtain refresh token
  */
 
+import { OUTREACH_EMAIL, resolveFromAddress } from "./persona";
+
 const GMAIL_API = "https://www.googleapis.com/gmail/v1/users/me";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const OUTREACH_EMAIL = (process.env.GMAIL_OUTREACH_EMAIL || "info@rehab-atlas.com").trim();
+
+/**
+ * Pull only the HTTP status and Google's error code out of a failed Google
+ * API response. Never returns the raw body, so tokens or request details
+ * can't end up in logs.
+ */
+async function googleErrorSummary(response: Response): Promise<string> {
+  let code = "unknown";
+  try {
+    const data = (await response.json()) as {
+      error?: string | { status?: string; code?: number; errors?: Array<{ reason?: string }> };
+    };
+    if (typeof data?.error === "string") {
+      code = data.error; // OAuth token endpoint, e.g. "invalid_grant"
+    } else if (data?.error) {
+      code = data.error.status || data.error.errors?.[0]?.reason || String(data.error.code ?? "unknown");
+    }
+  } catch {
+    // body not JSON — keep "unknown"
+  }
+  return `HTTP ${response.status} ${code.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 64)}`;
+}
 
 // Cache access token in memory (valid ~1 hour)
 let accessTokenCache: { token: string; expiresAt: number } | null = null;
@@ -49,8 +72,7 @@ async function getAccessToken(): Promise<string | null> {
   });
 
   if (!response.ok) {
-    const err = await response.text();
-    console.error("Gmail token refresh failed:", response.status, err);
+    console.error("Gmail token refresh failed:", await googleErrorSummary(response));
     return null;
   }
 
@@ -146,7 +168,7 @@ export async function sendEmail(params: {
 
   const raw = buildRawEmail({
     to: params.to,
-    from: OUTREACH_EMAIL,
+    from: await resolveFromAddress(),
     subject: params.subject,
     bodyText: params.bodyText,
     bodyHtml: params.bodyHtml,
@@ -166,9 +188,9 @@ export async function sendEmail(params: {
   });
 
   if (!response.ok) {
-    const err = await response.text();
-    console.error("Gmail send failed:", response.status, err);
-    throw new Error(`Gmail send failed: ${response.status} ${err}`);
+    const summary = await googleErrorSummary(response);
+    console.error("Gmail send failed:", summary);
+    throw new Error(`Gmail send failed: ${summary}`);
   }
 
   const data = await response.json();
@@ -287,12 +309,16 @@ export async function getDailySendCount(): Promise<number | null> {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.error("Gmail daily send count failed:", await googleErrorSummary(response));
+      return null;
+    }
     const data = await response.json();
     const listed = Array.isArray(data?.messages) ? data.messages.length : 0;
     const estimate = typeof data?.resultSizeEstimate === "number" ? data.resultSizeEstimate : 0;
     return Math.max(listed, estimate);
-  } catch {
+  } catch (err) {
+    console.error("Gmail daily send count failed:", err instanceof Error ? err.name : "unknown error");
     return null;
   }
 }

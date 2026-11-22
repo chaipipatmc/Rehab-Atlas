@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logClaudeUsage } from "@/lib/api-usage";
+import { resolvePersona } from "@/lib/agents/outreach/persona";
 
 export const maxDuration = 60;
 
@@ -47,13 +48,14 @@ export async function POST(request: Request) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const isEmail = !!checklist.to_email;
+    const persona = isEmail ? await resolvePersona() : "";
     const model = "claude-sonnet-5";
 
     const response = await anthropic.messages.create({
       model,
       max_tokens: 1500,
       system: isEmail
-        ? `You rewrite outreach emails for Rehab-Atlas based on admin feedback. Keep the same general structure and tone (warm, professional, human-sounding). Apply the feedback precisely. Return JSON: { "subject": "...", "body_text": "..." }. Use the signature: Sarah\\nPartnerships, Rehab-Atlas\\ninfo@rehab-atlas.com\\nrehab-atlas.com`
+        ? `You rewrite outreach emails for Rehab-Atlas based on admin feedback. Keep the same general structure and tone (warm, professional, human-sounding). Apply the feedback precisely. Write on behalf of ${persona} (the Partnerships team at Rehab-Atlas) in first person plural ('we'), not as an individual. Return JSON: { "subject": "...", "body_text": "..." }. Use the signature: ${persona}\\nPartnerships, Rehab-Atlas\\ninfo@rehab-atlas.com\\nrehab-atlas.com`
         : `You rewrite content for Rehab-Atlas based on admin feedback. Apply the feedback precisely and return the improved version. Return JSON with the same fields as the original.`,
       messages: [{
         role: "user",

@@ -7,7 +7,9 @@
  * Value = free listing + admin-vetted inquiries + author backlinks.
  */
 
-const PERSONA = process.env.OUTREACH_PERSONA_NAME || "Sarah";
+import { DEFAULT_PERSONA } from "../persona";
+
+const PERSONA = DEFAULT_PERSONA;
 
 interface FollowUpParams {
   centerName: string;
@@ -28,11 +30,11 @@ export function generateFollowUp1(params: FollowUpParams): { subject: string; bo
     subject: `Re: Partnership opportunity for ${params.centerName}`,
     bodyText: `${greeting}
 
-Just wanted to make sure my previous message didn't get buried — I know inboxes can be overwhelming.
+Just wanted to make sure our previous message didn't get buried — we know inboxes can be overwhelming.
 
-I reached out a few days ago about listing ${params.centerName} on Rehab-Atlas. We're a free directory that helps people seeking treatment find centers like yours, and I think there's a real opportunity here.
+We reached out a few days ago about listing ${params.centerName} on Rehab-Atlas. We're a free directory that helps people seeking treatment find centers like yours, and we think there's a real opportunity here.
 
-If you're interested, just reply to this email and I'll share more details about how it works. No pressure at all.
+If you're interested, just reply to this email and we'll share more details about how it works. No pressure at all.
 
 Best,
 ${persona}
@@ -55,11 +57,11 @@ export function generateFollowUp2(params: FollowUpParams): { subject: string; bo
     subject: `Re: Partnership opportunity for ${params.centerName}`,
     bodyText: `${greeting}
 
-Following up one more time — I wanted to share a quick update that might be relevant.
+Following up one more time — we wanted to share a quick update that might be relevant.
 
 We're steadily adding centers to the platform. A listing is free, inquiries are reviewed by our team before they're passed on so you only hear from people whose needs fit what you offer, and partners can publish educational articles that credit them as the author with a backlink to their own website.
 
-If the timing works, just drop me a reply and I'll fill you in on the details.
+If the timing works, just drop us a reply and we'll fill you in on the details.
 
 Best,
 ${persona}
@@ -82,9 +84,9 @@ export function generateFollowUp3(params: FollowUpParams): { subject: string; bo
     subject: `Re: Partnership opportunity for ${params.centerName}`,
     bodyText: `${greeting}
 
-I realize this might not be the right time, and I completely understand. Running a center is demanding work, and partnerships aren't always top of mind.
+We realize this might not be the right time, and we completely understand. Running a center is demanding work, and partnerships aren't always top of mind.
 
-I'll leave this here — if you're ever curious about how Rehab-Atlas could work for ${params.centerName}, feel free to reach out anytime. The door is always open.
+We'll leave this here — if you're ever curious about how Rehab-Atlas could work for ${params.centerName}, feel free to reach out anytime. The door is always open.
 
 Wishing you and your team all the best.
 
@@ -105,7 +107,7 @@ export function getFollowUpSystemPrompt(attemptNumber: number, persona: string =
       ? "Value-add — share something useful or mention social proof. A bit longer but still concise."
       : "Final follow-up — graceful, no pressure. Let them know the door is open. This is the last email.";
 
-  return `You are ${persona} from Rehab-Atlas Partnerships. Write follow-up #${attemptNumber} for a center that hasn't replied to the initial outreach.
+  return `You write on behalf of ${persona} (the Partnerships team at Rehab-Atlas); write in first person plural ('we'), sign as ${persona}. Write follow-up #${attemptNumber} for a center that hasn't replied to the initial outreach.
 
 Tone: ${toneGuide}
 

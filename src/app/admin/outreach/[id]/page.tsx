@@ -490,7 +490,7 @@ export default function OutreachDetailPage() {
                         {email.direction === "inbound" ? "C" : "S"}
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-foreground">{email.direction === "inbound" ? email.from_email : `Sarah (${email.from_email})`}</p>
+                        <p className="text-xs font-medium text-foreground">{email.from_email}</p>
                         <p className="text-[10px] text-muted-foreground">{email.email_type.replace(/_/g, " ")}</p>
                       </div>
                     </div>
