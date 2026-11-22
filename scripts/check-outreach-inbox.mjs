@@ -24,7 +24,7 @@ const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
 });
 const { access_token } = await tokenRes.json();
 if (!access_token) {
-  console.error("Token refresh failed:", await tokenRes.text());
+  console.error("Token refresh failed: HTTP", tokenRes.status);
   process.exit(1);
 }
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Eye, FileText, BookOpen, Clock, CheckCircle, Layers } from "lucide-react";
+import { Plus, Pencil, Eye, FileText, Clock, CheckCircle, Layers } from "lucide-react";
 
 export default async function AdminContentPage() {
   const supabase = await createClient();

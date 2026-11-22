@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { postAgentAction } from "@/lib/agents/action-client";
+import type { AgentActionDecision } from "@/lib/agents/action-request";
 import {
   Building2, FileText, UserSearch, Clock,
   CheckCircle, XCircle, AlertCircle, Loader2,
@@ -493,16 +495,12 @@ export default function AdminAgentsPage() {
     setToggling(null);
   }
 
-  async function handleAction(taskId: string, token: string, decision: string) {
+  async function handleAction(taskId: string, token: string, decision: AgentActionDecision) {
     setActioning(taskId);
     try {
       // JSON body → the action route answers with JSON errors (e.g. "Not sent: …")
       // instead of an HTML page, so the real reason can be shown below.
-      const res = await fetch("/api/agents/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, decision }),
-      });
+      const res = await postAgentAction({ token, decision });
       if (res.ok) {
         toast.success(`Task ${decision}`);
         await loadTasks();
@@ -1046,7 +1044,7 @@ function TaskCard({
   onEditBody: (v: string) => void;
   onEditSave: () => void;
   actioning: boolean;
-  onAction: (decision: string) => void;
+  onAction: (decision: AgentActionDecision) => void;
   outreachFrom: string;
 }) {
   const [task, setTask] = useState(initialTask);

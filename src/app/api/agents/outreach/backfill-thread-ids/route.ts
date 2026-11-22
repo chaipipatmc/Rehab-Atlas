@@ -110,7 +110,7 @@ export async function POST(request: Request) {
   const candidates = (pipelines || []) as PipelineRow[];
 
   const results: ResultRow[] = [];
-  let summary = {
+  const summary = {
     examined: candidates.length,
     foundViaMessageId: 0,
     foundViaSearch: 0,

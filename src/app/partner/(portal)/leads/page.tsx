@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -35,33 +35,44 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   not_admitted: { label: "Not Admitted", color: "bg-gray-100 text-gray-700", icon: XCircle },
 };
 
+/** Leads forwarded to the signed-in partner's center; null when the profile has no center. */
+async function fetchForwardedLeads(): Promise<ForwardedLead[] | null> {
+  const supabase = createClient();
+  const { data: profile } = await supabase.auth.getUser().then(({ data: { user } }) =>
+    supabase.from("profiles").select("center_id").eq("id", user!.id).single()
+  );
+
+  if (!profile?.center_id) return null;
+
+  const { data } = await supabase
+    .from("lead_forwards")
+    .select("id, lead_id, partner_status, partner_status_updated_at, treatment_fee, created_at, leads(name, email, phone, country, concern, urgency, who_for, age_range, message)")
+    .eq("center_id", profile.center_id)
+    .order("created_at", { ascending: false });
+
+  return (data || []) as unknown as ForwardedLead[];
+}
+
 export default function PartnerLeadsPage() {
   const [leads, setLeads] = useState<ForwardedLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadLeads();
-  }, []);
-
   async function loadLeads() {
-    const supabase = createClient();
-    const { data: profile } = await supabase.auth.getUser().then(({ data: { user } }) =>
-      supabase.from("profiles").select("center_id").eq("id", user!.id).single()
-    );
-
-    if (!profile?.center_id) return;
-
-    const { data } = await supabase
-      .from("lead_forwards")
-      .select("id, lead_id, partner_status, partner_status_updated_at, treatment_fee, created_at, leads(name, email, phone, country, concern, urgency, who_for, age_range, message)")
-      .eq("center_id", profile.center_id)
-      .order("created_at", { ascending: false });
-
-    setLeads((data || []) as unknown as ForwardedLead[]);
+    const rows = await fetchForwardedLeads();
+    if (!rows) return;
+    setLeads(rows);
     setLoading(false);
   }
+
+  useEffect(() => {
+    fetchForwardedLeads().then((rows) => {
+      if (!rows) return;
+      setLeads(rows);
+      setLoading(false);
+    });
+  }, []);
 
   async function updateLeadStatus(forwardId: string, status: "admitted" | "not_admitted") {
     setUpdating(forwardId);

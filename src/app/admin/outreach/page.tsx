@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Badge } from "@/components/ui/badge";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { postAgentAction } from "@/lib/agents/action-client";
 import {
   Send, Users, MessageSquare, FileSignature, CheckCircle2, Target,
   Search, Filter, RefreshCw, Plus, ArrowRight, TrendingUp,
@@ -144,6 +145,8 @@ export default function OutreachDashboard() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [draftTasks, setDraftTasks] = useState<Record<string, AgentTask>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  // "Days in stage" is measured from when the pipeline rows were loaded.
+  const [loadedAt, setLoadedAt] = useState(() => Date.now());
 
   const loadData = useCallback(async () => {
     const params = new URLSearchParams();
@@ -159,6 +162,7 @@ export default function OutreachDashboard() {
       const json = await res.json();
       pipelineData = json.data || [];
       setPipelines(pipelineData);
+      setLoadedAt(Date.now());
       setTotal(json.total || 0);
     }
 
@@ -261,17 +265,13 @@ export default function OutreachDashboard() {
   }
 
   function daysInStage(updatedAt: string): number {
-    return Math.floor((Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+    return Math.floor((loadedAt - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24));
   }
 
   async function handleApproveEmail(taskId: string) {
     setApprovingId(taskId);
     try {
-      const res = await fetch("/api/agents/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_id: taskId, decision: "approve" }),
-      });
+      const res = await postAgentAction({ task_id: taskId, decision: "approve" });
       if (res.ok) {
         toast.success("Email approved and sending...");
         setExpandedRow(null);
@@ -289,11 +289,7 @@ export default function OutreachDashboard() {
   async function handleRejectEmail(taskId: string) {
     const reason = prompt("Reason for rejection (optional):");
     try {
-      const res = await fetch("/api/agents/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_id: taskId, decision: "reject", reason }),
-      });
+      const res = await postAgentAction({ task_id: taskId, decision: "reject", reason });
       if (res.ok) {
         toast.success("Email rejected");
         setExpandedRow(null);

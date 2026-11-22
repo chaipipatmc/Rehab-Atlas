@@ -10,10 +10,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
-  Send, Upload, X, Plus, Trash2, GripVertical,
-  Building2, MapPin, Phone, Globe, DollarSign,
-  Stethoscope, Users, BedDouble, Heart, ExternalLink,
-  HelpCircle, Check, Loader2,
+  Send,
+  Upload,
+  X,
+  Plus,
+  Trash2,
+  GripVertical,
+  Building2,
+  MapPin,
+  Phone,
+  DollarSign,
+  Stethoscope,
+  BedDouble,
+  Heart,
+  ExternalLink,
+  HelpCircle,
+  Check,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { ChipSelector } from "@/components/shared/chip-selector";

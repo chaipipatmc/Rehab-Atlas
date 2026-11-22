@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { verifyWebhookSecret, verifyCronSecret } from "@/lib/agents/base";
-import { processInboundReplies, processThreadReply } from "@/lib/agents/outreach/response-handler";
+import { processInboundReplies } from "@/lib/agents/outreach/response-handler";
 
 // POST: Handle Gmail push notification or trigger manual scan
 export async function POST(request: Request) {

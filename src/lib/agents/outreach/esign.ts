@@ -6,7 +6,10 @@
  * PandaDoc docs: https://developers.pandadoc.com/reference
  */
 
+import { createHmac } from "crypto";
 import type { AgreementDetails } from "@/types/agent";
+import { summarizeHttpError } from "@/lib/http-error";
+import { readSecretEnv, safeEqual } from "@/lib/secrets";
 
 const API_BASE = "https://api.pandadoc.com/public/v1";
 const OWNER_EMAIL = process.env.ADMIN_EMAIL || "chaipipat.mc@rehab-atlas.com";
@@ -101,8 +104,7 @@ export async function createAgreement(details: AgreementDetails): Promise<Create
   });
 
   if (!response.ok) {
-    const err = await response.text();
-    console.error("PandaDoc create document failed:", err);
+    console.error("PandaDoc create document failed:", await summarizeHttpError(response));
     return null;
   }
 
@@ -129,8 +131,7 @@ export async function sendForSignature(documentId: string, message?: string): Pr
   });
 
   if (!response.ok) {
-    const err = await response.text();
-    console.error("PandaDoc send for signature failed:", err);
+    console.error("PandaDoc send for signature failed:", await summarizeHttpError(response));
     return false;
   }
 
@@ -194,12 +195,11 @@ export async function getDocumentLink(documentId: string, recipientEmail: string
  * Verify PandaDoc webhook signature.
  */
 export function verifyPandaDocWebhook(payload: string, signature: string): boolean {
-  const webhookKey = process.env.PANDADOC_WEBHOOK_KEY;
+  const webhookKey = readSecretEnv("PANDADOC_WEBHOOK_KEY");
   if (!webhookKey) return false;
 
-  const { createHmac } = require("crypto");
   const expected = createHmac("sha256", webhookKey).update(payload).digest("hex");
-  return signature === expected;
+  return safeEqual((signature ?? "").trim(), expected);
 }
 
 /**

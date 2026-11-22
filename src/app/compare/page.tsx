@@ -4,7 +4,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { canOptimizeImage } from "@/lib/images";
-import { Badge } from "@/components/ui/badge";
+
 import {
   MapPin,
   Star,
@@ -12,8 +12,6 @@ import {
   ArrowRight,
   Check,
   X,
-  Languages,
-  Clock,
   ArrowLeft,
 } from "lucide-react";
 import type { Metadata } from "next";

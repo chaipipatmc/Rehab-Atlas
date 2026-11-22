@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -182,9 +183,9 @@ export function ContactForm() {
       {/* Privacy note */}
       <p className="text-[11px] text-muted-foreground leading-relaxed">
         By submitting this form, you agree to our{" "}
-        <a href="/pages/privacy-policy" className="text-primary hover:underline">
+        <Link href="/pages/privacy-policy" className="text-primary hover:underline">
           Privacy Policy
-        </a>
+        </Link>
         . All information is held in strict confidence and will never be shared
         without your explicit consent.
       </p>

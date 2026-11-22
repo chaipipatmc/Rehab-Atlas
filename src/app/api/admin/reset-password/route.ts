@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResendClient } from "@/lib/email/resend";
 import { randomBytes } from "crypto";
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder_missing_key");
+const resend = createResendClient();
 const FROM_EMAIL = "Rehab-Atlas <onboarding@resend.dev>";
 
 export async function POST(req: Request) {

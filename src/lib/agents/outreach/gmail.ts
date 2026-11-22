@@ -9,31 +9,10 @@
  */
 
 import { OUTREACH_EMAIL, resolveFromAddress } from "./persona";
+import { summarizeHttpError } from "@/lib/http-error";
 
 const GMAIL_API = "https://www.googleapis.com/gmail/v1/users/me";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-
-/**
- * Pull only the HTTP status and Google's error code out of a failed Google
- * API response. Never returns the raw body, so tokens or request details
- * can't end up in logs.
- */
-async function googleErrorSummary(response: Response): Promise<string> {
-  let code = "unknown";
-  try {
-    const data = (await response.json()) as {
-      error?: string | { status?: string; code?: number; errors?: Array<{ reason?: string }> };
-    };
-    if (typeof data?.error === "string") {
-      code = data.error; // OAuth token endpoint, e.g. "invalid_grant"
-    } else if (data?.error) {
-      code = data.error.status || data.error.errors?.[0]?.reason || String(data.error.code ?? "unknown");
-    }
-  } catch {
-    // body not JSON — keep "unknown"
-  }
-  return `HTTP ${response.status} ${code.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 64)}`;
-}
 
 // Cache access token in memory (valid ~1 hour)
 let accessTokenCache: { token: string; expiresAt: number } | null = null;
@@ -72,7 +51,7 @@ async function getAccessToken(): Promise<string | null> {
   });
 
   if (!response.ok) {
-    console.error("Gmail token refresh failed:", await googleErrorSummary(response));
+    console.error("Gmail token refresh failed:", await summarizeHttpError(response));
     return null;
   }
 
@@ -188,7 +167,7 @@ export async function sendEmail(params: {
   });
 
   if (!response.ok) {
-    const summary = await googleErrorSummary(response);
+    const summary = await summarizeHttpError(response);
     console.error("Gmail send failed:", summary);
     throw new Error(`Gmail send failed: ${summary}`);
   }
@@ -310,7 +289,7 @@ export async function getDailySendCount(): Promise<number | null> {
     );
 
     if (!response.ok) {
-      console.error("Gmail daily send count failed:", await googleErrorSummary(response));
+      console.error("Gmail daily send count failed:", await summarizeHttpError(response));
       return null;
     }
     const data = await response.json();

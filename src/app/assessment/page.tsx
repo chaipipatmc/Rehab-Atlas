@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  WHO_FOR_OPTIONS,
   AGE_RANGE_OPTIONS,
   TREATMENT_FOCUS_OPTIONS,
   SUBSTANCE_OPTIONS,

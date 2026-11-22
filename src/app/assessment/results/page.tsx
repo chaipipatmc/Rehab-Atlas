@@ -1,12 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cookies } from "next/headers";
-import { createHmac } from "crypto";
+import { verifyAssessmentSession } from "@/lib/assessment-session";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { canOptimizeImage } from "@/lib/images";
-import { Badge } from "@/components/ui/badge";
+
 import { MapPin, Star, ArrowRight, Search, AlertCircle, Brain, DollarSign, Building } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -38,9 +38,8 @@ export default async function ResultsPage({ searchParams }: PageProps) {
   const signedSession = cookieStore.get("assessment_session")?.value;
   const hmacKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!signedSession || !hmacKey) notFound();
-  const [sid, sig] = signedSession.split(".");
-  const expectedSig = createHmac("sha256", hmacKey).update(sid).digest("hex").slice(0, 16);
-  if (sig !== expectedSig || sid !== assessment.session_id) notFound();
+  const sid = verifyAssessmentSession(signedSession, hmacKey);
+  if (sid === null || sid !== assessment.session_id) notFound();
 
   const matchedIds = assessment.matched_center_ids || [];
   const explanations = (assessment.explanations || []) as Array<{

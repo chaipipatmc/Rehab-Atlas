@@ -1,11 +1,11 @@
-import { Resend } from "resend";
+import { createResendClient } from "@/lib/email/resend";
 import { getAdminEmail, isNotificationEnabled } from "@/lib/settings";
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder_missing_key");
+const resend = createResendClient();
 
 // Admin recipient + notification toggles come from /admin/settings
 // (site_settings platform_* keys) with env fallback — see src/lib/settings.ts.
