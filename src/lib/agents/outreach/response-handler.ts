@@ -6,29 +6,44 @@
  * - "unsubscribe" / opt-out reply → pipeline marked opted out, no further mail.
  * - Questions → drafts a reply for admin approval.
  * - Decline → admin task only (no automatic win-back email).
- * - Agreement → terms_agreed + admin task to invite the contact manually
- *   (no auto-created accounts, no passwords by email).
+ * - Explicit acceptance of terms (flag + verbatim quote) → terms_agreed, and
+ *   an admin task to invite the contact manually only if the center has no
+ *   partner account yet (no auto-created accounts, no passwords by email).
+ *   Wanting to join / profile changes are NOT acceptance (see reply-outcome.ts).
  */
 
-import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAgentTask, logAgentAction } from "@/lib/agents/base";
 import { analyzeWithClaude } from "@/lib/agents/claude";
 import { getLatestInboundReply } from "./gmail";
 import { isOptOutReply, OPTED_OUT_MARKER } from "./policy";
+import { resolvePersona } from "./persona";
+import {
+  decideReplyOutcome,
+  isExplicitTermsAcceptance,
+  REPLY_WATCH_STAGES,
+  responseAnalysisSchema,
+  type ResponseAnalysis,
+} from "./reply-outcome";
 import type { OutreachPipeline, ResponseSentiment } from "@/types/agent";
 
-const responseAnalysisSchema = z.object({
-  sentiment: z.enum(["positive", "neutral", "negative", "question"]),
-  summary: z.string(),
-  key_points: z.array(z.string()),
-  agreed_to_partner: z.boolean(),
-  has_questions: z.boolean(),
-  counter_offer_rate: z.number().nullable(),
-  suggested_reply: z.string().nullable(),
-});
-
-type ResponseAnalysis = z.infer<typeof responseAnalysisSchema>;
+/**
+ * Does any partner account already manage this center?
+ * Errors count as "yes" (fail closed: no duplicate invite task).
+ */
+async function centerHasPartnerAccount(centerId: string): Promise<boolean> {
+  const admin = createAdminClient();
+  const { count, error } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "partner")
+    .or(`center_id.eq.${centerId},managed_center_ids.cs.{${centerId}}`);
+  if (error) {
+    console.error("Partner account lookup failed:", error.message);
+    return true;
+  }
+  return (count ?? 0) > 0;
+}
 
 /**
  * Process all pipeline entries that have new replies.
@@ -47,7 +62,7 @@ export async function processInboundReplies(): Promise<{
   const { data: pipelines } = await admin
     .from("outreach_pipeline")
     .select("*")
-    .in("stage", ["outreach_sent", "followed_up", "responded", "negotiating"])
+    .in("stage", [...REPLY_WATCH_STAGES])
     .not("outreach_thread_id", "is", null)
     .limit(100);
 
@@ -156,40 +171,42 @@ async function processReply(
   await expireOpenTasks(pipeline.id, ["outreach_followup"]);
 
   // Analyze with Claude
+  const persona = await resolvePersona();
   const analysis = await analyzeWithClaude<ResponseAnalysis>({
     systemPrompt: `You analyze inbound email replies from rehabilitation centers being invited to join Rehab-Atlas, a free platform that helps people find rehab centers.
 Determine the sender's intent and sentiment. We invited them to join our platform for free — create a profile, share their programs, and optionally publish educational blog articles.
 There is NO commission, fee or pricing discussion — never mention commission, fees, pricing or referral costs in a suggested reply. This is purely about onboarding their center profile.
-Never offer phone calls. Never include passwords or login credentials in a suggested reply.
-Return JSON with: sentiment, summary, key_points, agreed_to_partner, has_questions, counter_offer_rate (always null), suggested_reply (null if no reply needed).`,
+Never offer phone calls. Never include passwords or login credentials in a suggested reply. Sign any suggested reply as "${persona}".
+Field rules:
+- wants_to_join: true if they show interest in being listed or joining, or ask to create/update/rename their profile or add another center.
+- explicitly_accepted_terms: true ONLY if the reply explicitly says they accept or agree to our terms, the agreement, or the partnership terms (for example "we accept the terms" or "we agree to the agreement"). Interest in joining, profile updates, name changes, adding a center, thanks or questions are NOT acceptance. If in doubt, false.
+- terms_acceptance_quote: when explicitly_accepted_terms is true, copy the exact sentence from their reply that accepts the terms, word for word; otherwise null.
+Return JSON with exactly these keys: sentiment, summary, key_points, wants_to_join, explicitly_accepted_terms, terms_acceptance_quote, has_questions, counter_offer_rate (always null), suggested_reply (null if no reply needed).`,
     userPrompt: `Center: ${center?.name || "Unknown"}
 Their reply:
 ${reply.body}
 
 Previous context: We invited them to join Rehab-Atlas for free — set up their center profile and publish blog articles for SEO backlinks.`,
     responseSchema: responseAnalysisSchema,
-    maxTokens: 600,
+    maxTokens: 700,
     agentType: "outreach_response",
     operation: "sentiment_analysis",
   });
 
-  // Fallback analysis
   const sentiment: ResponseSentiment = analysis?.sentiment || "neutral";
   const summary = analysis?.summary || `Reply received from ${center?.name || "center"}`;
-  const declined = sentiment === "negative" && !analysis?.has_questions && !analysis?.agreed_to_partner;
 
-  // Determine next stage
-  let nextStage: string;
-  if (analysis?.agreed_to_partner) {
-    nextStage = "terms_agreed";
-  } else if (declined) {
-    // No automatic win-back. Admin decides whether to reply at all.
-    nextStage = "declined";
-  } else if (analysis?.has_questions) {
-    nextStage = "negotiating";
-  } else {
-    nextStage = "responded";
-  }
+  // Only look up partner accounts when the reply really accepts terms.
+  const hasPartnerAccount = isExplicitTermsAcceptance(analysis, reply.body)
+    ? await centerHasPartnerAccount(pipeline.center_id)
+    : false;
+
+  const outcome = decideReplyOutcome(analysis, {
+    replyBody: reply.body,
+    currentStage: pipeline.stage,
+    hasPartnerAccount,
+  });
+  const { nextStage, declined } = outcome;
 
   // Update pipeline (commission fields intentionally not written — policy)
   await admin
@@ -223,7 +240,7 @@ Previous context: We invited them to join Rehab-Atlas for free — set up their 
       ai_recommendation: "needs_info",
       confidence: analysis ? 0.8 : 0.5,
     });
-  } else if (analysis?.has_questions || nextStage === "negotiating" || (analysis?.agreed_to_partner && analysis?.suggested_reply)) {
+  } else if (outcome.draftReply) {
     // Drafted reply for admin approval (sent only via the approval endpoint)
     await createAgentTask({
       agent_type: "outreach_response",
@@ -244,9 +261,9 @@ Previous context: We invited them to join Rehab-Atlas for free — set up their 
     });
   }
 
-  // Agreed: admin invites the contact manually. No account is created here
-  // and no password is generated or emailed.
-  if (analysis?.agreed_to_partner) {
+  // Explicit agreement and no partner account yet: admin invites the contact
+  // manually. No account is created here and no password is generated or emailed.
+  if (outcome.partnerInvite) {
     const contactEmail = (reply.from.match(/<([^>]+)>/)?.[1] || reply.from).trim().toLowerCase();
     const contactName = reply.from.match(/^([^<]+)</)?.[1]?.trim() || contactEmail.split("@")[0];
 
@@ -260,10 +277,11 @@ Previous context: We invited them to join Rehab-Atlas for free — set up their 
         contact_name: contactName,
         contact_email: contactEmail,
         summary,
+        terms_acceptance_quote: analysis?.terms_acceptance_quote,
         admin_action:
           "Verify the contact really represents this center, then invite them as a partner yourself (Supabase Auth invite link, role=partner, center_id above). Do NOT set or email a password.",
       },
-      ai_summary: `${center?.name} agreed to join. Admin to verify the contact and send a partner invite manually.`,
+      ai_summary: `${center?.name} explicitly accepted the terms. Admin to verify the contact and send a partner invite manually.`,
       ai_recommendation: "approve",
       confidence: analysis ? 0.85 : 0.5,
     });
@@ -276,8 +294,12 @@ Previous context: We invited them to join Rehab-Atlas for free — set up their 
       pipeline_id: pipeline.id,
       center_id: pipeline.center_id,
       sentiment,
+      previous_stage: pipeline.stage,
       next_stage: nextStage,
-      agreed: analysis?.agreed_to_partner || false,
+      agreed: outcome.termsAccepted,
+      wants_to_join: analysis?.wants_to_join || false,
+      partner_account_exists: outcome.termsAccepted ? hasPartnerAccount : undefined,
+      partner_invite_task: outcome.partnerInvite,
     },
   });
 }
