@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { createPublicClient } from "@/lib/supabase/server";
+import { SUPABASE_TIMEOUT_MS, throwIfUnavailable } from "@/lib/supabase/timeout";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BASE_URL } from "@/lib/site";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
@@ -25,6 +26,12 @@ import type { Center, CenterPhoto } from "@/types/center";
 import Anthropic from "@anthropic-ai/sdk";
 
 export const revalidate = 3600;
+// Supabase calls are bounded (8s), Unsplash 5s, Claude 30s (first-time
+// country content only) — cap well below the 300s default.
+export const maxDuration = 120;
+
+const UNSPLASH_TIMEOUT_MS = 5_000;
+const CLAUDE_TIMEOUT_MS = 30_000;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,7 +86,10 @@ async function fetchUnsplashImages(
     try {
       const res = await fetch(
         `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=landscape&per_page=1`,
-        { headers: { Authorization: `Client-ID ${key}` } }
+        {
+          headers: { Authorization: `Client-ID ${key}` },
+          signal: AbortSignal.timeout(UNSPLASH_TIMEOUT_MS),
+        }
       );
       if (!res.ok) continue;
       const data = await res.json();
@@ -109,8 +119,11 @@ async function resolveCountry(slug: string): Promise<string | null> {
   // The directory grid is still gated to status='published', so unreviewed
   // drafts won't appear publicly — but the hub page exists for SEO + the
   // assessment/inquiry CTA works as soon as any center is imported.
-  const admin = createAdminClient();
-  const { data } = await admin.from("centers").select("country");
+  const admin = createAdminClient({ timeoutMs: SUPABASE_TIMEOUT_MS.public });
+  const res = await admin.from("centers").select("country");
+  // Timeout must not become notFound() (cached for the revalidate window).
+  throwIfUnavailable(res, "resolve country");
+  const { data } = res;
   if (!data) return null;
 
   const unique = [
@@ -131,11 +144,15 @@ async function getOrGenerateContent(
   const admin = createAdminClient();
 
   // 1. Check DB cache
-  const { data: cached } = await supabase
+  const cachedRes = await supabase
     .from("country_descriptions")
     .select("description, highlights, images")
     .eq("country_slug", countrySlug)
     .single();
+  // Timeout must not look like a cache miss (that would call Claude and
+  // overwrite the stored copy).
+  throwIfUnavailable(cachedRes, "country content cache");
+  const { data: cached } = cachedRes;
 
   if (cached?.description) {
     try {
@@ -224,7 +241,7 @@ async function generateAIContent(
 ): Promise<{ paragraphs: CountryParagraph[]; highlights: string[] }> {
   if (process.env.ANTHROPIC_API_KEY) {
     try {
-      const client = new Anthropic();
+      const client = new Anthropic({ timeout: CLAUDE_TIMEOUT_MS, maxRetries: 1 });
       const message = await client.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 1200,
@@ -381,6 +398,7 @@ export default async function CountryRehabPage({ params }: PageProps) {
       .limit(6),
   ]);
 
+  throwIfUnavailable(centersResult, "country centers");
   const { paragraphs, highlights, images } = content;
   const centers = centersResult.data;
   const posts = postsResult.data;

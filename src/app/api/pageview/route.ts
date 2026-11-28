@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { SUPABASE_TIMEOUT_MS } from "@/lib/supabase/timeout";
+
+// Fire-and-forget tracking: rate-limit RPC + one insert, each bounded to 4s.
+// Never let a stuck backend hold this for the 300s platform default.
+export const maxDuration = 10;
 
 const BOT_REGEX = /bot|crawl|spider|slurp|facebookexternalhit|Mediapartners|Bingbot|Googlebot|YandexBot|Baiduspider|DuckDuckBot|Twitterbot|Applebot|SemrushBot|AhrefsBot/i;
 
@@ -39,7 +44,7 @@ export async function POST(request: Request) {
         ? clientReferrer
         : request.headers.get("referer")) || null;
 
-    const admin = createAdminClient();
+    const admin = createAdminClient({ timeoutMs: SUPABASE_TIMEOUT_MS.tracking });
     await admin.from("page_views").insert({
       path: path.slice(0, 500),
       referrer: referrer?.slice(0, 500) || null,

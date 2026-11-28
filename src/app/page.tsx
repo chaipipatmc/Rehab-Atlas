@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Shield, Users, Compass, ArrowRight, BookOpen, ClipboardList, Stethoscope, MailCheck, Lock } from "lucide-react";
 import { createPublicClient } from "@/lib/supabase/server";
+import { SupabaseUnavailableError } from "@/lib/supabase/timeout";
 import { FeaturedCarousel } from "@/components/centers/featured-carousel";
 import { HeroSearch } from "@/components/centers/hero-search";
 import { OrganizationJsonLd } from "@/components/shared/json-ld";
@@ -12,6 +13,9 @@ import { canOptimizeImage } from "@/lib/images";
 // articles + featured centers, both of which change at most a few times per
 // day, so 10 min freshness is plenty and saves a Supabase round-trip per visit.
 export const revalidate = 600;
+// Supabase calls are bounded (8s each); cap the render well below the 300s
+// platform default so a stuck backend fails fast and the cached page is kept.
+export const maxDuration = 60;
 
 // Minimum number of photographed centers required to show the Featured Centers
 // carousel. Below this, the section is hidden to avoid sparse/empty cards that
@@ -46,13 +50,19 @@ export default async function HomePage() {
   // distinct countries) so the homepage doesn't lean on vague badges.
   let publishedCount = 0;
   let countryCount = 0;
+  // Set when Supabase timed out; we throw after the try blocks (which swallow
+  // "not configured" errors) so ISR keeps the last good page instead of
+  // caching an empty homepage.
+  let unavailable = false;
   try {
     const supabase = createPublicClient();
-    const { data } = await supabase
+    const featuredRes = await supabase
       .from("centers")
       .select("id, name, slug, city, state_province, country, short_description, verified_profile, is_unclaimed, photos:center_photos(url, alt_text)")
       .eq("status", "published")
       .limit(20);
+    const { data } = featuredRes;
+    if (featuredRes.status === 0) unavailable = true;
     if (data) featuredCenters = (data as typeof featuredCenters).filter(c => c.photos && c.photos.length > 0);
 
     const { count: totalPublished } = await supabase
@@ -74,17 +84,19 @@ export default async function HomePage() {
   let latestArticles: Array<{ slug: string; title: string; meta_description: string | null; published_at: string; featured_image_url: string | null; word_count: number | null; tags: string[] | null }> = [];
   try {
     const supabase = createPublicClient();
-    const { data } = await supabase
+    const articlesRes = await supabase
       .from("pages")
       .select("slug, title, meta_description, published_at, featured_image_url, word_count, tags")
       .eq("page_type", "blog")
       .eq("status", "published")
       .order("published_at", { ascending: false })
       .limit(6);
-    if (data) latestArticles = data as typeof latestArticles;
+    if (articlesRes.status === 0) unavailable = true;
+    if (articlesRes.data) latestArticles = articlesRes.data as typeof latestArticles;
   } catch {
     // Supabase not configured yet
   }
+  if (unavailable) throw new SupabaseUnavailableError("home");
   return (
     <>
       <OrganizationJsonLd />

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
+import { throwIfUnavailable } from "@/lib/supabase/timeout";
 import { canOptimizeImage } from "@/lib/images";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BookOpen } from "lucide-react";
@@ -17,6 +18,8 @@ export const metadata: Metadata = {
 // `unstable_cache` so the DB round-trip is amortized across visitors even
 // though the page renders per-request.
 export const revalidate = 600;
+// Supabase calls are bounded (8s each) — fail fast instead of the 300s default.
+export const maxDuration = 60;
 
 // Page size for /blog grid. With ~160 articles, 30 per page = ~6 pages,
 // keeping each HTML response near 200 KB instead of 900+ KB and giving
@@ -49,7 +52,9 @@ const getBlogPosts = unstable_cache(
       .order("published_at", { ascending: false })
       .range(from, to);
     if (tag) query = query.contains("tags", [tag]);
-    const { data, count } = await query;
+    const res = await query;
+    throwIfUnavailable(res, "blog list");
+    const { data, count } = res;
     return { posts: (data ?? []) as BlogListPost[], total: count ?? 0 };
   },
   ["blog-posts-paged"],
@@ -59,12 +64,14 @@ const getBlogPosts = unstable_cache(
 const getAllBlogTags = unstable_cache(
   async (): Promise<Array<[string, number]>> => {
     const supabase = createPublicClient();
-    const { data } = await supabase
+    const res = await supabase
       .from("pages")
       .select("tags")
       .eq("page_type", "blog")
       .eq("status", "published")
       .not("tags", "is", null);
+    throwIfUnavailable(res, "blog tags");
+    const { data } = res;
     const counts = new Map<string, number>();
     (data ?? []).forEach((p) => {
       const tags = p.tags as string[] | null;

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { SUPABASE_TIMEOUT_MS, fetchWithTimeout } from "./timeout";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -9,6 +10,7 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: fetchWithTimeout(SUPABASE_TIMEOUT_MS.request) },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -48,6 +50,7 @@ export function createPublicClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: fetchWithTimeout(SUPABASE_TIMEOUT_MS.public) },
     }
   );
 }

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
+import { throwIfUnavailable } from "@/lib/supabase/timeout";
 import { CenterCard } from "@/components/centers/center-card";
 import { CenterFilters } from "@/components/centers/center-filters";
 import { MobileFilters } from "@/components/centers/mobile-filters";
@@ -15,6 +16,8 @@ import type { Metadata } from "next";
 
 
 export const revalidate = 60;
+// Supabase calls are bounded (8s each) — fail fast instead of the 300s default.
+export const maxDuration = 60;
 
 export const metadata: Metadata = {
   title: "Browse Rehab Centers",
@@ -29,12 +32,15 @@ const PAGE_SIZE = 12;
 const getFilterOptions = unstable_cache(
   async () => {
     const supabase = createPublicClient();
-    const { data: filterData } = await supabase
+    const filterRes = await supabase
       .from("centers")
       .select(
         "country, treatment_focus, conditions, setting_type, insurance, who_we_treat, treatment_methods, languages, amenities"
       )
       .eq("status", "published");
+    // Throw on timeout so unstable_cache does not store empty facets for 5 min.
+    throwIfUnavailable(filterRes, "centers filters");
+    const filterData = filterRes.data;
 
     const allCentersForFilters = filterData || [];
 
@@ -169,7 +175,9 @@ export default async function CentersPage({ searchParams }: PageProps) {
 
   // Paginate
   query = query.range(offset, offset + PAGE_SIZE - 1);
-  const { data: centers, count } = await query;
+  const centersRes = await query;
+  throwIfUnavailable(centersRes, "centers list");
+  const { data: centers, count } = centersRes;
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
   // Distinct filter values — cached (5 min) rather than re-scanned per request

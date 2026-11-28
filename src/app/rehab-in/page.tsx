@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
+import { SUPABASE_TIMEOUT_MS, throwIfUnavailable } from "@/lib/supabase/timeout";
 import { countryToSlug } from "@/lib/utils";
 import { BASE_URL } from "@/lib/site";
 import { BreadcrumbJsonLd } from "@/components/shared/json-ld";
@@ -10,6 +11,8 @@ import { Globe, Building2, ArrowRight, MapPin, Clock } from "lucide-react";
 
 // ISR — statically rendered, refreshed hourly.
 export const revalidate = 3600;
+// Supabase calls are bounded (8s each) — fail fast instead of the 300s default.
+export const maxDuration = 60;
 
 export const metadata: Metadata = {
   title: "Rehab Destinations Worldwide | Rehab-Atlas",
@@ -41,11 +44,12 @@ export default async function RehabDestinationsPage() {
   // key is unavailable (e.g. local build), fall back to published-only via
   // the anon client so the page still statically renders.
   let centerData: { country: string | null; status: string }[] | null = null;
+  let centersRes: { status: number } | null = null;
   try {
-    const admin = createAdminClient();
-    ({ data: centerData } = await admin
-      .from("centers")
-      .select("country, status"));
+    const admin = createAdminClient({ timeoutMs: SUPABASE_TIMEOUT_MS.public });
+    const res = await admin.from("centers").select("country, status");
+    centersRes = res;
+    centerData = res.data;
   } catch {
     const { data } = await createPublicClient()
       .from("centers")
@@ -53,6 +57,8 @@ export default async function RehabDestinationsPage() {
       .eq("status", "published");
     centerData = data;
   }
+  // Timeout: keep the cached directory instead of caching an empty one.
+  throwIfUnavailable(centersRes, "destinations");
 
   const publishedByName: Record<string, number> = {};
   const draftOnlyNames = new Set<string>();

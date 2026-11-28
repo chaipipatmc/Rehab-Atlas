@@ -11,6 +11,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { SUPABASE_TIMEOUT_MS } from "@/lib/supabase/timeout";
 
 interface RateLimitEntry {
   count: number;
@@ -71,7 +72,9 @@ export async function rateLimit(
     process.env.SUPABASE_SERVICE_ROLE_KEY
   ) {
     try {
-      const admin = createAdminClient();
+      // Short deadline: on timeout the RPC errors and we fall back to memory
+      // (fail-open) instead of holding the public request.
+      const admin = createAdminClient({ timeoutMs: SUPABASE_TIMEOUT_MS.tracking });
       const { data, error } = await admin.rpc("rate_limit_hit", {
         p_key: key,
         p_limit: options.limit,

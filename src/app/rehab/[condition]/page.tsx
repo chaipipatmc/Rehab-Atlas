@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createPublicClient } from "@/lib/supabase/server";
+import { throwIfUnavailable } from "@/lib/supabase/timeout";
 import { canOptimizeImage } from "@/lib/images";
 import { countryToSlug } from "@/lib/utils";
 import { CONDITIONS, CONDITION_SLUGS, type ConditionDef } from "@/lib/conditions";
@@ -14,6 +15,8 @@ import type { Center, CenterPhoto } from "@/types/center";
 
 // Revalidate daily — content only changes when centers/articles are added.
 export const revalidate = 86400;
+// Supabase calls are bounded (8s each) — fail fast instead of the 300s default.
+export const maxDuration = 60;
 
 // Condition data lives in the shared module (@/lib/conditions) so this page,
 // the city × condition pages, and the sitemap can never drift apart.
@@ -87,13 +90,15 @@ export default async function ConditionPage({
   const supabase = createPublicClient();
 
   // Single query: centers whose treatment_focus overlaps ANY filter token
-  const { data: centerRows } = await supabase
+  const centersRes = await supabase
     .from("centers")
     .select("*, photos:center_photos(*)")
     .eq("status", "published")
     .overlaps("treatment_focus", data.filters)
     .order("is_featured", { ascending: false })
     .order("rating", { ascending: false, nullsFirst: false });
+  throwIfUnavailable(centersRes, "condition centers");
+  const { data: centerRows } = centersRes;
 
   const centers = (centerRows || []) as (Center & { photos?: CenterPhoto[] })[];
 

@@ -4,9 +4,13 @@ import { cookies } from "next/headers";
 import { verifyAssessmentSession } from "@/lib/assessment-session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { SUPABASE_TIMEOUT_MS } from "@/lib/supabase/timeout";
 import { InquiryForm, type InquiryPrefill } from "@/components/leads/inquiry-form";
 import { Shield, Users, Eye } from "lucide-react";
 import type { Metadata } from "next";
+
+// Supabase calls are bounded (8–10s) — fail fast instead of the 300s default.
+export const maxDuration = 30;
 
 export const metadata: Metadata = {
   title: "Submit a Confidential Inquiry",
@@ -73,7 +77,8 @@ async function loadAssessmentPrefill(
   const sid = verifyAssessmentSession(signedSession, hmacKey);
   if (sid === null) return undefined;
 
-  const admin = createAdminClient();
+  // Prefill is optional — on a slow backend render the empty form instead.
+  const admin = createAdminClient({ timeoutMs: SUPABASE_TIMEOUT_MS.public });
   const { data: assessment } = await admin
     .from("assessments")
     .select("id, session_id, answers, urgency_level, contact_email, contact_name, contact_phone")

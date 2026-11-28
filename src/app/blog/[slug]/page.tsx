@@ -2,6 +2,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createPublicClient } from "@/lib/supabase/server";
+import { throwIfUnavailable } from "@/lib/supabase/timeout";
 import { canOptimizeImage } from "@/lib/images";
 import { BASE_URL } from "@/lib/site";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ import { inferPillar, getPillarCta } from "@/lib/pillars";
 // merge. Standard ISR caches readers correctly and still produces a sub-300ms
 // edge HIT on warm paths.
 export const revalidate = 86400;
+// Supabase calls are bounded (8s each) — fail fast instead of the 300s default.
+export const maxDuration = 60;
 export const dynamicParams = true;
 
 interface PageProps {
@@ -153,13 +156,15 @@ function extractHowToSteps(
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const supabase = createPublicClient();
-  const { data: post } = await supabase
+  const metaRes = await supabase
     .from("pages")
     .select("title, meta_title, meta_description, content, published_at")
     .eq("slug", slug)
     .eq("page_type", "blog")
     .eq("status", "published")
     .single();
+  throwIfUnavailable(metaRes, "blog metadata");
+  const { data: post } = metaRes;
 
   if (!post) return { title: "Article Not Found" };
 
@@ -265,23 +270,29 @@ export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params;
   const supabase = createPublicClient();
 
-  const { data: post } = await supabase
+  const postRes = await supabase
     .from("pages")
     .select("*, author_center:centers(name, slug)")
     .eq("slug", slug)
     .eq("page_type", "blog")
     .eq("status", "published")
     .single();
+  // A timeout must not fall through to notFound(): that would cache a 404 for
+  // a live article for the whole 24h revalidate window.
+  throwIfUnavailable(postRes, "blog post");
+  const { data: post } = postRes;
 
   if (!post) {
     // Article isn't currently published. Check the redirects table — if this
     // slug was merged into another canonical article (auto-dedup cleanup),
     // 301 to the canonical slug to preserve SEO link equity.
-    const { data: redirect } = await supabase
+    const redirectRes = await supabase
       .from("blog_redirects")
       .select("target_slug")
       .eq("slug", slug)
       .maybeSingle();
+    throwIfUnavailable(redirectRes, "blog redirect");
+    const { data: redirect } = redirectRes;
     if (redirect?.target_slug) {
       permanentRedirect(`/blog/${redirect.target_slug}`);
     }

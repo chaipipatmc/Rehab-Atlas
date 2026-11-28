@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createPublicClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { SUPABASE_TIMEOUT_MS, throwIfUnavailable } from "@/lib/supabase/timeout";
 import { CONDITIONS } from "@/lib/conditions";
 import { BASE_URL } from "@/lib/site";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
@@ -18,6 +19,8 @@ import { MapPin, Building2, ArrowRight, ArrowLeft, CheckCircle, Sparkles } from 
 import type { Center, CenterPhoto } from "@/types/center";
 
 export const revalidate = 86400; // 24h
+// Supabase calls are bounded (8s each) — fail fast instead of the 300s default.
+export const maxDuration = 60;
 
 // Shared condition definitions (@/lib/conditions) drive the city × condition
 // cross-links so this page, the condition pages, and the sitemap never drift.
@@ -49,11 +52,14 @@ const resolveLocation = cache(
     countrySlug: string,
     citySlug: string,
   ): Promise<ResolvedLocation | null> => {
-    const admin = createAdminClient();
-    const { data } = await admin
+    const admin = createAdminClient({ timeoutMs: SUPABASE_TIMEOUT_MS.public });
+    const res = await admin
       .from("centers")
       .select("country, city")
       .eq("status", "published");
+    // Timeout must not become notFound() (cached for the revalidate window).
+    throwIfUnavailable(res, "resolve location");
+    const { data } = res;
     if (!data) return null;
 
     for (const row of data) {
@@ -123,7 +129,7 @@ export default async function CityRehabPage({ params }: PageProps) {
 
   // Cookieless client — keeps this page eligible for ISR (revalidate above).
   const supabase = createPublicClient();
-  const { data: centers } = await supabase
+  const centersRes = await supabase
     .from("centers")
     .select("*, photos:center_photos(id, url, alt_text, sort_order, is_primary)")
     .eq("status", "published")
@@ -132,6 +138,8 @@ export default async function CityRehabPage({ params }: PageProps) {
     .order("is_featured", { ascending: false })
     .order("editorial_overall", { ascending: false, nullsFirst: false })
     .order("rating", { ascending: false, nullsFirst: false });
+  throwIfUnavailable(centersRes, "city centers");
+  const { data: centers } = centersRes;
 
   // Which conditions are actually covered by centers in this city — for cross-link section
   const conditionsAvailable = new Set<string>();

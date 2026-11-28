@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createPublicClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { SUPABASE_TIMEOUT_MS, throwIfUnavailable } from "@/lib/supabase/timeout";
 import { CONDITIONS } from "@/lib/conditions";
 import { BASE_URL } from "@/lib/site";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
@@ -18,6 +19,8 @@ import { ArrowLeft, ArrowRight, MapPin, Building2 } from "lucide-react";
 import type { Center, CenterPhoto } from "@/types/center";
 
 export const revalidate = 86400;
+// Supabase calls are bounded (8s each) — fail fast instead of the 300s default.
+export const maxDuration = 60;
 
 // Shared condition definitions (@/lib/conditions), adapted to the local shape
 // (short label + concise clinical description) used throughout this page.
@@ -46,11 +49,14 @@ const resolveLocation = cache(
     countrySlug: string,
     citySlug: string,
   ): Promise<ResolvedLocation | null> => {
-    const admin = createAdminClient();
-    const { data } = await admin
+    const admin = createAdminClient({ timeoutMs: SUPABASE_TIMEOUT_MS.public });
+    const res = await admin
       .from("centers")
       .select("country, city")
       .eq("status", "published");
+    // Timeout must not become notFound() (cached for the revalidate window).
+    throwIfUnavailable(res, "resolve location");
+    const { data } = res;
     if (!data) return null;
     for (const row of data) {
       if (!row.country || !row.city) continue;
@@ -144,13 +150,15 @@ export default async function CityConditionPage({ params }: PageProps) {
   const supabase = createPublicClient();
 
   // Single query: centers in this city matching ANY of the condition filters
-  const { data: centerRows } = await supabase
+  const centersRes = await supabase
     .from("centers")
     .select("*, photos:center_photos(id, url, alt_text, sort_order, is_primary)")
     .eq("status", "published")
     .eq("country", loc.countryName)
     .eq("city", loc.cityName)
     .overlaps("treatment_focus", cond.filters);
+  throwIfUnavailable(centersRes, "city condition centers");
+  const { data: centerRows } = centersRes;
 
   const centers = (centerRows || []) as unknown as (Center & { photos?: CenterPhoto[] })[];
   centers.sort((a, b) => {
