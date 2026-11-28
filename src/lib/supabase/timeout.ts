@@ -42,10 +42,22 @@ export function fetchWithTimeout(
 
 /** Thrown when Supabase could not be reached (timeout / network failure). */
 export class SupabaseUnavailableError extends Error {
-  constructor(context: string) {
-    super(`Supabase unavailable (${context})`);
+  constructor(context: string, cause?: string) {
+    super(`Supabase unavailable (${context})${cause ? `: ${cause}` : ""}`);
     this.name = "SupabaseUnavailableError";
   }
+}
+
+/**
+ * Short, non-sensitive reason from a PostgREST transport error, e.g.
+ * "AbortError/TimeoutError" vs "TypeError: fetch failed" — enough to tell a
+ * deadline from a connection failure in the logs. Never includes URLs/keys.
+ */
+export function transportReason(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const message = (error as { message?: unknown }).message;
+  if (typeof message !== "string") return undefined;
+  return message.replace(/https?:\/\/\S+/g, "<url>").slice(0, 120);
 }
 
 /**
@@ -56,10 +68,10 @@ export class SupabaseUnavailableError extends Error {
  * window.
  */
 export function throwIfUnavailable(
-  result: { status?: number } | null | undefined,
+  result: { status?: number; error?: unknown } | null | undefined,
   context: string
 ): void {
   if (result && result.status === 0) {
-    throw new SupabaseUnavailableError(context);
+    throw new SupabaseUnavailableError(context, transportReason(result.error));
   }
 }

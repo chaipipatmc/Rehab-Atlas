@@ -63,3 +63,14 @@ describe("supabase-js with a bounded fetch", () => {
     expect(() => throwIfUnavailable(res, "pages")).toThrow(SupabaseUnavailableError);
   });
 });
+
+describe("transport failure reason in the error message", () => {
+  it("includes the short reason and strips URLs", () => {
+    expect(() =>
+      throwIfUnavailable(
+        { status: 0, error: { message: "TypeError: fetch failed https://x.supabase.co/rest/v1/pages?select=*" } },
+        "blog list"
+      )
+    ).toThrow("Supabase unavailable (blog list): TypeError: fetch failed <url>");
+  });
+});
