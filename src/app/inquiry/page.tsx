@@ -217,7 +217,7 @@ export default async function InquiryPage({ searchParams }: PageProps) {
                   {
                     icon: Eye,
                     title: "Pre-Intake Review",
-                    desc: "Our clinical team carefully ensures your assessment is completed to deliver a more comprehensive treatment path.",
+                    desc: "The Rehab-Atlas team checks that your assessment is complete so we can suggest a better-matched treatment path.",
                   },
                 ].map((item) => (
                   <div key={item.title} className="flex gap-3">

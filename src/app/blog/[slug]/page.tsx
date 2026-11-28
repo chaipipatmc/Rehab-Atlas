@@ -386,16 +386,9 @@ export default async function BlogPostPage({ params }: PageProps) {
             ? `${BASE_URL}/centers/${authorCenter.slug}`
             : BASE_URL
         }
-        reviewedBy={
-          // Only add medical reviewer for editorial (non-partner) health articles
-          !isPartnerArticle
-            ? {
-                name: "Rehab-Atlas Clinical Review Team",
-                jobTitle: "Licensed Clinical Reviewers",
-                url: `${BASE_URL}/about`,
-              }
-            : undefined
-        }
+        // No reviewedBy: articles are not reviewed by named clinicians, so we
+        // must not claim it in structured data (YMYL). Re-add only with a
+        // real, named reviewer.
         url={`${BASE_URL}/blog/${post.slug}`}
       />
       <MedicalWebPageJsonLd

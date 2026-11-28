@@ -122,7 +122,7 @@ export default function AboutPage() {
             {[
               { icon: Search, title: "Public Records Review", desc: "We review publicly available accreditation records, licensing, and patient advocacy data for every center in our network." },
               { icon: Shield, title: "Zero Affiliate Bias", desc: "Our recommendations prioritize clinical fit above all else. We maintain strict editorial independence in our center evaluations." },
-              { icon: CheckCircle, title: "Peer-Reviewed Content", desc: "All educational materials are reviewed by licensed clinicians before publication." },
+              { icon: CheckCircle, title: "Editorial Content", desc: "Articles are written by the Rehab-Atlas editorial team as general information. They are not medical advice; talk to a qualified professional about your situation." },
               { icon: Eye, title: "Continuous Monitoring", desc: "We regularly reassess listed centers to ensure they maintain the standards we expect." },
             ].map((item) => (
               <div key={item.title} className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient text-center">
@@ -150,8 +150,8 @@ export default function AboutPage() {
             <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 {
-                  name: "Clinical Review",
-                  title: "Our editorial process references licensed clinical standards to evaluate treatment modalities, staff credentials, and patient outcomes.",
+                  name: "Evaluation Criteria",
+                  title: "Our editorial process compares published accreditation, licensing and staff information across treatment modalities.",
                   icon: CheckCircle,
                 },
                 {

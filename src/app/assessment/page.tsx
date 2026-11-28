@@ -504,7 +504,7 @@ export default function AssessmentPage() {
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                   {matchCount !== null
                     ? "Your matches are ready — ranked by clinical fit, budget, and preferences. Enter your email to view them and return anytime."
-                    : "Your matches are ready. Give us your email so you can return to them anytime, and so our clinical team can follow up if you'd like guidance."}
+                    : "Your matches are ready. Give us your email so you can return to them anytime, and so the Rehab-Atlas team can follow up if you'd like guidance."}
                 </p>
               </div>
 

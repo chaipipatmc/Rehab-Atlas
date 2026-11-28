@@ -33,7 +33,7 @@ const HOW_IT_WORKS = [
     icon: ShieldCheck,
     title: "Verification",
     description:
-      "Our clinical team verifies your accreditation, licensing, and facility standards. This process typically takes 5–10 business days.",
+      "The Rehab-Atlas team reviews your accreditation, licensing, and facility information. This process typically takes 5–10 business days.",
   },
   {
     step: "03",

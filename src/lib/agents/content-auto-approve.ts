@@ -11,12 +11,16 @@
  * - Has at least 4 tags
  * - Title is reasonable length
  * - Content has proper heading structure (at least 2 H2s)
+ * - No clinical-review claims, no example.com sources, and every paragraph
+ *   with a % figure links an external source (src/lib/content/claims.ts).
+ *   Failing drafts are skipped and stay in the human review queue.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAgentAction } from "@/lib/agents/base";
 import { isAgentEnabled } from "@/lib/agents/config";
 import { checkDuplicate, persistDedupVerdict } from "@/lib/agents/content-dedup";
+import { contentClaimIssues } from "@/lib/content/claims";
 
 interface QualityResult {
   passed: boolean;
@@ -69,6 +73,10 @@ function checkQuality(page: Record<string, unknown>): QualityResult {
       reasons.push(`FAQ section has only ${faqItems} questions (min 3 for FAQPage schema)`);
     }
   }
+
+  // Sourcing / YMYL claim checks — never auto-publish unsourced statistics or
+  // a claim of clinical review.
+  reasons.push(...contentClaimIssues(content));
 
   return {
     passed: reasons.length === 0,

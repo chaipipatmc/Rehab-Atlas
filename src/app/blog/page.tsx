@@ -340,7 +340,7 @@ export default async function BlogPage({
               <>
                 <p className="text-headline-md text-foreground">Coming Soon</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Our clinical team is preparing new articles. Check back soon.
+                  Our editorial team is preparing new articles. Check back soon.
                 </p>
               </>
             )}

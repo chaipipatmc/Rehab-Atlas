@@ -243,7 +243,7 @@ export async function sendAssessmentConfirmation(data: AssessmentConfirmationDat
           <h2 style="color: #45636b; margin-bottom: 8px;">Your matches are ready</h2>
           <p style="color: #6b7d82; font-size: 13px; margin-top: 0;">${greeting}</p>
           <p style="font-size: 14px; line-height: 1.6;">
-            Based on your assessment, here are the treatment centers our clinical team identified as the strongest fits for you.
+            Based on your assessment, here are the treatment centers that best match your answers.
           </p>
 
           ${isUrgent ? `

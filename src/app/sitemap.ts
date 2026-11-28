@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { countryToSlug, cityToSlug } from "@/lib/utils";
+import { isSitemapExcluded } from "@/lib/seo/sitemap-exclusions";
 import { CONDITIONS, CONDITION_SLUGS } from "@/lib/conditions";
 import { BASE_URL } from "@/lib/site";
 
@@ -19,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/contact`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/assessment`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/inquiry`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE_URL}/partner/join`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    // /partner/join is not listed: it redirects (307) for most visitors.
   ];
 
   // Rehab condition pages — from the shared module
@@ -231,5 +232,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...centerPages,
     ...comparePages,
     ...blogPages,
-  ];
+  ].filter((entry) => !isSitemapExcluded(entry.url));
 }
