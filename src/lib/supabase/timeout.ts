@@ -24,6 +24,23 @@ export const SUPABASE_TIMEOUT_MS = {
 } as const;
 
 /**
+ * `next build` prerenders hundreds of pages with ~30 workers at once, which
+ * makes the small Supabase instance answer slowly (a build failed on the 8s
+ * page deadline, 2026-11-28). Runtime deadlines protect live requests; at
+ * build time a slow answer is fine, so use a generous floor instead.
+ */
+export const BUILD_TIMEOUT_FLOOR_MS = 90_000;
+
+export function effectiveTimeoutMs(
+  timeoutMs: number,
+  phase: string | undefined = process.env.NEXT_PHASE
+): number {
+  return phase === "phase-production-build"
+    ? Math.max(timeoutMs, BUILD_TIMEOUT_FLOOR_MS)
+    : timeoutMs;
+}
+
+/**
  * Wrap fetch so each request aborts after `timeoutMs`, while still honouring
  * any AbortSignal the caller (supabase-js) already passed.
  */
@@ -32,7 +49,7 @@ export function fetchWithTimeout(
   baseFetch: typeof fetch = fetch
 ): typeof fetch {
   return (input, init) => {
-    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const timeoutSignal = AbortSignal.timeout(effectiveTimeoutMs(timeoutMs));
     const signal = init?.signal
       ? AbortSignal.any([init.signal, timeoutSignal])
       : timeoutSignal;

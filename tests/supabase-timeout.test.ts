@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import {
   SupabaseUnavailableError,
+  effectiveTimeoutMs,
   fetchWithTimeout,
   throwIfUnavailable,
 } from "@/lib/supabase/timeout";
@@ -72,5 +73,15 @@ describe("transport failure reason in the error message", () => {
         "blog list"
       )
     ).toThrow("Supabase unavailable (blog list): TypeError: fetch failed <url>");
+  });
+});
+
+describe("effectiveTimeoutMs", () => {
+  it("keeps runtime deadlines as-is", () => {
+    expect(effectiveTimeoutMs(8_000, undefined)).toBe(8_000);
+    expect(effectiveTimeoutMs(8_000, "phase-production-server")).toBe(8_000);
+  });
+  it("uses a generous floor during next build", () => {
+    expect(effectiveTimeoutMs(8_000, "phase-production-build")).toBe(90_000);
   });
 });
