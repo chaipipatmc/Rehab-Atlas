@@ -152,29 +152,40 @@ export default function AdminContentEditPage() {
     setPage((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
 
+  // All writes go through the admin API (server-side admin check +
+  // revalidation of the public pages). Reads stay on the browser client (RLS).
+  async function savePage(fields: Record<string, unknown>): Promise<string | null> {
+    try {
+      const res = await fetch(`/api/admin/content/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fields),
+      });
+      if (res.ok) return null;
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      return data.error || `HTTP ${res.status}`;
+    } catch {
+      return "Network error";
+    }
+  }
+
   async function handleSave() {
     if (!page) return;
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("pages")
-      .update({
-        title: page.title,
-        slug: page.slug,
-        content: page.content,
-        page_type: page.page_type,
-        status: page.status,
-        meta_title: page.meta_title,
-        meta_description: page.meta_description,
-        tags: page.tags || [],
-        published_at: page.status === "published" && !page.published_at
-          ? new Date().toISOString()
-          : page.published_at,
-      })
-      .eq("id", params.id);
+    const error = await savePage({
+      title: page.title,
+      slug: page.slug,
+      content: page.content,
+      page_type: page.page_type,
+      status: page.status,
+      meta_title: page.meta_title ?? null,
+      meta_description: page.meta_description ?? null,
+      tags: page.tags || [],
+      published_at: page.published_at ?? null,
+    });
 
     if (error) {
-      toast.error("Failed to save: " + error.message);
+      toast.error("Failed to save: " + error);
     } else {
       toast.success("Saved");
       router.refresh();
@@ -186,14 +197,10 @@ export default function AdminContentEditPage() {
     if (!page) return;
     update("status", "published");
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("pages")
-      .update({
-        status: "published",
-        published_at: page.published_at || new Date().toISOString(),
-      })
-      .eq("id", params.id);
+    const error = await savePage({
+      status: "published",
+      published_at: page.published_at || new Date().toISOString(),
+    });
 
     if (error) {
       toast.error("Failed to publish");
@@ -214,11 +221,7 @@ export default function AdminContentEditPage() {
   async function handleApprove() {
     if (!page) return;
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("pages")
-      .update({ status: "approved" })
-      .eq("id", params.id);
+    const error = await savePage({ status: "approved" });
 
     if (error) {
       toast.error("Failed to approve");
@@ -232,9 +235,14 @@ export default function AdminContentEditPage() {
 
   async function handleDelete() {
     if (!confirm("Are you sure you want to delete this content?")) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("pages").delete().eq("id", params.id);
-    if (error) {
+    let ok = false;
+    try {
+      const res = await fetch(`/api/admin/content/${params.id}`, { method: "DELETE" });
+      ok = res.ok;
+    } catch {
+      ok = false;
+    }
+    if (!ok) {
       toast.error("Failed to delete");
     } else {
       toast.success("Deleted");
@@ -257,17 +265,13 @@ export default function AdminContentEditPage() {
     // Prepend feedback to content so the content creator agent or editor can see it
     const updatedContent = feedbackBlock + currentContent.replace(/^(> \*\*Admin Feedback.*?\n\n)+/, "");
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("pages")
-      .update({
-        status: "draft",
-        content: updatedContent,
-      })
-      .eq("id", params.id);
+    const error = await savePage({
+      status: "draft",
+      content: updatedContent,
+    });
 
     if (error) {
-      toast.error("Failed to request rewrite: " + error.message);
+      toast.error("Failed to request rewrite: " + error);
     } else {
       update("status", "draft");
       update("content", updatedContent);
