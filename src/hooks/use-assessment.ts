@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { AssessmentAnswers } from "@/types/assessment";
+import { trackEvent } from "@/lib/track-event";
 
 const TOTAL_STEPS = 6;
 
@@ -64,6 +65,9 @@ export function useAssessment() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resumed, setResumed] = useState(false);
   const hydrated = useRef(false);
+  // Fire "assessment_step1_start" once, on the first answer of a fresh
+  // (non-resumed) assessment. Count only — no answer values are sent.
+  const startTracked = useRef(false);
 
   // Restore saved progress once on mount (client only, avoids SSR mismatch)
   useEffect(() => {
@@ -72,6 +76,7 @@ export function useAssessment() {
       setAnswers({ ...DEFAULT_ANSWERS, ...saved.answers });
       setStep(Math.min(saved.step, TOTAL_STEPS - 1));
       setResumed(true);
+      startTracked.current = true;
     }
     hydrated.current = true;
   }, []);
@@ -93,6 +98,10 @@ export function useAssessment() {
     <K extends keyof AssessmentAnswers>(key: K, value: AssessmentAnswers[K] | null) => {
       if (value !== null) {
         setAnswers((prev) => ({ ...prev, [key]: value }));
+        if (!startTracked.current) {
+          startTracked.current = true;
+          trackEvent("assessment_step1_start");
+        }
       }
     },
     []
