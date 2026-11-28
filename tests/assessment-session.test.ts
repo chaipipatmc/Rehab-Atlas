@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { signAssessmentSession, verifyAssessmentSession } from "@/lib/assessment-session";
+import { sessionIdFromCookie, signAssessmentSession, verifyAssessmentSession } from "@/lib/assessment-session";
 
 const KEY = "test-hmac-key";
 
@@ -16,5 +16,25 @@ describe("assessment session cookie", () => {
     expect(verifyAssessmentSession("abc-123", KEY)).toBeNull();
     expect(verifyAssessmentSession("abc-123.", KEY)).toBeNull();
     expect(verifyAssessmentSession(cookie, "other-key")).toBeNull();
+  });
+});
+
+describe("sessionIdFromCookie (used by /api/leads)", () => {
+  it("returns the bare id for a correctly signed cookie", () => {
+    const cookie = signAssessmentSession("11111111-2222-3333-4444-555555555555", KEY);
+    expect(sessionIdFromCookie(cookie, KEY)).toBe("11111111-2222-3333-4444-555555555555");
+  });
+
+  it("does not link forged, unsigned or missing cookies", () => {
+    const forged = "11111111-2222-3333-4444-555555555555.0000000000000000";
+    expect(sessionIdFromCookie(forged, KEY)).toBeNull();
+    expect(sessionIdFromCookie("11111111-2222-3333-4444-555555555555", KEY)).toBeNull();
+    expect(sessionIdFromCookie(undefined, KEY)).toBeNull();
+    expect(sessionIdFromCookie("", KEY)).toBeNull();
+  });
+
+  it("does not link anything when the HMAC key is missing", () => {
+    const cookie = signAssessmentSession("abc", KEY);
+    expect(sessionIdFromCookie(cookie, undefined)).toBeNull();
   });
 });

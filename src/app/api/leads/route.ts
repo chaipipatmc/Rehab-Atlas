@@ -5,6 +5,7 @@ import { leadFormSchema } from "@/lib/validators";
 import { sendAdminNotification } from "@/lib/email/send";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { validateOrigin } from "@/lib/csrf";
+import { sessionIdFromCookie } from "@/lib/assessment-session";
 
 export async function POST(request: Request) {
   // CSRF check
@@ -35,9 +36,15 @@ export async function POST(request: Request) {
     const data = parsed.data;
     const supabase = createAdminClient();
 
-    // Check for assessment session
+    // Link the lead to the visitor's assessment only via a correctly signed
+    // session cookie. The cookie holds "<id>.<sig>" while assessments store
+    // the bare id, so the raw value never matched (assessment_id was always
+    // null); an unverified value must not be trusted either.
     const cookieStore = await cookies();
-    const sessionId = cookieStore.get("assessment_session")?.value;
+    const sessionId = sessionIdFromCookie(
+      cookieStore.get("assessment_session")?.value,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
     let assessmentId: string | null = null;
 
     if (sessionId) {

@@ -21,3 +21,16 @@ export function verifyAssessmentSession(cookieValue: string, hmacKey: string): s
   const [sessionId, sig] = cookieValue.split(".");
   return safeEqual(sig ?? "", signatureFor(sessionId, hmacKey)) ? sessionId : null;
 }
+
+/**
+ * Session id from a raw cookie value, or null when the cookie is missing,
+ * unsigned, tampered, or the HMAC key is not configured. Callers use the
+ * bare id (what `assessments.session_id` stores), never the cookie string.
+ */
+export function sessionIdFromCookie(
+  cookieValue: string | undefined | null,
+  hmacKey: string | undefined | null
+): string | null {
+  if (!cookieValue || !hmacKey) return null;
+  return verifyAssessmentSession(cookieValue, hmacKey);
+}
